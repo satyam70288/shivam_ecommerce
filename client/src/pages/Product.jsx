@@ -150,106 +150,127 @@ const handleAddToCart = () => {
   });
 };
 
-
-
-
   const handleBuyNow = async () => {
-    if (!isAuthenticated) {
-      navigate("/login");
+  console.log("handleBuyNow called");
+
+  if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
+    navigate("/login");
+    return;
+  }
+
+  console.log("Address before validation:", address);
+
+  // ✅ Required frontend keys
+  const requiredFieldsMap = {
+    "full name (frist and last name)": "Full Name",
+    email: "Email",
+    "mobile number": "Mobile Number",
+    "Flat, house no., building, apartment": "Flat/House",
+    "Area, street, village": "Area/Street",
+    landmark: "Landmark",
+    "Town/city": "City",
+    state: "State",
+    "pin code": "Pin Code",
+    "country/Region": "Country",
+  };
+
+  // ✅ Frontend validation
+  for (const key in requiredFieldsMap) {
+    if (!address[key] || address[key].trim() === "") {
+      console.log(`Validation failed: ${requiredFieldsMap[key]} is missing`);
+      return toast({
+        title: `Please enter ${requiredFieldsMap[key]}`,
+        variant: "destructive",
+      });
+    }
+  }
+
+  console.log("Product quantity:", productQuantity, "Stock:", product.stock);
+  if (productQuantity > product.stock) {
+    console.log("Product out of stock");
+    toast({ title: "Product out of stock" });
+    return;
+  }
+
+  if (product.blacklisted) {
+    console.log("Product is blacklisted");
+    toast({ title: "Product isn't available for purchase" });
+    return;
+  }
+
+  if (!productColor) {
+    console.log("No color selected");
+    toast({ title: "Please select a color" });
+    return;
+  }
+
+  if (!paymentMethod) {
+    console.log("No payment method selected");
+    toast({ title: "Please select a payment method" });
+    return;
+  }
+
+  const totalAmount = (product.discountedPrice || product.price) * productQuantity;
+  console.log("Total amount:", totalAmount);
+
+  // ✅ Map frontend address to backend keys
+  const mappedAddress = {
+    name: address["full name (frist and last name)"],
+    phone: address["mobile number"],
+    street: address["Flat, house no., building, apartment"] + ", " + address["Area, street, village"],
+    city: address["Town/city"],
+    state: address["state"],
+    zip: address["pin code"],
+    country: address["country/Region"],
+    email: address["email"],
+    landmark: address["landmark"] || "",
+  };
+
+  // ✅ Prepare products array
+  const orderProducts = [
+    {
+      id: product._id,
+      name: product.name,
+      price: product.discountedPrice || product.price,
+      quantity: productQuantity,
+      color: productColor,
+      size: productSize,
+      image: product?.variants?.[0]?.images?.[selectedImage]?.url || "/fallback.png",
+    },
+  ];
+
+  // ✅ Payment handling
+  if (paymentMethod === "razorpay") {
+    try {
+      console.log("Processing Razorpay payment");
+      const amountInPaise = totalAmount * 100;
+      const order = await generatePayment(amountInPaise);
+      console.log("Razorpay order generated:", order);
+
+      await verifyPayment({ ...order, amount: order.amount || amountInPaise }, orderProducts, mappedAddress, navigate);
+      console.log("Razorpay payment verified and order placed");
+    } catch (error) {
+      console.error("Razorpay payment failed:", error);
+      toast({ title: "Payment failed. Please try again." });
       return;
     }
-
-    const requiredFields = [
-      "name",
-      "email",
-      "phone",
-      "street",
-      "city",
-      "state",
-      "zip",
-    ];
-    for (const field of requiredFields) {
-      if (!address[field] || address[field].trim() === "") {
-        return alert(`Please enter ${field}`);
-      }
-    }
-
-    if (productQuantity > product.stock) {
-      toast({ title: "Product out of stock" });
-      return;
-    }
-
-    if (product.blacklisted) {
-      toast({ title: "Product isn't available for purchase" });
-      return;
-    }
-
-    if (productColor === "") {
-      toast({ title: "Please select a color" });
-      return;
-    }
-
-    if (!paymentMethod) {
-      toast({ title: "Please select a payment method" });
-      return;
-    }
-
-    const totalAmount =
-      (product.discountedPrice || product.price) * productQuantity;
-
-    if (paymentMethod === "razorpay") {
-      try {
-        const amountInPaise = totalAmount * 100;
-        const order = await generatePayment(amountInPaise);
-
-        await verifyPayment(
-          {
-            ...order,
-            amount: order.amount || amountInPaise,
+  } else if (paymentMethod === "cod") {
+    try {
+      console.log("Processing COD order");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/cod-order`,
+        {
+          amount: totalAmount,
+          address: mappedAddress,
+          products: orderProducts,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          [
-            {
-              id: product._id,
-              name: product.name,
-              price: product.discountedPrice || product.price,
-              quantity: productQuantity,
-              color: productColor,
-              size: productSize,
-              image: product?.variants?.[0]?.images?.[selectedImage]?.url,
-            },
-          ],
-          address,
-          navigate
-        );
-      } catch (error) {
-        console.error("Razorpay payment failed:", error);
-        toast({ title: "Payment failed. Please try again." });
-      }
-    } else if (paymentMethod === "cod") {
-      try {
-        const res = await axios.post(
-          `${import.meta.env.VITE_API_URL}/cod-order`,
-          {
-            amount: totalAmount,
-            address,
-            products: [
-              {
-                id: product._id,
-                name: product.name,
-                price: product.discountedPrice || product.price,
-                quantity: productQuantity,
-                color: productColor,
-                size: productSize,
-                image: product?.variants?.[0]?.images?.[0]?.url,
-              },
-            ],
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        }
+      );
 
         if (res.data.success) {
           toast({ title: "Order placed with Cash on Delivery!" });
@@ -258,10 +279,11 @@ const handleAddToCart = () => {
           toast({ title: res.data.message || "Failed to place COD order." });
         }
       } catch (err) {
-        console.error(err);
-        toast({ title: "Something went wrong. Please try again." });
-      }
+      console.error("COD order failed:", err.response?.data || err);
+      toast({ title: "Something went wrong. Please try again." });
+      return;
     }
+  }
 
     setPurchaseProduct(false);
     setPaymentMethod("");
@@ -275,8 +297,7 @@ const handleAddToCart = () => {
           {/* Main Image */}
           <img
             src={
-              product?.variants
-                ?.find((v) => v.color === productColor)
+              product?.variants?.find((v) => v.color === productColor)
                 ?.images?.[selectedImage]?.url || "/fallback.png"
             }
             alt="Selected product"
@@ -293,25 +314,24 @@ const handleAddToCart = () => {
                   src={img?.url}
                   alt={`Thumbnail ${index + 1}`}
                   onClick={() => setSelectedImage(index)}
-                  className={`rounded-xl min-w-[5rem] h-20 object-cover cursor-pointer border transition-all duration-200 ${selectedImage === index
-                    ? "border-2 border-orange-400"
-                    : "border-gray-300"
-                    }`}
+                  className={`rounded-xl min-w-[5rem] h-20 object-cover cursor-pointer border transition-all duration-200 ${
+                    selectedImage === index
+                      ? "border-2 border-orange-400"
+                      : "border-gray-300"
+                  }`}
                 />
               ))}
           </div>
         </div>
 
         {/* RIGHT SIDE */}
-        <div className="sm:w-[50%] lg:w-[35%]">
+        <div className="sm:w-[50%] lg:w-[35%] px-4 sm:px-0">
           <div className="pb-5">
             <h2 className="font-extrabold text-2xl">{product?.name}</h2>
-            <p className="text-sm my-2">{product?.description}</p>
+            <p className="sm:m-2 text-sm my-2">{product?.description}</p>
             <div className="flex items-center">
               {starsGenerator(product.rating, "0", 15)}
-              <span className="text-md ml-1">
-                ({product?.reviews?.length})
-              </span>
+              <span className="text-md ml-1">({product?.reviews?.length})</span>
             </div>
           </div>
           <div className="mt-2 flex items-baseline gap-1">
@@ -333,10 +353,11 @@ const handleAddToCart = () => {
                 <button
                   key={size}
                   onClick={() => setProductSize(size)}
-                  className={`px-4 py-2 border rounded-md text-sm font-medium transition-all ${productSize === size
-                    ? "border-orange-500 bg-orange-100 text-orange-700 shadow-md"
-                    : "border-gray-300 bg-white text-black hover:border-black"
-                    }`}
+                  className={`px-4 py-2 border rounded-md text-sm font-medium transition-all ${
+                    productSize === size
+                      ? "border-orange-500 bg-orange-100 text-orange-700 shadow-md"
+                      : "border-gray-300 bg-white text-black hover:border-black"
+                  }`}
                 >
                   {size}
                 </button>
@@ -356,8 +377,9 @@ const handleAddToCart = () => {
                   strokeWidth={0.2}
                   size={40}
                   onClick={() => setProductColor(color)}
-                  className={`cursor-pointer filter hover:brightness-50 ${productColor === color ? "ring-2 ring-orange-400" : ""
-                    }`}
+                  className={`cursor-pointer filter hover:brightness-50 ${
+                    productColor === color ? "ring-2 ring-orange-400" : ""
+                  }`}
                 />
               ))}
             </div>
@@ -425,13 +447,16 @@ const handleAddToCart = () => {
               <div className="my-2 space-y-4">
                 <div className="grid gap-2">
                   {[
-                    "name",
+                    "full name (frist and last name)",
                     "email",
-                    "phone",
-                    "street",
-                    "city",
+                    "mobile number",
+                    "Flat, house no., building, apartment",
+                    "Area, street, village",
+                    "landmark",
+                    "Town/city",
                     "state",
-                    "zip",
+                    "pin code",
+                    "country/Region",
                   ].map((field) => (
                     <Input
                       key={field}

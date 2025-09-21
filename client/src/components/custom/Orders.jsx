@@ -27,6 +27,7 @@ const Orders = () => {
  console.log("Current Page:", orders);
   const { handleErrorLogout } = useErrorLogout();
 
+// pura product dekho
   useEffect(() => {
     const fetchOrders = () => {
       try {
@@ -86,7 +87,16 @@ const Orders = () => {
                   <Card key={item._id} className="space-y-2 p-3 shadow-md">
                     <div className="grid sm:grid-cols-3 gap-2">
                       {item?.products?.map((product) => (
-                        <OrderProductTile key={product._id} {...product} />
+                        <OrderProductTile
+                        key={product._id}
+                        name={product.name}
+                       price={product.price}
+                       quantity={product.quantity}
+                       color={product.color} 
+                       size={product.size}
+                        id={product.id} 
+                        />
+
                       ))}
                     </div>
                     <hr />
@@ -100,7 +110,7 @@ const Orders = () => {
                       <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
                         <span className="font-bold">Address:</span>
                         <span className="text-sm text-customGray">
-                          {item?.address}
+                          {item?.address?.name}, {item?.address?.phone}, {item?.address?.street}, {item?.address?.city}, {item?.address?.state}, {item?.address?.zip}, {item?.address?.country}
                         </span>
                       </p>
                       <p className="flex justify-between sm:justify-start gap-2 items-center px-3">

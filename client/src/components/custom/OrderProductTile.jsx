@@ -1,18 +1,20 @@
 import React from "react";
 
-const OrderProductTile = ({ quantity, id, color, size }) => {
+const OrderProductTile = ({ id, name, price, quantity, color, size }) => {
+  const imageUrl = id?.variants?.[0]?.images?.[0]?.url;
+
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 dark:border-zinc-800">
       {/* Product Info */}
       <div className="flex flex-row items-center gap-3 w-full sm:w-auto">
         <img
-          src={id?.images[0].url}
-          alt={id?.name}
+          src={imageUrl || "/placeholder.png"}
+          alt={id?.name || name}
           className="w-20 sm:w-24 h-20 sm:h-24 object-cover rounded-lg border border-gray-200 dark:border-zinc-700"
         />
         <div className="flex flex-col gap-1">
           <h1 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white">
-            {id?.name}
+            {id?.name || name}
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600 dark:text-customGray">
             {/* Color */}
@@ -25,7 +27,7 @@ const OrderProductTile = ({ quantity, id, color, size }) => {
             </span>
             {/* Size */}
             <span className="font-semibold">
-              Size: <span className="font-medium">{size}</span>
+              Size: <span className="font-medium">{size || "—"}</span>
             </span>
             {/* Quantity */}
             <span className="font-semibold">
@@ -36,7 +38,7 @@ const OrderProductTile = ({ quantity, id, color, size }) => {
             <span className="font-semibold">
               Price:{" "}
               <span className="font-bold text-customYellow">
-                ₹{id?.price}
+                ₹{price || id?.price}
               </span>
             </span>
           </div>
