@@ -78,3 +78,85 @@ exports.removeFromCart = async function (req, res) {
   }
 };
 
+exports.decreaseQuantity = async function (req, res) {
+  try {
+    const { userId, cartItemId } = req.body; // cartItemId = product inside cart
+    console.log(req.body, "Decrease cart item payload");
+
+    // Find user's cart
+    const cart = await Cart.findOne({ user: userId });
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Cart not found" });
+    }
+
+    // Find the cart item by subdocument ID
+    const item = cart.products.id(cartItemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Cart item not found" });
+    }
+
+    // Decrease or remove
+    if (item.quantity > 1) {
+      item.quantity -= 1;
+    } else {
+      cart.products = cart.products.filter(
+        (p) => p._id.toString() !== cartItemId
+      );
+    }
+
+    await cart.save();
+
+    // ✅ Populate product details (optional but useful for frontend)
+    await cart.populate("products.product");
+
+    res.status(200).json({
+      success: true,
+      message: "Quantity updated",
+      cart,
+    });
+  } catch (error) {
+    console.error("Decrease quantity error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.increaseQuantity = async function (req, res) {
+  try {
+    const { userId, cartItemId } = req.body; // cartItemId = product inside cart
+    console.log(req.body, "Increase cart item payload");
+
+    // Find user's cart
+    const cart = await Cart.findOne({ user: userId });
+    if (!cart) {
+      return res.status(404).json({ success: false, message: "Cart not found" });
+    }
+
+    // Find the cart item by subdocument ID
+    const item = cart.products.id(cartItemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: "Cart item not found" });
+    }
+
+    // Optional: check stock
+    if (item.quantity >= item.product.stock) {
+      return res.status(400).json({ success: false, message: "Maximum stock reached" });
+    }
+
+    // Increase quantity
+    item.quantity += 1;
+
+    await cart.save();
+
+    // ✅ Populate product details (optional)
+    await cart.populate("products.product");
+
+    res.status(200).json({
+      success: true,
+      message: "Quantity increased",
+      cart,
+    });
+  } catch (error) {
+    console.error("Increase quantity error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

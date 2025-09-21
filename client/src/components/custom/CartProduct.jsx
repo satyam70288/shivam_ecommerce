@@ -9,12 +9,13 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import useRazorpay from "@/hooks/use-razorpay";
 import useCart from "@/hooks/useCart";
+import useCartActions from "@/hooks/useCartActions";
 
 const CartProduct = ({
   name,
   price,
-  cartItemId,   // ✅ cart item ID for removal
-  productId,    // ✅ actual product ID for buy now
+  cartItemId, // ✅ cart item ID for removal
+  productId, // ✅ actual product ID for buy now
   image,
   quantity,
   stock,
@@ -28,7 +29,11 @@ const CartProduct = ({
   const { generatePayment, verifyPayment } = useRazorpay();
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { fetchCart } = useCart();
+  const { decreaseQuantity,increaseQuantity } = useCartActions();
+  const user = JSON.parse(localStorage.getItem("user"));
+  const userId = user?.id; // <-- now you can use this safely
 
+  console.log(cartItemId, "Cart item id in cart product");
   const handleBuyNow = async () => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -51,14 +56,18 @@ const CartProduct = ({
     }
 
     const order = await generatePayment(price * quantity);
-    await verifyPayment(order, [{ id: productId, quantity, color, size }], "123 Main street");
+    await verifyPayment(
+      order,
+      [{ id: productId, quantity, color, size }],
+      "123 Main street"
+    );
     fetchCart(); // refresh cart after buy
   };
 
   const handleRemove = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
-      console.log(cartItemId)
+      console.log(cartItemId);
       if (!user && !cartItemId) return;
 
       await axios.delete(`${import.meta.env.VITE_API_URL}/cart/remove`, {
@@ -92,20 +101,28 @@ const CartProduct = ({
                 stroke={Colors.customGray}
                 onClick={() => {
                   if (quantity > 1) {
-                    dispatch(removeFromCart({ productId, quantity: 1, color, size }));
+                    console.log("decreasing one");
+                    decreaseQuantity({
+                      userId,
+                      cartItemId,
+                      toast,
+                    });
                   } else {
-                    handleRemove();
+                    handleRemove(); // pura item hata do
                   }
                 }}
               />
-              <span className="text-slate-950 text-sm sm:text-md">{quantity}</span>
+
+              <span className="text-slate-950 text-sm sm:text-md">
+                {quantity}
+              </span>
               <Plus
                 size={15}
                 stroke={Colors.customGray}
                 onClick={() => {
                   stock === quantity
                     ? toast({ title: "Maximum stock reached" })
-                    : dispatch(addToCart({ productId, quantity: 1, color, size }));
+                    : increaseQuantity({ userId, cartItemId, toast });
                 }}
               />
             </div>

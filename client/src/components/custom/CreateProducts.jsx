@@ -32,6 +32,7 @@ const COLOR_OPTIONS = [
   { name: "Purple", code: "#800080" }, 
 ];
 
+const MAX_IMAGES_PER_COLOR = 40;
 
 const CreateProducts = ({ productId }) => {
   const [currentColor, setCurrentColor] = useState("");
@@ -107,26 +108,36 @@ const CreateProducts = ({ productId }) => {
     setVariantImages(updated);
   };
 
-  // ---- Images ----
+  // ---- Image Upload with 40 limit ----
   const handleImageUpload = (colorName) => (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    const existingNames = (variantImages[colorName] || []).map(
-      (img) => img.file?.name || img.preview
-    );
+    setVariantImages((prev) => {
+      const existingImages = prev[colorName] || [];
+      const currentCount = existingImages.length;
 
-    const newFiles = files
-      .filter((f) => !existingNames.includes(f.name))
-      .map((file) => ({ file, preview: URL.createObjectURL(file) }));
+      if (currentCount >= MAX_IMAGES_PER_COLOR) {
+        toast({
+          title: "Limit Reached",
+          description: `You can upload a maximum of ${MAX_IMAGES_PER_COLOR} images for ${colorName}.`,
+        });
+        return prev;
+      }
 
-    if (newFiles.length) {
-      setVariantImages((prev) => ({
-        ...prev,
-        [colorName]: prev[colorName] ? [...prev[colorName], ...newFiles] : newFiles,
+      const allowedFiles = files.slice(0, MAX_IMAGES_PER_COLOR - currentCount);
+      const newFiles = allowedFiles.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
       }));
-    }
-    console.log(variantImages,"uyfguyasguiguisghvauigys")
+
+      return {
+        ...prev,
+        [colorName]: [...existingImages, ...newFiles],
+      };
+    });
+
+    e.target.value = "";
   };
   const removeImage = (colorName, index) => {
     setVariantImages((prev) => ({
@@ -285,12 +296,14 @@ const CreateProducts = ({ productId }) => {
 
               {colors.map((colorName) => {
                 const colorCode = COLOR_OPTIONS.find(c => c.name === colorName)?.code || "#000";
+                const imageCount = variantImages[colorName]?.length || 0;
                 return (
                   <div key={colorName} className="border border-gray-700 rounded-lg p-3 bg-gray-900 mt-2">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
                         <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: colorCode }} />
                         <span className="font-medium text-white">{colorName}</span>
+                        <span className="text-sm text-gray-400">({imageCount}/{MAX_IMAGES_PER_COLOR})</span>
                       </div>
                       <Button variant="ghost" size="sm" className="p-1" onClick={() => removeColor(colorName)}>
                         <X className="h-4 w-4 text-red-500" />
@@ -310,8 +323,8 @@ const CreateProducts = ({ productId }) => {
                     </div>
 
                     {/* Upload Images button */}
-                    <Button type="button" variant="outline" onClick={() => fileInputRefs.current[colorName]?.click()} className="w-full flex items-center justify-center gap-2 border-dashed border-gray-600 hover:border-indigo-400 hover:text-indigo-500">
-                      <Upload className="h-5 w-5" /> Upload Images
+                    <Button type="button" variant="outline" disabled={imageCount >= MAX_IMAGES_PER_COLOR} onClick={() => fileInputRefs.current[colorName]?.click()} className="w-full flex items-center justify-center gap-2 border-dashed border-gray-600 hover:border-indigo-400 hover:text-indigo-500">
+                      <Upload className="h-5 w-5" /> {imageCount >= MAX_IMAGES_PER_COLOR ? "Limit Reached" : "Upload Images"}
                     </Button>
                     <input type="file" multiple accept="image/*" className="hidden" ref={(el) => (fileInputRefs.current[colorName] = el)} onChange={handleImageUpload(colorName)} />
                   </div>

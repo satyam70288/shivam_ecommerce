@@ -94,16 +94,22 @@ const Navbar = () => {
       {/* Hamburger / Mobile toggle */}
 
       {/* Mobile floating menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-64 sm:w-72 bg-white/90 dark:bg-zinc-900/90 h-full shadow-xl px-6 py-6 flex flex-col gap-5 text-base text-black dark:text-white relative rounded-l-xl">
-            {/* Close Button */}
-            <button
-              className="absolute top-4 right-4 text-black dark:text-white hover:rotate-90 transition-transform"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <X className="w-6 h-6" />
-            </button>
+  {mobileMenuOpen && (
+  <div
+    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end"
+    onClick={() => setMobileMenuOpen(false)} // ✅ tap overlay to close
+  >
+    <div
+      className="w-40 sm:w-44 bg-white/90 dark:bg-zinc-900/90 h-full shadow-xl px-4 py-6 flex flex-col gap-5 text-base text-black dark:text-white relative rounded-l-xl transform translate-x-0 transition-transform duration-300 ease-in-out"
+      onClick={(e) => e.stopPropagation()} // ✅ prevent close when clicking inside menu
+    >
+      {/* Close Button */}
+      <button
+        className="absolute top-4 right-4 text-black dark:text-white hover:rotate-90 transition-transform"
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <X className="w-6 h-6" />
+      </button>
 
             {/* Menu Items */}
             <div className="mt-12 grid grid-cols-1 gap-4  ">

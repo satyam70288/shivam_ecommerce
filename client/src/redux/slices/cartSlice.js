@@ -16,7 +16,9 @@ const cartSlice = createSlice({
 
       // Map over the products and create cartItems
       state.cartItems = products.map((item) => {
-        const variant = item.product.variants?.find((v) => v.color === item.color);
+        const variant = item.product.variants?.find(
+          (v) => v.color === item.color
+        );
 
         return {
           cartItemId: item._id,       // ✅ Cart item ID, for remove API
@@ -48,7 +50,10 @@ const cartSlice = createSlice({
     // Add an item to cart
     addToCart: (state, action) => {
       const existingItem = state.cartItems.find(
-        (item) => item._id === action.payload._id && item.color === action.payload.color && item.size === action.payload.size
+        (item) =>
+          item._id === action.payload._id &&
+          item.color === action.payload.color &&
+          item.size === action.payload.size
       );
       if (existingItem) {
         existingItem.quantity += action.payload.quantity;
@@ -69,10 +74,32 @@ const cartSlice = createSlice({
 
     // Remove a single item from cart
     removeFromCart: (state, action) => {
-      // action.payload = _id of product to remove
-      state.cartItems = state.cartItems.filter(
-        (item) => item._id !== action.payload
+      const { productId, color, size } = action.payload;
+      console.log(action.payload, "payload");
+      console.log(state.cartItems);
+      const existingItem = state.cartItems.find(
+        (item) =>
+          item._id === action.payload._id &&
+          item.color === action.payload.color &&
+          item.size === action.payload.size
       );
+
+      console.log(existingItem, "existing item");
+      if (existingItem) {
+        if (existingItem.quantity > 1) {
+          existingItem.quantity -= 1; // decrease by 1
+        } else {
+          state.cartItems = state.cartItems.filter(
+            (item) =>
+              !(
+                item._id === productId &&
+                item.color === color &&
+                item.size === size
+              )
+          );
+        }
+      }
+
       // recalc totals
       state.totalQuantity = state.cartItems.reduce(
         (acc, item) => acc + item.quantity,
@@ -93,5 +120,6 @@ const cartSlice = createSlice({
   },
 });
 
-export const { setCart, addToCart, removeFromCart, emptyCart } = cartSlice.actions;
+export const { setCart, addToCart, removeFromCart, emptyCart } =
+  cartSlice.actions;
 export default cartSlice.reducer;

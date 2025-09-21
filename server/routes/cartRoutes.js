@@ -11,6 +11,10 @@ router.get("/cart/:userId", cartController.getCart);
 
 router.delete("/cart/remove", cartController.removeFromCart);
 
+router.post("/cart/decrease", cartController.decreaseQuantity);
+
+router.post("/cart/increase", cartController.increaseQuantity);
+
 // // Clear all items from user's cart
 // router.delete("/:userId/clear", cartController.clearCart);
 

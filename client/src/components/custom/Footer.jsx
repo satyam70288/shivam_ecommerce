@@ -1,6 +1,7 @@
 import React from "react";
-import { Facebook, Instagram, Twitter, Mail, Youtube } from "lucide-react";
+import { Facebook, Instagram, Youtube, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
+
 
 const Footer = () => {
   return (
@@ -11,8 +12,9 @@ const Footer = () => {
           <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
             Swag Fashion
           </h3>
-          <p>
-            Address: Parshv Elite Building No.1, Birwadi Road, Near Railway Phatak, Umroli East, Umroli, Palghar, Maharashtra - 401404
+           <p className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+            <MapPin className="w-16 h-6" /> {/* Address icon */}
+            Parshv Elite Building No.1, Birwadi Road, Near Railway Phatak, Umroli East, Umroli, Palghar, Maharashtra - 401404
           </p>
         </div>
         {/* Navigation */}
