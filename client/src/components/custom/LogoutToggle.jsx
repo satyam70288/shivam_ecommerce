@@ -30,6 +30,9 @@ const LogoutToggle = ({ user }) => {
         <Link to="/orders">
           <DropdownMenuItem>My Orders</DropdownMenuItem>
         </Link>
+        <Link to="/account">
+          <DropdownMenuItem>My Account</DropdownMenuItem>
+        </Link>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,6 +1,8 @@
 const { ROLES } = require("../utils/constants");
 const Product = require("../models/Product");
 const cloudinary = require("../utils/cloudinary");
+const Category = require("../models/Category");
+const { default: mongoose } = require("mongoose");
 
 const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -10,87 +12,181 @@ const createProduct = async (req, res) => {
   try {
     const {
       name,
-      price,
       description,
-      stock,
       category,
-      sizes,
-      colors,
+      productType,
+      price,
+      stock,
       discount,
       offerTitle,
       offerDescription,
       offerValidFrom,
       offerValidTill,
-      colorsForImages
+      colors,
+      sizes,
+      variants,
     } = req.body;
 
-    if (!name || !price || !description || !stock || !category || !sizes || !colors) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields including sizes and colors are required.",
+    if (!name || !description || !category || !productType) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    // ------------------------------
+    // PRODUCT TYPE: SIMPLE
+    // ------------------------------
+    if (productType === "simple") {
+      if (!price || !stock) {
+        return res.status(400).json({
+          success: false,
+          message: "Price and stock are required for simple products",
+        });
+      }
+      console.log(req.files, "filll");
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "At least one product image required",
+        });
+      }
+
+      // Upload simple images
+      const uploadedImages = [];
+
+      for (const file of req.files) {
+        const result = await cloudinaryUploadBuffer(file.buffer);
+        uploadedImages.push({ url: result.secure_url, id: result.public_id });
+      }
+
+      const product = new Product({
+        productType,
+        name,
+        description,
+        category,
+        price,
+        stock,
+        images: uploadedImages,
+        discount: discount || 0,
+        offerTitle,
+        offerDescription,
+        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
+        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+      });
+
+      await product.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "Simple product created",
+        data: product,
       });
     }
-    console.log(req.files, "hjvgcvuiuihvuhfgvfvvjhvvrhvirvhjvehivevchjhiobvejrvivercirfjjhreioerfwh")
-    const sizesArray = Array.isArray(sizes) ? sizes : JSON.parse(sizes);
-    const colorsArray = Array.isArray(colors) ? colors : JSON.parse(colors);
-    const colorsImagesArray = Array.isArray(colorsForImages) ? colorsForImages : JSON.parse(colorsForImages);
 
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: "No images uploaded" });
-    }
-
-    // Upload images to Cloudinary using buffer
-    const uploadedImages = [];
-    for (let i = 0; i < req.files.length; i++) {
-      const file = req.files[i];
-      const result = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "products" },
-          (error, result) => (error ? reject(error) : resolve(result))
-        );
-        stream.end(file.buffer);
-      });
-      uploadedImages.push({ url: result.secure_url, id: result.public_id });
-    }
-
-    // Map images to colors
-    const variantData = {};
-    for (let i = 0; i < uploadedImages.length; i++) {
-      const color = colorsImagesArray[i];
-      if (!variantData[color]) variantData[color] = [];
-      variantData[color].push(uploadedImages[i]);
-    }
-
-    const variants = Object.entries(variantData).map(([color, images]) => ({ color, images }));
-
-    const product = new Product({
-      name,
-      price,
-      description,
-      stock,
-      category,
-      colors: colorsArray,
-      sizes: sizesArray,
-      variants,
-      discount: discount ? Number(discount) : 0,
-      offerTitle: offerTitle || null,
-      offerDescription: offerDescription || null,
-      offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
-      offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
-    });
-
-    await product.save();
-
-    return res.status(201).json({
-      success: true,
-      message: "Product added successfully",
-      data: product,
-    });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid product type" });
   } catch (error) {
-    console.error(error);
+    console.error("PRODUCT ERROR:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+const getProductsforadmin = async (req, res) => {
+  console.log("inside");
+
+  try {
+    let { page, limit, category, price, search, sort } = req.query;
+    console.log("pppp", page, limit, category, price, search, sort);
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
+    const query = {};
+
+    // CATEGORY FILTER (Slug + ID)
+    if (category && category.toLowerCase() !== "all") {
+      if (mongoose.Types.ObjectId.isValid(category)) {
+        query.category = new mongoose.Types.ObjectId(category);
+      } else {
+        const catDoc = await Category.findOne({
+          slug: category.trim().toLowerCase(),
+        });
+
+        if (!catDoc) {
+          return res.status(404).json({
+            success: false,
+            message: "Category not found ",
+          });
+        }
+
+        query.category = catDoc._id;
+      }
+    }
+
+    // SEARCH FILTER
+    if (search && search.trim() !== "") {
+      query.name = { $regex: search.trim(), $options: "i" };
+    }
+
+    // PRICE FILTER
+    if (price && !isNaN(price)) {
+      query.price = { $lte: Number(price) };
+    }
+
+    // SORTING
+    let sortBy = { createdAt: -1 };
+    if (sort === "priceLowToHigh") sortBy = { price: 1 };
+    if (sort === "priceHighToLow") sortBy = { price: -1 };
+
+    // AGGREGATION PIPELINE
+    const pipeline = [
+      { $match: query },
+      {
+        $facet: {
+          products: [
+            { $sort: sortBy },
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const result = await Product.aggregate(pipeline);
+
+    const products = result[0].products;
+    const totalProducts = result[0].totalCount[0]?.count || 0;
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Products fetched successfully",
+      data: products,
+      pagination: {
+        totalProducts,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Get Products Admin Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Utility function
+async function cloudinaryUploadBuffer(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "products" },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+    stream.end(buffer);
+  });
+}
 
 const updateProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -168,8 +264,10 @@ const getProducts = async (req, res) => {
     const query = { blacklisted: false };
 
     // Filters
-    if (category && category.toLowerCase() !== "all") query.category = category.trim();
-    if (search && search.trim() !== "") query.name = { $regex: search.trim(), $options: "i" };
+    if (category && category.toLowerCase() !== "all")
+      query.category = category.trim();
+    if (search && search.trim() !== "")
+      query.name = { $regex: search.trim(), $options: "i" };
     if (price && !isNaN(price)) query.price = { $lte: Number(price) };
 
     // Sorting
@@ -202,8 +300,18 @@ const getProducts = async (req, res) => {
                   $round: [
                     {
                       $cond: [
-                        { $and: [{ $gt: ["$discount", 0] }, { $gt: ["$offerValidTill", now] }] },
-                        { $multiply: ["$price", { $subtract: [1, { $divide: ["$discount", 100] }] }] },
+                        {
+                          $and: [
+                            { $gt: ["$discount", 0] },
+                            { $gt: ["$offerValidTill", now] },
+                          ],
+                        },
+                        {
+                          $multiply: [
+                            "$price",
+                            { $subtract: [1, { $divide: ["$discount", 100] }] },
+                          ],
+                        },
                         "$price",
                       ],
                     },
@@ -222,74 +330,6 @@ const getProducts = async (req, res) => {
     const result = await Product.aggregate(pipeline);
     const products = result[0].products;
     const totalProducts = result[0].totalCount[0]?.count || 0;
-    const totalPages = Math.ceil(totalProducts / limit);
-
-    return res.status(200).json({
-      success: true,
-      message: "Products fetched",
-      data: products,
-      pagination: {
-        totalProducts,
-        totalPages,
-        currentPage: page,
-        pageSize: limit,
-      },
-    });
-  } catch (error) {
-    console.error("Get Products Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const getProductsforadmin = async (req, res) => {
-  try {
-    let { page, limit, category, price, search, sort } = req.query;
-
-    page = parseInt(page) || 1;
-    limit = parseInt(limit) || 9;
-
-    const query = { blacklisted: false };
-
-    // Category filter
-    if (category && category.toLowerCase() !== "all") {
-      query.category = category.trim();
-    }
-
-    // Search filter
-    if (search && search.trim() !== "") {
-      query.name = { $regex: search.trim(), $options: "i" };
-    }
-
-    // Price filter
-    if (price && !isNaN(price)) {
-      query.price = { $lte: Number(price) };
-    }
-
-    // Sorting
-    let sortBy = { createdAt: -1 };
-    if (sort === "priceLowToHigh") sortBy = { price: 1 };
-    if (sort === "priceHighToLow") sortBy = { price: -1 };
-
-    // Aggregation pipeline without projection
-    const pipeline = [
-      { $match: query },
-      {
-        $facet: {
-          products: [
-            { $sort: sortBy },
-            { $skip: (page - 1) * limit },
-            { $limit: limit },
-            // ❌ Removed $project so we return full documents
-          ],
-          totalCount: [{ $count: "count" }],
-        },
-      },
-    ];
-
-    const result = await Product.aggregate(pipeline);
-
-    const products = result[0].products;
-    const totalProducts = result.totalCount?.count || 0;
     const totalPages = Math.ceil(totalProducts / limit);
 
     return res.status(200).json({
@@ -329,7 +369,7 @@ const getProductByName = async (req, res) => {
     // Convert product to plain object to add discountedPrice
     const productObj = product.toObject();
     productObj.discountedPrice = discountedPrice;
-    console.log(productObj, "ygyfgh")
+    console.log(productObj, "ygyfgh");
     return res.status(200).json({
       success: true,
       message: "Product found",
@@ -422,6 +462,58 @@ const getProductById = async (req, res) => {
   }
 };
 
+const getProductsByCategory = async (req, res) => {
+  try {
+    const categoryParam = req.params.category?.trim().toLowerCase();
+
+    if (!categoryParam) {
+      return res.status(400).json({
+        success: false,
+        message: "Category is required",
+      });
+    }
+
+    let categoryDoc;
+
+    // Case 1: Category is ObjectId
+    if (mongoose.Types.ObjectId.isValid(categoryParam)) {
+      categoryDoc = await Category.findById(categoryParam);
+    } else {
+      // Case 2: Category is slug
+      categoryDoc = await Category.findOne({ slug: categoryParam });
+    }
+
+    if (!categoryDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    const products = await Product.aggregate([
+      { $match: { category: categoryDoc._id } },
+      {
+        $addFields: {
+          image: { $arrayElemAt: ["$images", 0] },
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      category: categoryDoc.name,
+      total: products.length,
+      data: products,
+    });
+  } catch (error) {
+    console.error("GetProductsByCategory Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createProduct,
   updateProduct,
@@ -432,4 +524,5 @@ module.exports = {
   removeFromBlacklist,
   getProductById,
   getProductsforadmin,
+  getProductsByCategory,
 };

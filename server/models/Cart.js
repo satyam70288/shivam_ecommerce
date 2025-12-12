@@ -1,15 +1,39 @@
-var mongoose = require("mongoose");
+const mongoose = require("mongoose");
 
-var cartSchema = new mongoose.Schema(
+const cartSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
+
     products: [
       {
-        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+
+        // Only for clothing (variant products)
+        variantId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: false,
+        },
+
+        // optional color/size
+        color: { type: String, required: false },
+        size: { type: String, required: false },
+
         quantity: { type: Number, default: 1 },
-        color: { type: String },
-        size: { type: String },
-        price: { type: Number },
+
+        // freeze price at time of adding to cart
+        price: { type: Number, required: true },
+
+        // Optional image for cart display
+        image: { type: String },
       },
     ],
   },

@@ -28,39 +28,39 @@ const FilterMenu = () => {
 
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    const getFilterProducts = async () => {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_URL}/get-products`,
-          {
-            params: {
-              category: category !== "All" ? category : "", // Only send if not "All"
-              price: price || "",
-              search: search || "",
-            },
-          }
-        );
-        const data = res.data.data;
+  // useEffect(() => {
+  //   const getFilterProducts = async () => {
+  //     try {
+  //       const res = await axios.get(
+  //         `${import.meta.env.VITE_API_URL}/get-products`,
+  //         {
+  //           params: {
+  //             category: category !== "All" ? category : "", // Only send if not "All"
+  //             price: price || "",
+  //             search: search || "",
+  //           },
+  //         }
+  //       );
+  //       const data = res.data.data;
 
-        // Filter unique products by name
-        const uniqueByName = [];
-        const nameSet = new Set();
-        for (const product of data) {
-          if (!nameSet.has(product.name)) {
-            nameSet.add(product.name);
-            uniqueByName.push(product);
-          }
-        }
+  //       // Filter unique products by name
+  //       const uniqueByName = [];
+  //       const nameSet = new Set();
+  //       for (const product of data) {
+  //         if (!nameSet.has(product.name)) {
+  //           nameSet.add(product.name);
+  //           uniqueByName.push(product);
+  //         }
+  //       }
 
-        dispatch(setProducts(uniqueByName));
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      }
-    };
+  //       dispatch(setProducts(uniqueByName));
+  //     } catch (err) {
+  //       console.error("Error fetching products:", err);
+  //     }
+  //   };
 
-    getFilterProducts();
-  }, [category, price, search, dispatch]);
+  //   getFilterProducts();
+  // }, [category, price, search, dispatch]);
 
   return (
     <div className="w-[93vw] flex flex-col sm:flex-row justify-between items-center mx-auto my-10 gap-3 sm:gap-0">

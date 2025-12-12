@@ -1,90 +1,74 @@
 const mongoose = require("mongoose");
 const Review = require("./Review");
 
+const variantSchema = new mongoose.Schema({
+  color: { type: String },
+  size: { type: String },
+  stock: { type: Number, default: 0 },
+  price: { type: Number },
+  images: [{ url: String, id: String }]
+}, { _id: true });
+
 const productSchema = new mongoose.Schema(
   {
-    name: {
+    // SIMPLE or VARIANT PRODUCT
+    productType: {
       type: String,
-      required: true,
+      enum: ["simple", "variant"],
+      default: "simple"
     },
-    price: {
-      type: Number,
-      required: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    stock: {
-      type: Number,
-      required: true,
-    },
-    variants: [
-      {
-        color: { type: String, required: true },
-        images: [
-          {
-            url: String,
-            id: String,
-          },
-        ],
-      },
-    ],
 
-    rating: {
-      type: Number,
-      default: 5,
-    },
-    reviews: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Review",
-      },
-    ],
-    colors: {
-      type: Array,
-      required: false,
-    },
+    name: { type: String, required: true },
+
+    // SIMPLE PRODUCT FIELDS
+    price: Number,
+    stock: Number,
+
+    // VARIANT PRODUCT FIELDS (clothes only)
+    variants: [variantSchema],
+
+    description: { type: String, required: true },
+
+    // SIMPLE PRODUCT IMAGES
+    images: [{ url: String, id: String }],
+
+    colors: { type: [String], default: [] },
+
     sizes: {
       type: [String],
       enum: ["XS", "S", "M", "L", "XL", "XXL"],
-      required: true,
+      required: false
     },
-    blacklisted: {
-      type: Boolean,
-      default: false,
+
+    rating: { type: Number, default: 5 },
+
+    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
+
+    blacklisted: { type: Boolean, default: false },
+
+    // YOUR CATEGORY SYSTEM
+  category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true
     },
-    category: {
-      type: String,
-      enum: ["All Category", "Men", "Women", "Kid", "Men & Women"],
-      required: true,
-    },
+
     discount: {
-      type: Number, // percentage
+      type: Number,
       default: 0,
       min: 0,
-      max: 100,
+      max: 100
     },
-    offerTitle: {
-      type: String,
-      default: null,
-    },
-    offerDescription: {
-      type: String,
-      default: null,
-    },
-    offerValidFrom: {
-      type: Date,
-      default: null,
-    },
-    offerValidTill: {
-      type: Date,
-      default: null,
-    },
+
+    offerTitle: String,
+    offerDescription: String,
+    offerValidFrom: Date,
+    offerValidTill: Date
   },
   { timestamps: true }
 );
 
+// Rating Calculation
 productSchema.methods.calculateRating = async function () {
   const reviews = await Review.find({ productId: this._id });
   if (reviews.length > 0) {
@@ -95,30 +79,21 @@ productSchema.methods.calculateRating = async function () {
   }
   await this.save();
 };
-// Check if offer is active based on current date
+
+// Offer Active Check
 productSchema.methods.isOfferActive = function () {
   if (!this.offerValidFrom || !this.offerValidTill) return false;
   const now = new Date();
   return now >= this.offerValidFrom && now <= this.offerValidTill;
 };
 
-// Get discounted price if offer is active
+// Discount Price
 productSchema.methods.getDiscountedPrice = function () {
-  let finalPrice = this.price;
-
-  // Apply discount only if offer is active
-  if (
-    this.isOfferActive &&
-    typeof this.isOfferActive === "function" &&
-    this.discount > 0
-  ) {
-    finalPrice = this.price * (1 - this.discount / 100);
+  const originalPrice = this.price;
+  if (this.discount > 0 && this.isOfferActive()) {
+    return Math.round(originalPrice * (1 - this.discount / 100));
   }
-
-  // Round to nearest integer (0.5 or more rounds up)
-  return Math.round(finalPrice);
+  return originalPrice;
 };
 
-const Product = mongoose.model("Product", productSchema);
-
-module.exports = Product;
+module.exports = mongoose.model("Product", productSchema);

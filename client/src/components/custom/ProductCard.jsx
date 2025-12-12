@@ -1,38 +1,69 @@
-import React from "react";
+import React, { useState } from "react";
 import { starsGenerator } from "@/constants/helper";
 import { toast } from "@/hooks/use-toast";
-import { addToCart } from "@/redux/slices/cartSlice";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import useCartActions from "@/hooks/useCartActions";
+import { Heart } from "lucide-react";
+
 const ProductCard = ({
   _id,
   name = "Product Title",
   price = 2000,
   rating = 4,
-  image = null, // default null
+  image = null,
   discountedPrice = price,
   discount = 0,
   offerValidTill,
-  variants = [], // add variants prop
+  variants = [],
 }) => {
   const slug = name.split(" ").join("-");
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { addToCart } = useCartActions();
 
-  const now = new Date();
-  const isOfferActive = offerValidTill
-    ? new Date(offerValidTill) >= now && discount > 0
-    : false;
-  const displayPrice = isOfferActive ? discountedPrice : price;
-  const displayImage =
+  const [wishlisted, setWishlisted] = useState(false);
+  const [bursts, setBursts] = useState([]);
+
+  const createBurst = () => {
+    const items = Array.from({ length: 6 }).map(() => ({
+      id: Math.random(),
+      tx: (Math.random() - 0.5) * 35,
+      ty: (Math.random() - 0.5) * 35,
+    }));
+    setBursts(items);
+    setTimeout(() => setBursts([]), 800);
+  };
+
+  const toggleWishlist = (e) => {
+    e.preventDefault();
+    setWishlisted(!wishlisted);
+
+    if (!wishlisted) createBurst();
+
+    toast({
+      title: !wishlisted ? "Added to Wishlist ❤️" : "Removed from Wishlist",
+    });
+  };
+
+  const optimizeImg = (url) =>
+    url?.replace("/upload/", "/upload/f_auto,q_auto,w_400/");
+
+  const rawImage =
     image?.url ||
-    (variants.length > 0 && variants[0].images?.[0]?.url) ||
-    "https://images.pexels.com/photos/3801990/pexels-photo-3801990.jpeg?auto=compress&cs=tinysrgb&w=600";
-  
-    const handleAddToCart = (e) => {
+    variants[0]?.images?.[0]?.url ||
+    "https://images.pexels.com/photos/3801990/pexels-photo-3801990.jpeg";
+
+  const displayImage = optimizeImg(rawImage);
+
+  const now = new Date();
+  const isOfferActive = discount > 0 && offerValidTill
+    ? new Date(offerValidTill) >= now
+    : false;
+
+  const displayPrice = isOfferActive ? discountedPrice : price;
+
+  const handleAddToCart = (e) => {
     e.preventDefault();
 
     if (!isAuthenticated) {
@@ -48,98 +79,142 @@ const ProductCard = ({
       productId: _id,
       quantity: 1,
       price: displayPrice,
-      color: variants?.[0]?.color || "Default", // adjust logic if multiple colors
-      size: "", // optional, you can add size selection later
+      color: variants?.[0]?.color || "Default",
+      size: "",
       toast,
     });
   };
 
   return (
-    <div className="relative group border rounded-2xl overflow-hidden shadow-md transform transition-transform duration-300 hover:scale-[1.02] bg-white dark:bg-zinc-900">
+    <div
+      className="
+      relative border rounded-xl overflow-hidden shadow-md 
+      bg-white dark:bg-zinc-900 
+      transition-all duration-300
+      hover:shadow-lg hover:-translate-y-1
+    "
+    >
       <Link to={`/product/${slug}`}>
-        {/* Product Image: fixed height for all screen sizes */}
-        <div className="w-full h-56 lg:h-80 overflow-hidden">
-          <img src={displayImage} alt={name} className="object-cover w-full h-full" />
+        
+        {/* ❤️ WISHLIST BUTTON */}
+        <button
+          onClick={toggleWishlist}
+          className="
+            absolute top-2 right-2 z-20 p-1.5 rounded-full
+            bg-white dark:bg-zinc-800 shadow
+            hover:shadow-md transition-all
+          "
+        >
+          <Heart
+            size={18}
+            className={`
+              transition-all duration-300
+              ${wishlisted ? "fill-red-500 text-red-500 scale-110" : "text-gray-500"}
+            `}
+          />
+
+          {/* BURST HEARTS */}
+          <div className="absolute inset-0 pointer-events-none">
+            {bursts.map((b) => (
+              <span
+                key={b.id}
+                className="
+                  absolute text-[9px] 
+                  opacity-0
+                  animate-[burst_0.8s_ease-out_forwards]
+                "
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  transform: `translate(-50%, -50%)`,
+                  "--tw-translate-x": `${b.tx}px`,
+                  "--tw-translate-y": `${b.ty}px`,
+                }}
+              >
+                ❤️
+              </span>
+            ))}
+          </div>
+
+          {/* INLINE KEYFRAMES */}
+          <style>
+            {`
+              @keyframes burst {
+                0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(var(--tw-translate-x), var(--tw-translate-y)) scale(0.6); }
+              }
+            `}
+          </style>
+        </button>
+
+        {/* IMAGE — COMPACT HEIGHT */}
+        <div className="w-full h-44 lg:h-56 overflow-hidden bg-gray-100">
+          <img
+            loading="lazy"
+            src={displayImage}
+            alt={name}
+            className="
+              w-full h-full object-cover 
+              transition-transform duration-500
+              group-hover:scale-105
+            "
+          />
         </div>
 
-        {/* Product Info for small screens */}
-        <div className="p-3 lg:hidden">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+        {/* CONTENT — COMPACT BEAUTIFUL */}
+        <div className="p-3 space-y-1.5">
+          
+          <h3 className="text-xs font-semibold text-gray-900 dark:text-white line-clamp-1">
             {name}
           </h3>
 
-          {/* Rating */}
-          <div className="flex items-center mt-1">
-            <div className="flex text-xs">{starsGenerator(rating)}</div>
-            <span className="text-xs text-gray-500 ml-1">
+          {/* ⭐ Rating */}
+          <div className="flex items-center gap-1">
+            <div className="flex text-yellow-400 text-[11px]">
+              {starsGenerator(rating)}
+            </div>
+            <span className="text-[10px] text-gray-500">
               ({rating.toFixed(1)})
             </span>
           </div>
 
-          {/* Price */}
-          <div className="mt-2 flex items-baseline gap-1">
-            {isOfferActive && discount > 0 && (
-              <span className="text-xs text-gray-400 line-through">
+          {/* PRICE ROW */}
+          <div className="flex items-center gap-2">
+            {isOfferActive && (
+              <span className="text-[10px] text-gray-400 line-through">
                 ₹{price.toFixed(2)}
               </span>
             )}
-            <span className="text-lg font-bold text-gray-900 dark:text-yellow-400">
-              ₹{(discountedPrice || price).toFixed(2)}
-            </span>
-          </div>
 
-          {/* Discount / No Discount Badge */}
-          {isOfferActive ? (
-            <span className="inline-block mt-1 bg-yellow-300 text-yellow-900 text-xs px-1.5 py-0.5 rounded-full">
-              {discount}% OFF
-            </span>
-          ) : (
-            <span className="inline-block mt-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-              Non-Discount Price
-            </span>
-          )}
-
-          {/* Add to Cart Button */}
-          <button
-            className="mt-2 w-full py-1.5 bg-yellow-500 text-gray-900 text-sm font-medium rounded-md hover:bg-yellow-600 transition-colors"
-            onClick={handleAddToCart}
-          >
-            Add to Cart
-          </button>
-        </div>
-
-        {/* Hover info for large screens only */}
-        <div
-          className="
-        px-3 gap-1 py-2 absolute bg-white dark:bg-zinc-900 w-full bottom-0 
-        opacity-0 translate-y-[3rem]
-        lg:opacity-0 lg:translate-y-[3rem]
-        lg:group-hover:opacity-100 lg:group-hover:translate-y-0
-        transform transition-all ease-in-out duration-300
-        rounded-xl pointer-events-none lg:pointer-events-auto
-        hidden lg:grid
-        max-h-screen overflow-hidden
-      "
-          style={{ maxHeight: "120px" }} // optional inline style for max height
-        >
-          <h2 className="text-lg font-semibold">{name}</h2>
-
-          <div className="flex justify-between items-center">
-            <div className="flex">{starsGenerator(rating)}</div>
-            <span className="text-sm font-medium">
+            <span className="text-[15px] font-bold text-gray-900 dark:text-yellow-400">
               ₹{displayPrice.toFixed(2)}
             </span>
           </div>
 
-          {isOfferActive && (
-            <span className=" lg:w-16 inline-block mt-1 bg-yellow-300 text-yellow-900 text-xs px-1.5 py-0.5 rounded-full">
+          {/* DISCOUNT TAG */}
+          {isOfferActive ? (
+            <span className="inline-block bg-yellow-300 text-yellow-900 text-[10px] px-1.5 py-[2px] rounded-full font-medium">
               {discount}% OFF
+            </span>
+          ) : (
+            <span className="inline-block bg-red-500 text-white text-[10px] px-1.5 py-[2px] rounded-full">
+              No Discount
             </span>
           )}
 
-          <div className="text-sm text-primary underline mt-1">
-            View Product
-          </div>
+          {/* ADD TO CART — SLIM, PREMIUM */}
+          <button
+            onClick={handleAddToCart}
+            className="
+              mt-2 w-full py-1.5 text-[12px] font-semibold rounded-md
+              bg-yellow-500 text-gray-900 
+              hover:bg-yellow-600 
+              transition-all
+            "
+          >
+            Add to Cart
+          </button>
+
         </div>
       </Link>
     </div>

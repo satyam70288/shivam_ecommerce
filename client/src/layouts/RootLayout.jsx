@@ -1,13 +1,16 @@
-import Navbar from "../components/custom/Navbar";
-import Footer from "../components/custom/Footer";
-import ScrollToTop from "../components/ScrollToTop";
+// layouts/RootLayout.jsx
+import Footer from "@/components/custom/Footer";
+import Header from "@/components/custom/Header";
+import Navbar from "@/components/custom/Navbar";
+import ScrollToTop from "@/components/ScrollToTop";
+import { Outlet } from "react-router-dom";
 
-const RootLayout = ({ children }) => {
+const RootLayout = () => {
   return (
     <>
-      <ScrollToTop />
+    <ScrollToTop />
       <Navbar />
-      <main>{children}</main>
+      <Outlet />
       <Footer />
     </>
   );

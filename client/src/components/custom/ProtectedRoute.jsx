@@ -1,26 +1,39 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Outlet } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
   const { pathname } = useLocation();
   const { isAuthenticated, role } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
 
-  if (isAuthenticated && role === "admin" && pathname === "/admin/login") {
-    return <Navigate to="/admin/dashboard" />;
+  const render = children || <Outlet />;  
+  // If children passed → use children
+  // If used as wrapper → use Outlet
+
+  // ============================
+  // ADMIN ROUTES
+  // ============================
+  if (pathname.startsWith("/admin")) {
+
+    if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
+
+    if (role !== "admin") return <Navigate to="/" replace />;
+
+    if (role === "admin" && pathname === "/admin/login") {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
   }
 
-  if (
-    isAuthenticated &&
-    role === "user" &&
-    (pathname.startsWith("/admin/dashboard") || pathname === "/admin/login")
-  ) {
-    return <Navigate to="/" />;
+  // ============================
+  // USER ROUTES
+  // ============================
+  if (!isAuthenticated && (pathname === "/orders" || pathname === "/account")) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (!isAuthenticated && pathname.startsWith("/admin/dashboard")) {
-    return <Navigate to="/" />;
+  if (pathname === "/checkout" && cartItems.length === 0) {
+    return <Navigate to="/" replace />;
   }
 
   if (
@@ -28,17 +41,10 @@ const ProtectedRoute = ({ children }) => {
     role === "user" &&
     (pathname === "/login" || pathname === "/signup")
   ) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" replace />;
   }
 
-  if (!isAuthenticated && pathname === "/orders") {
-    return <Navigate to="/login" />;
-  }
-
-  if (isAuthenticated && cartItems.length === 0 && pathname === "/checkout") {
-    return <Navigate to="/" />;
-  }
-  return children;
+  return render;
 };
 
 export default ProtectedRoute;

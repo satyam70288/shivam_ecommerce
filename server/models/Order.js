@@ -4,7 +4,15 @@ const orderSchema = new mongoose.Schema(
   {
     amount: { type: Number, required: true },
 
-    // Address object (Shiprocket requires structured fields)
+    // FINAL SHIPPING CHARGE from Shiprocket
+    shippingCharge: { type: Number, required: true },
+
+    // Courier Details (from Shiprocket)
+    courierName: { type: String, default: null },
+    awbCode: { type: String, default: null }, // airway bill number
+    estimatedDelivery: { type: String, default: null },
+
+    // Address
     address: {
       name: { type: String, required: true },
       email: { type: String, required: true },
@@ -16,21 +24,40 @@ const orderSchema = new mongoose.Schema(
       country: { type: String, default: "India" },
     },
 
-    paymentMode: { type: String, enum: ["Razorpay", "COD"], default: "Razorpay" },
+    paymentMode: {
+      type: String,
+      enum: ["Razorpay", "COD"],
+      default: "Razorpay",
+    },
     isPaid: { type: Boolean, default: false },
 
-    // Shiprocket fields
-    shiprocketId: { type: String, default: null },
+    // Shiprocket
+    shiprocketOrderId: { type: String, default: null },
     courierTrackingId: { type: String, default: null },
 
     products: [
       {
-        id: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
+
+        variantId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: false,
+        },
+
         name: { type: String, required: true },
-        price: { type: Number, required: true }, // price per product
+        price: { type: Number, required: true },
         quantity: { type: Number, required: true },
-        color: { type: String, required: true },
-        size: { type: String },
+
+        // for variant products
+        color: { type: String, required: false },
+        size: { type: String, required: false },
+
+        // per-product weight copied from Product model
+        weight: { type: Number, required: false },
       },
     ],
 
@@ -49,23 +76,25 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    // Cancel/Exchange/Return
     isCancelled: { type: Boolean, default: false },
-    cancelledAt: { type: Date, default: null },
-    cancelReason: { type: String, default: null },
+    cancelledAt: Date,
+    cancelReason: String,
 
     isExchanged: { type: Boolean, default: false },
-    exchangedAt: { type: Date, default: null },
-    exchangeReason: { type: String, default: null },
+    exchangedAt: Date,
+    exchangeReason: String,
 
     isReturned: { type: Boolean, default: false },
-    returnedAt: { type: Date, default: null },
-    returnReason: { type: String, default: null },
+    returnedAt: Date,
+    returnReason: String,
 
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-const Order = mongoose.model("Order", orderSchema);
-module.exports = Order;
+module.exports = mongoose.model("Order", orderSchema);

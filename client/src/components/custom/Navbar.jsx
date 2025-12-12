@@ -5,9 +5,10 @@ import CartDrawer from "./CartDrawer";
 import { User, Menu, ChevronLeft, X, Sparkles } from "lucide-react";
 import LogoutToggle from "./LogoutToggle";
 import { useDispatch, useSelector } from "react-redux";
-import swagiconDark from "@/assets/iconwhite.png";
+import swagiconDark from "../../assets/shivam_logo.png";
 import { setCart } from "@/redux/slices/cartSlice";
 import axios from "axios";
+import Navigation from "./Navigation";
 const Navbar = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,7 +27,7 @@ const Navbar = () => {
         const res = await axios.get(
           `${import.meta.env.VITE_API_URL}/cart/${user.id}`
         );
-        console.log(res, "uyfuyguhbjhb")
+        console.log(res, "uyfuyguhbjhb");
         if (res.data.success) {
           dispatch(setCart(res.data.cart)); // set cart in Redux
         }
@@ -39,7 +40,7 @@ const Navbar = () => {
   }, [user?.id, dispatch]);
 
   return (
-    <nav className="relative border-b dark:bg-zinc-900 bg-white px-4 sm:px-6 py-3 sm:py-4">
+    <><nav className="relative border-b dark:bg-zinc-900 bg-white px-4 sm:px-6 py-3 sm:py-4">
       {/* Top nav row */}
       <div className="flex justify-between items-center relative">
         {/* Left arrow */}
@@ -56,11 +57,20 @@ const Navbar = () => {
             to="/"
             className="flex items-center gap-2 hover:text-pink-500 transition-colors duration-300"
           >
-            <img
-              src={swagiconDark}
+            {/* <img
+             
               alt="Swag Icon Dark"
-              className="h-20 w-20 sm:h-24 sm:w-24 lg:h-36 lg:w-40 rounded-full"
-            />
+              className="object-cover"
+            /> */}
+            <div>
+              <Link to="/">
+                <img
+                  src={swagiconDark}
+                  alt="Logo"
+                  className="w-[140px] drop-shadow-sm hover:opacity-90 transition h-16"
+                />
+              </Link>
+            </div>
           </Link>
         </div>
 
@@ -94,22 +104,22 @@ const Navbar = () => {
       {/* Hamburger / Mobile toggle */}
 
       {/* Mobile floating menu */}
-  {mobileMenuOpen && (
-  <div
-    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end"
-    onClick={() => setMobileMenuOpen(false)} // ✅ tap overlay to close
-  >
-    <div
-      className="w-40 sm:w-44 bg-white/90 dark:bg-zinc-900/90 h-full shadow-xl px-4 py-6 flex flex-col gap-5 text-base text-black dark:text-white relative rounded-l-xl transform translate-x-0 transition-transform duration-300 ease-in-out"
-      onClick={(e) => e.stopPropagation()} // ✅ prevent close when clicking inside menu
-    >
-      {/* Close Button */}
-      <button
-        className="absolute top-4 right-4 text-black dark:text-white hover:rotate-90 transition-transform"
-        onClick={() => setMobileMenuOpen(false)}
-      >
-        <X className="w-6 h-6" />
-      </button>
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end"
+          onClick={() => setMobileMenuOpen(false)} // ✅ tap overlay to close
+        >
+          <div
+            className="w-40 sm:w-44 bg-white/90 dark:bg-zinc-900/90 h-full shadow-xl px-4 py-6 flex flex-col gap-5 text-base text-black dark:text-white relative rounded-l-xl transform translate-x-0 transition-transform duration-300 ease-in-out"
+            onClick={(e) => e.stopPropagation()} // ✅ prevent close when clicking inside menu
+          >
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 text-black dark:text-white hover:rotate-90 transition-transform"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <X className="w-6 h-6" />
+            </button>
 
             {/* Menu Items */}
             <div className="mt-12 grid grid-cols-1 gap-4  ">
@@ -191,7 +201,10 @@ const Navbar = () => {
           </div>
         </div>
       )}
+  
     </nav>
+        <Navigation/>
+    </>
   );
 };
 

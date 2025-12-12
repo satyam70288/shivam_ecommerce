@@ -3,41 +3,58 @@ import React from "react";
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
 
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-
   return (
-    <div className="flex items-center justify-center gap-2 mt-6">
+    <div className="flex items-center justify-center gap-2 mt-8">
+      {/* Previous */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-1 border rounded disabled:opacity-50"
+        className="
+          px-4 py-2 rounded-full border text-sm font-medium
+          bg-background text-foreground
+          hover:bg-muted transition
+          disabled:opacity-40 disabled:cursor-not-allowed
+        "
       >
-        Prev
+        ← Prev
       </button>
 
-      {pageNumbers.map((page) => (
-        <button
-          key={page}
-          onClick={() => onPageChange(page)}
-          className={`px-3 py-1 rounded border ${
-            page === currentPage
-              ? "bg-black text-white"
-              : "hover:bg-gray-100"
-          }`}
-        >
-          {page}
-        </button>
-      ))}
+      {/* Page Numbers */}
+      {Array.from({ length: totalPages }).map((_, i) => {
+        const page = i + 1;
+        const isActive = page === currentPage;
 
+        return (
+          <button
+            key={page}
+            onClick={() => onPageChange(page)}
+            className={`
+              w-10 h-10 rounded-full text-sm font-medium
+              transition
+              ${
+                isActive
+                  ? "bg-foreground text-background shadow-md scale-105"
+                  : "bg-background border text-foreground hover:bg-muted"
+              }
+            `}
+          >
+            {page}
+          </button>
+        );
+      })}
+
+      {/* Next */}
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-1 border rounded disabled:opacity-50"
+        className="
+          px-4 py-2 rounded-full border text-sm font-medium
+          bg-background text-foreground
+          hover:bg-muted transition
+          disabled:opacity-40 disabled:cursor-not-allowed
+        "
       >
-        Next
+        Next →
       </button>
     </div>
   );

@@ -13,6 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import useCart from "@/hooks/useCart";
 import useCartActions from "@/hooks/useCartActions";
+import RelatedProducts from "./RelatedProducts ";
 const productStock = 5;
 
 const Product = () => {
@@ -123,6 +124,15 @@ const Product = () => {
   //   }
   // };
 
+const isVariant = product?.productType === "variant";
+
+const activeVariant = isVariant
+  ? product?.variants?.find((v) => v?.color === productColor)
+  : null;
+
+const images = isVariant
+  ? activeVariant?.images || []
+  : product?.images || [];
 
 const { addToCart } = useCartActions();
 
@@ -296,32 +306,30 @@ const handleAddToCart = () => {
         <div className="relative sm:w-[45%] w-full grid gap-3">
           {/* Main Image */}
           <img
-            src={
-              product?.variants?.find((v) => v.color === productColor)
-                ?.images?.[selectedImage]?.url || "/fallback.png"
-            }
-            alt="Selected product"
-            className="w-full lg:h-[35rem] rounded-xl object-center object-cover border dark:border-none"
-          />
+  src={images[selectedImage]?.url || "/fallback.png"}
+  alt="Product"
+  className="w-full lg:h-[35rem] rounded-xl object-cover border dark:border-none"
+/>
+
 
           {/* Scrollable Thumbnails */}
           <div className="flex overflow-x-auto gap-2 mt-2 scrollbar-hide">
-            {product?.variants
-              ?.find((v) => v.color === productColor)
-              ?.images?.map((img, index) => (
-                <img
-                  key={index}
-                  src={img?.url}
-                  alt={`Thumbnail ${index + 1}`}
-                  onClick={() => setSelectedImage(index)}
-                  className={`rounded-xl min-w-[5rem] h-20 object-cover cursor-pointer border transition-all duration-200 ${
-                    selectedImage === index
-                      ? "border-2 border-orange-400"
-                      : "border-gray-300"
-                  }`}
-                />
-              ))}
-          </div>
+  {images.map((img, idx) => (
+    <img
+      key={idx}
+      src={img?.url || "/fallback.png"}
+      className={`rounded-xl min-w-[5rem] h-20 object-cover cursor-pointer transition-all duration-200
+        ${
+          selectedImage === idx
+            ? "border-2 border-orange-500"
+            : "border border-gray-300"
+        }
+      `}
+      onClick={() => setSelectedImage(idx)}
+    />
+  ))}
+</div>
+
         </div>
 
         {/* RIGHT SIDE */}
@@ -497,6 +505,7 @@ const handleAddToCart = () => {
 
       {/* REVIEW SECTION */}
       <ReviewsComponent productId={product?._id} />
+      <RelatedProducts/>
     </div>
   );
 };

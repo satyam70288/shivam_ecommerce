@@ -32,35 +32,36 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 /* ========== SECURITY HEADERS ========== */
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "https://checkout.razorpay.com", // Razorpay script
-        ],
-        connectSrc: [
-          "'self'",
-          "https://api.razorpay.com",      // Razorpay API
-          "https://checkout.razorpay.com", // Razorpay checkout
-        ],
-        frameSrc: [
-          "'self'",
-          "https://checkout.razorpay.com", // Razorpay iframe
-        ],
-        imgSrc: [
-          "'self'",
-          "data:",
-          "https://*.razorpay.com",        // Razorpay images/logos
-        ],
-        styleSrc: ["'self'", "'unsafe-inline'"], // keep inline if frontend injects styles
-      },
-    },
-    crossOriginEmbedderPolicy: false,
-  })
-);
+// app.use(
+//   helmet({
+//     contentSecurityPolicy: {
+//       directives: {
+//         defaultSrc: ["'self'"],
+//         scriptSrc: [
+//           "'self'",
+//            "http://localhost:5173",
+//           "https://checkout.razorpay.com", // Razorpay script
+//         ],
+//         connectSrc: [
+//           "'self'",
+//           "https://api.razorpay.com",      // Razorpay API
+//           "https://checkout.razorpay.com", // Razorpay checkout
+//         ],
+//         frameSrc: [
+//           "'self'",
+//           "https://checkout.razorpay.com", // Razorpay iframe
+//         ],
+//         imgSrc: [
+//           "'self'",
+//           "data:",
+//           "https://*.razorpay.com",        // Razorpay images/logos
+//         ],
+//         styleSrc: ["'self'", "'unsafe-inline'"], // keep inline if frontend injects styles
+//       },
+//     },
+//     crossOriginEmbedderPolicy: false,
+//   })
+// );
 
 
 /* ========== SANITIZATION ========== */
