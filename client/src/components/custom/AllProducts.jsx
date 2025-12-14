@@ -60,7 +60,8 @@ const AllProducts = () => {
   };
 
   return (
-    <div className="mx-auto px-4 sm:px-8 pb-16">
+   <div className="w-full px-4 sm:px-6 pb-16">
+
       <h1 className="text-3xl font-bold mb-8">Products</h1>
 
       {/* Filters */}
@@ -78,7 +79,9 @@ const AllProducts = () => {
       {products.length === 0 ? (
         <p className="text-center text-gray-500 mt-8">No products found.</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-6">
+       <div className="grid gap-6 mt-6 grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+
+
           {products.map((p) => (
             <ProductCard
               key={p._id}

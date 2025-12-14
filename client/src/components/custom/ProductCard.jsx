@@ -57,9 +57,8 @@ const ProductCard = ({
   const displayImage = optimizeImg(rawImage);
 
   const now = new Date();
-  const isOfferActive = discount > 0 && offerValidTill
-    ? new Date(offerValidTill) >= now
-    : false;
+  const isOfferActive =
+    discount > 0 && offerValidTill ? new Date(offerValidTill) >= now : false;
 
   const displayPrice = isOfferActive ? discountedPrice : price;
 
@@ -88,14 +87,15 @@ const ProductCard = ({
   return (
     <div
       className="
-      relative border rounded-xl overflow-hidden shadow-md 
-      bg-white dark:bg-zinc-900 
-      transition-all duration-300
-      hover:shadow-lg hover:-translate-y-1
-    "
+    group relative rounded-xl overflow-hidden
+    bg-white dark:bg-zinc-900
+    border border-gray-200 dark:border-zinc-800
+    shadow-sm hover:shadow-lg
+    transition-all duration-300 ease-out
+    hover:-translate-y-1
+  "
     >
       <Link to={`/product/${slug}`}>
-        
         {/* ❤️ WISHLIST BUTTON */}
         <button
           onClick={toggleWishlist}
@@ -109,7 +109,11 @@ const ProductCard = ({
             size={18}
             className={`
               transition-all duration-300
-              ${wishlisted ? "fill-red-500 text-red-500 scale-110" : "text-gray-500"}
+              ${
+                wishlisted
+                  ? "fill-red-500 text-red-500 scale-110"
+                  : "text-gray-500"
+              }
             `}
           />
 
@@ -146,7 +150,20 @@ const ProductCard = ({
             `}
           </style>
         </button>
-
+        {isOfferActive && (
+          <div
+            className="
+        absolute top-3 left-3 z-10
+        px-2 py-1 rounded-full
+        bg-gradient-to-r from-red-500 to-orange-500
+        shadow-lg
+      "
+          >
+            <span className="text-[10px] font-bold text-white tracking-wider">
+              {discount}% OFF
+            </span>
+          </div>
+        )}
         {/* IMAGE — COMPACT HEIGHT */}
         <div className="w-full h-44 lg:h-56 overflow-hidden bg-gray-100">
           <img
@@ -162,60 +179,74 @@ const ProductCard = ({
         </div>
 
         {/* CONTENT — COMPACT BEAUTIFUL */}
-        <div className="p-3 space-y-1.5">
-          
-          <h3 className="text-xs font-semibold text-gray-900 dark:text-white line-clamp-1">
-            {name}
-          </h3>
+        <div className="p-4 space-y-2.5 bg-white dark:bg-zinc-900 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
+  
+  {/* PRODUCT NAME */}
+  <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug">
+    {name}
+  </h3>
 
-          {/* ⭐ Rating */}
-          <div className="flex items-center gap-1">
-            <div className="flex text-yellow-400 text-[11px]">
-              {starsGenerator(rating)}
-            </div>
-            <span className="text-[10px] text-gray-500">
-              ({rating.toFixed(1)})
-            </span>
-          </div>
+  {/* ⭐ RATING */}
+  <div className="flex items-center gap-1">
+    <div className="flex text-yellow-400 text-[12px]">
+      {starsGenerator(rating)}
+    </div>
+    <span className="text-[11px] text-gray-500">
+      {rating.toFixed(1)}
+    </span>
+  </div>
 
-          {/* PRICE ROW */}
-          <div className="flex items-center gap-2">
-            {isOfferActive && (
-              <span className="text-[10px] text-gray-400 line-through">
-                ₹{price.toFixed(2)}
-              </span>
-            )}
+  {/* PRICE */}
+  <div className="flex items-center justify-between">
+  {/* PRICE BLOCK */}
+  <div className="flex items-baseline gap-2">
+    <span className="text-lg font-bold text-gray-900 dark:text-yellow-400">
+      ₹{displayPrice.toFixed(2)}
+    </span>
 
-            <span className="text-[15px] font-bold text-gray-900 dark:text-yellow-400">
-              ₹{displayPrice.toFixed(2)}
-            </span>
-          </div>
+    {isOfferActive && (
+      <span className="text-xs text-gray-400 line-through">
+        ₹{price.toFixed(2)}
+      </span>
+    )}
+  </div>
 
-          {/* DISCOUNT TAG */}
-          {isOfferActive ? (
-            <span className="inline-block bg-yellow-300 text-yellow-900 text-[10px] px-1.5 py-[2px] rounded-full font-medium">
-              {discount}% OFF
-            </span>
-          ) : (
-            <span className="inline-block bg-red-500 text-white text-[10px] px-1.5 py-[2px] rounded-full">
-              No Discount
-            </span>
-          )}
+  {/* DISCOUNT BADGE */}
+  {isOfferActive && (
+    <span className="
+      bg-gradient-to-r from-green-400 to-yellow-500
+      text-gray-900 text-[11px]
+      px-2 py-[3px]
+      rounded-full font-bold
+      shadow-sm
+    ">
+      {discount}% OFF
+    </span>
+  )}
+</div>
 
-          {/* ADD TO CART — SLIM, PREMIUM */}
-          <button
-            onClick={handleAddToCart}
-            className="
-              mt-2 w-full py-1.5 text-[12px] font-semibold rounded-md
-              bg-yellow-500 text-gray-900 
-              hover:bg-yellow-600 
-              transition-all
-            "
-          >
-            Add to Cart
-          </button>
 
-        </div>
+  {/* DISCOUNT BADGE */}
+  
+
+  {/* CTA */}
+  <button
+  onClick={handleAddToCart}
+  className="
+    mt-3 w-full py-2.5 text-sm font-bold rounded-xl
+    text-gray-900
+    bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600
+    hover:from-yellow-500 hover:via-yellow-600 hover:to-yellow-700
+    shadow-md hover:shadow-lg
+    active:scale-[0.97]
+    transition-all duration-200
+  "
+>
+  Add to Cart
+</button>
+
+</div>
+
       </Link>
     </div>
   );

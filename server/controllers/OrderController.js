@@ -8,23 +8,41 @@ const { createShipment } = require("./shiprocketController"); // Import your Shi
 
 const axios = require("axios");
 const Cart = require("../models/Cart");
+const address = require("../models/address");
 const getOrdersByUserId = async (req, res) => {
   const userId = req.id;
 
   try {
+    const orders = await Order.find({ userId })
+      .populate({
+        path: "products.productId",
+        select: "images",
+      })
+      .lean();
 
-    const orders = await Order.find({ userId }).populate({
-      path: "products.id",
-      select: "name price category variants", // ye sahi hai
+    const simplifiedOrders = orders.map(order => ({
+      orderId: order._id,
+      date: order.createdAt,
+      status: order.status,
+      amount: order.amount,
+      products: order.products.map(p => ({
+        productId: p.productId?._id,
+        name: p.name,           // snapshot
+        price: p.price,         // snapshot
+        quantity: p.quantity,
+        image: p.productId?.images?.[0]?.url || null,
+      })),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: simplifiedOrders,
     });
-    if (!orders)
-      return res
-        .status(500)
-        .json({ success: false, message: "No orders to show" });
-
-    return res.status(200).json({ success: true, data: orders });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -170,8 +188,8 @@ const getMetrics = async (req, res) => {
 
     const usersGrowth = lastMonthUsers.length
       ? ((thisMonthUsers.length - lastMonthUsers.length) /
-        lastMonthUsers.length) *
-      100
+          lastMonthUsers.length) *
+        100
       : 0;
 
     // Active now (last hour) vs previous day
@@ -246,63 +264,186 @@ const getMetrics = async (req, res) => {
   }
 };
 
-const createCODOrder = async (req, res) => {
-  const userId = req.id;
-  console.log("Creating COD Order for User ID:", req.body.products);
-
+const createOrder = async (req, res) => {
   try {
-    const { amount, address, products } = req.body;
+    console.log("inside")
+    const userId = req.id;
+console.log( req.body);
+    const {
+      paymentMode,        // "COD" | "ONLINE"
+      addressId,
+      buyNow = false,
+      productId,
+      qty = 1,
+      color,
+      size,
+    } = req.body;
 
-    if (!amount || !address || !products || products.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required" });
+    if (!paymentMode || !addressId) {
+      return res.status(400).json({ message: "Missing fields" });
     }
 
-    // ✅ Update product stock and user's purchasedProducts
-    for (const product of products) {
-      await Product.findByIdAndUpdate(
-        { _id: product.id },
-        { $inc: { stock: -product.quantity } }
-      );
-
-      await User.findByIdAndUpdate(
-        { _id: userId },
-        { $push: { purchasedProducts: product.id } }
-      );
+    /* =========================
+       FETCH ADDRESS (SNAPSHOT)
+    ========================= */
+    const addressDoc = await address.findById(addressId);
+    if (!addressDoc) {
+      return res.status(400).json({ message: "Invalid address" });
     }
 
-    // ✅ Create COD Order
-    const order = await Order.create({
-      amount,
-      address,
-      paymentMode: "COD",
-      isPaid: false,
-      products,
-      userId,
-    });
-    const purchasedProductIds = products.map((p) => p.id);
+    const shippingAddress = {
+      name: addressDoc.name,
+      phone: addressDoc.phone,
+      email: addressDoc.email,
+      address_line1: addressDoc.address_line1,
+      address_line2: addressDoc.address_line2,
+      city: addressDoc.city,
+      state: addressDoc.state,
+      pincode: addressDoc.pincode,
+      country: addressDoc.country,
+    };
 
-    await Cart.updateOne(
-      { user: userId },
-      { $pull: { products: { product: { $in: purchasedProductIds } } } }
-    );
-    // ✅ Immediately create shipment in Shiprocket
-    try {
-      await createShipment(order._id);
-      console.log("Shipment created in Shiprocket for order:", order._id);
-    } catch (shipErr) {
-      console.error("Shiprocket shipment error:", shipErr.message);
+    let items = [];
+    let totalAmount = 0;
+
+    /* =========================
+       CASE 1️⃣ BUY NOW
+    ========================= */
+    if (buyNow) {
+      if (!productId) {
+        return res.status(400).json({ message: "Product ID required" });
+      }
+
+      const product = await Product.findById(productId);
+      if (!product || product.blacklisted) {
+        return res.status(400).json({ message: "Product unavailable" });
+      }
+
+      if (product.stock < qty) {
+        return res.status(400).json({
+          message: `${product.name} out of stock`,
+        });
+      }
+
+      const price = product.getDiscountedPrice();
+      totalAmount = price * qty;
+
+      items.push({
+        productId: product._id,
+        name: product.name,
+        price,
+        quantity: qty,
+        color,
+        size,
+      });
     }
 
-    return res.status(201).json({
-      success: true,
-      message: "COD order placed successfully and shipment created",
-      data: order,
-    });
+    /* =========================
+       CASE 2️⃣ CART CHECKOUT
+    ========================= */
+    else {
+      const cart = await Cart.findOne({ user: userId }).populate("products.product");
+
+      if (!cart || cart.products.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+
+      for (const item of cart.products) {
+        const product = item.product;
+
+        if (!product || product.blacklisted) {
+          return res.status(400).json({ message: "Product unavailable" });
+        }
+
+        if (product.stock < item.quantity) {
+          return res.status(400).json({
+            message: `${product.name} out of stock`,
+          });
+        }
+
+        const price = product.getDiscountedPrice();
+        totalAmount += price * item.quantity;
+
+        items.push({
+          productId: product._id,
+          name: product.name,
+          price,
+          quantity: item.quantity,
+          color: item.color,
+          size: item.size,
+        });
+      }
+    }
+
+    /* =========================
+       COD ORDER
+    ========================= */
+    if (paymentMode === "COD") {
+      // reduce stock immediately
+      for (const item of items) {
+        await Product.findByIdAndUpdate(item.productId, {
+          $inc: { stock: -item.quantity },
+        });
+      }
+
+      const order = await Order.create({
+        userId,
+        amount: totalAmount,
+        shippingCharge: 0,
+        shippingAddress,
+        paymentMode: "COD",
+        isPaid: false,
+        status: "confirmed",
+        products: items,
+      });
+
+      if (!buyNow) {
+        await Cart.deleteOne({ user: userId });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "COD order placed",
+        orderId: order._id,
+      });
+    }
+
+    /* =========================
+       ONLINE ORDER (RAZORPAY)
+    ========================= */
+    if (paymentMode === "ONLINE") {
+      const razorpayOrder = await razorpay.orders.create({
+        amount: totalAmount * 100,
+        currency: "INR",
+        receipt: `order_${Date.now()}`,
+      });
+
+      const order = await Order.create({
+        userId,
+        amount: totalAmount,
+        shippingCharge: 0,
+        shippingAddress,
+        paymentMode: "Razorpay",
+        isPaid: false,
+        status: "pending",
+        razorpay: {
+          orderId: razorpayOrder.id,
+        },
+        products: items,
+      });
+
+      return res.status(201).json({
+        success: true,
+        orderId: order._id,
+        razorpayOrder,
+      });
+    }
+
+    return res.status(400).json({ message: "Invalid payment mode" });
+
   } catch (error) {
-    console.error("COD Order Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Create Order Error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -379,7 +520,7 @@ module.exports = {
   getAllOrders,
   updateOrderStatus,
   getMetrics,
-  createCODOrder,
+  createOrder,
   cancelOrder,
   exchangeOrder,
   trackShipment,

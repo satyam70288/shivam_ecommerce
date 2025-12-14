@@ -4,6 +4,8 @@ const cloudinary = require("../utils/cloudinary");
 const Category = require("../models/Category");
 const { default: mongoose } = require("mongoose");
 
+
+
 const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(401).json({ success: false, message: "Access denied" });
@@ -22,75 +24,133 @@ const createProduct = async (req, res) => {
       offerDescription,
       offerValidFrom,
       offerValidTill,
+
+      // NEW FIELDS
+      material,
+      brand,
+      ageGroup,
       colors,
       sizes,
-      variants,
+      tags,
+      keywords,
+      isFeatured,
+      isNewArrival,
+      isBestSeller,
     } = req.body;
 
-    if (!name || !description || !category || !productType) {
+    // ----------------------------------------------------
+    // REQUIRED VALIDATION
+    // ----------------------------------------------------
+    if (!name || !description || !category) {
       return res
         .status(400)
         .json({ success: false, message: "Missing required fields" });
     }
 
-    // ------------------------------
-    // PRODUCT TYPE: SIMPLE
-    // ------------------------------
-    if (productType === "simple") {
-      if (!price || !stock) {
-        return res.status(400).json({
-          success: false,
-          message: "Price and stock are required for simple products",
-        });
-      }
-      console.log(req.files, "filll");
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "At least one product image required",
-        });
-      }
-
-      // Upload simple images
-      const uploadedImages = [];
-
-      for (const file of req.files) {
-        const result = await cloudinaryUploadBuffer(file.buffer);
-        uploadedImages.push({ url: result.secure_url, id: result.public_id });
-      }
-
-      const product = new Product({
-        productType,
-        name,
-        description,
-        category,
-        price,
-        stock,
-        images: uploadedImages,
-        discount: discount || 0,
-        offerTitle,
-        offerDescription,
-        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
-        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
-      });
-
-      await product.save();
-
-      return res.status(201).json({
-        success: true,
-        message: "Simple product created",
-        data: product,
+    if (!productType || productType !== "simple") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or missing product type",
       });
     }
 
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid product type" });
+    if (!price || !stock) {
+      return res.status(400).json({
+        success: false,
+        message: "Price & stock are required for simple products",
+      });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one product image is required",
+      });
+    }
+
+    // ----------------------------------------------------
+    // UPLOAD SIMPLE PRODUCT IMAGES
+    // ----------------------------------------------------
+    const uploadedImages = [];
+
+    for (const file of req.files) {
+      const uploadRes = await cloudinaryUploadBuffer(file.buffer);
+      uploadedImages.push({
+        url: uploadRes.secure_url,
+        id: uploadRes.public_id,
+      });
+    }
+
+    // ----------------------------------------------------
+    // PARSE JSON FIELDS (IF SENT AS STRINGS)
+    // ----------------------------------------------------
+    const parsedAgeGroup = ageGroup ? JSON.parse(ageGroup) : [];
+    const parsedColors = colors ? JSON.parse(colors) : [];
+    const parsedSizes = sizes ? JSON.parse(sizes) : [];
+
+    const parsedTags = tags ? JSON.parse(tags) : [];
+    const parsedKeywords = keywords ? JSON.parse(keywords) : [];
+
+    // ----------------------------------------------------
+    // CREATE PRODUCT DOCUMENT
+    // ----------------------------------------------------
+   const product = new Product({
+  productType: "simple",
+
+  // Basic
+  name,
+  description,
+  category,
+
+  // Simple fields
+  price,
+  stock,
+
+  images: uploadedImages,
+
+  // NEW FIELDS
+  material: material || "",
+  brand: brand || "",
+
+  ageGroup: parsedAgeGroup || [],
+  colors: parsedColors || [],
+  sizes: parsedSizes || [],
+
+  tags: parsedTags || [],
+  keywords: parsedKeywords || [],
+
+  isFeatured: isFeatured === "true",
+  isNewArrival: isNewArrival === "true",
+  isBestSeller: isBestSeller === "true",
+
+  // Offer
+  discount: discount || 0,
+  offerTitle,
+  offerDescription,
+  offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
+  offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+});
+
+
+    await product.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      data: product,
+    });
   } catch (error) {
-    console.error("PRODUCT ERROR:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("PRODUCT CREATE ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while creating product",
+      error: error.message,
+    });
   }
 };
+
+
+
 
 const getProductsforadmin = async (req, res) => {
   console.log("inside");
@@ -475,11 +535,10 @@ const getProductsByCategory = async (req, res) => {
 
     let categoryDoc;
 
-    // Case 1: Category is ObjectId
+    // Check: ID or slug
     if (mongoose.Types.ObjectId.isValid(categoryParam)) {
       categoryDoc = await Category.findById(categoryParam);
     } else {
-      // Case 2: Category is slug
       categoryDoc = await Category.findOne({ slug: categoryParam });
     }
 
@@ -490,8 +549,64 @@ const getProductsByCategory = async (req, res) => {
       });
     }
 
+    /* ------------------------------
+       STEP 1: Prepare Filters
+    ------------------------------ */
+    const query = { category: categoryDoc._id };
+
+    // PRICE RANGE FILTER
+    if (req.query.priceRange) {
+      const ranges = req.query.priceRange.split(",");
+
+      const priceConditions = ranges.map((r) => {
+        const [min, max] = r.split("-").map(Number);
+        return max
+          ? { price: { $gte: min, $lte: max } }
+          : { price: { $gte: min } }; // 2000+ case
+      });
+
+      query.$or = priceConditions;
+    }
+
+    // DISCOUNT FILTER
+    if (req.query.discount) {
+      query.discount = { $gte: Number(req.query.discount) };
+    }
+
+    // RATINGS FILTER
+    if (req.query.rating) {
+      query.rating = { $gte: Number(req.query.rating) };
+    }
+
+    // COLOR FILTER
+    if (req.query.color) {
+      query.colors = { $in: req.query.color.split(",") };
+    }
+
+    // AGE GROUP FILTER
+    if (req.query.ageGroup) {
+      query.ageGroup = { $in: req.query.ageGroup.split(",") };
+    }
+
+    // MATERIAL FILTER
+    if (req.query.material) {
+      query.material = { $in: req.query.material.split(",") };
+    }
+
+    // AVAILABILITY FILTER
+    if (req.query.availability) {
+      if (req.query.availability === "In Stock") {
+        query.stock = { $gt: 0 };
+      } else {
+        query.stock = 0;
+      }
+    }
+
+    /* ------------------------------
+       STEP 2: Run Query
+    ------------------------------ */
     const products = await Product.aggregate([
-      { $match: { category: categoryDoc._id } },
+      { $match: query },
       {
         $addFields: {
           image: { $arrayElemAt: ["$images", 0] },
@@ -505,6 +620,7 @@ const getProductsByCategory = async (req, res) => {
       total: products.length,
       data: products,
     });
+
   } catch (error) {
     console.error("GetProductsByCategory Error:", error);
     return res.status(500).json({
@@ -513,6 +629,7 @@ const getProductsByCategory = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   createProduct,

@@ -6,17 +6,20 @@ import { Outlet } from "react-router-dom";
 const AdminLayout = () => {
   return (
     <SidebarProvider>
-      <div className="flex w-full">
+      <div className="flex w-full min-h-screen">
+        
         {/* LEFT SIDEBAR */}
         <AppSidebar />
 
         {/* RIGHT CONTENT AREA */}
-        <main className="flex-1">
+        <main className="flex-1 overflow-x-hidden">
           <SidebarTrigger />
 
-          <div className="sm:m-10 p-5">
-            <Outlet />  {/* THIS IS VERY IMPORTANT */}
+          {/* FULL WIDTH WRAPPER */}
+          <div className="w-full px-5 sm:px-10 py-5">
+            <Outlet />
           </div>
+          
         </main>
       </div>
     </SidebarProvider>

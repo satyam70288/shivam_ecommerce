@@ -68,19 +68,30 @@ const ProductList = ({ category, price, search }) => {
   }
 
   return (
-    <>
+  <>
+    {products.length > 0 && (
+       <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center my-10">
+        {products.map((p) => (
+          <div key={p._id} className="w-full">
+            <ProductCard {...p} />
+          </div>
+        ))}
+      </div>
+    )}
 
-      {products.length > 0 && (
-        <div className="max-w-7xl mx-auto grid gap-5 grid-cols-[repeat(auto-fill,minmax(170px,1fr))] px-4 py-10">
-          {products.map((p) => (
-            <ProductCard key={p._id} {...p} />
-          ))}
-        </div>
-      )}
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+    {/* PAGINATION */}
+    <div className="flex justify-center py-4 sm:py-6">
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+    </div>
+  </>
+);
 
-    </>
-  );
+
+
 };
 
 export default ProductList;

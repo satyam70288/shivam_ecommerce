@@ -4,9 +4,11 @@ const {
   getAllOrders,
   getMetrics,
   updateOrderStatus,
-  createCODOrder,
+ 
   trackShipment,
   cancelOrder,
+  createOrder,
+ 
 } = require("../controllers/OrderController");
 const verifyToken = require("../middlewares/verifyToken");
 
@@ -18,7 +20,7 @@ router.get("/get-metrics", verifyToken, getMetrics);
 
 router.put("/update-order-status/:paymentId", verifyToken, updateOrderStatus);
 
-router.post("/cod-order", verifyToken, createCODOrder);
+router.post("/orders/create", verifyToken, createOrder);
 
 router.get("/track/:id", trackShipment);
 

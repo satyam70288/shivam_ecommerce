@@ -1,100 +1,69 @@
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema(
-  {
-    amount: { type: Number, required: true },
+const orderSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-    // FINAL SHIPPING CHARGE from Shiprocket
-    shippingCharge: { type: Number, required: true },
+  amount: { type: Number, required: true },
+  shippingCharge: { type: Number, default: 0 },
 
-    // Courier Details (from Shiprocket)
-    courierName: { type: String, default: null },
-    awbCode: { type: String, default: null }, // airway bill number
-    estimatedDelivery: { type: String, default: null },
-
-    // Address
-    address: {
-      name: { type: String, required: true },
-      email: { type: String, required: true },
-      phone: { type: String, required: true },
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      zip: { type: String, required: true },
-      country: { type: String, default: "India" },
-    },
-
-    paymentMode: {
-      type: String,
-      enum: ["Razorpay", "COD"],
-      default: "Razorpay",
-    },
-    isPaid: { type: Boolean, default: false },
-
-    // Shiprocket
-    shiprocketOrderId: { type: String, default: null },
-    courierTrackingId: { type: String, default: null },
-
-    products: [
-      {
-        productId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Product",
-          required: true,
-        },
-
-        variantId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: false,
-        },
-
-        name: { type: String, required: true },
-        price: { type: Number, required: true },
-        quantity: { type: Number, required: true },
-
-        // for variant products
-        color: { type: String, required: false },
-        size: { type: String, required: false },
-
-        // per-product weight copied from Product model
-        weight: { type: Number, required: false },
-      },
-    ],
-
-    status: {
-      type: String,
-      enum: [
-        "pending",
-        "packed",
-        "in_transit",
-        "delivered",
-        "cancelled",
-        "exchanged",
-        "returned",
-        "failed",
-      ],
-      default: "pending",
-    },
-
-    isCancelled: { type: Boolean, default: false },
-    cancelledAt: Date,
-    cancelReason: String,
-
-    isExchanged: { type: Boolean, default: false },
-    exchangedAt: Date,
-    exchangeReason: String,
-
-    isReturned: { type: Boolean, default: false },
-    returnedAt: Date,
-    returnReason: String,
-
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+  shippingAddress: {
+    name: String,
+    phone: String,
+    email: String,
+    address_line1: String,
+    address_line2: String,
+    city: String,
+    state: String,
+    pincode: String,
+    country: { type: String, default: "India" },
   },
-  { timestamps: true }
-);
+
+  paymentMode: {
+    type: String,
+    enum: ["Razorpay", "COD"],
+    required: true,
+  },
+
+  isPaid: { type: Boolean, default: false },
+
+  razorpay: {
+    orderId: String,
+    paymentId: String,
+    signature: String,
+  },
+
+  products: [{
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    variantId: mongoose.Schema.Types.ObjectId,
+    name: String,
+    price: Number,
+    quantity: Number,
+    color: String,
+    size: String,
+    weight: { type: Number, default: 0 },
+  }],
+
+  status: {
+    type: String,
+    enum: [
+      "pending",
+      "confirmed",
+      "packed",
+      "in_transit",
+      "delivered",
+      "cancelled",
+      "returned",
+      "failed",
+    ],
+    default: "pending",
+  },
+
+  shiprocketOrderId: String,
+  awbCode: String,
+  courierName: String,
+  estimatedDelivery: String,
+
+}, { timestamps: true });
+
 
 module.exports = mongoose.model("Order", orderSchema);

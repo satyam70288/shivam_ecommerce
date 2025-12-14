@@ -6,112 +6,91 @@ const initialState = {
   totalPrice: 0,
 };
 
+const recalcTotals = (state) => {
+  state.totalQuantity = state.cartItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+  state.totalPrice = state.cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+};
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    // Set cart from backend (used when fetching user cart)
+    /* =====================
+       SET CART (FROM API)
+    ===================== */
     setCart: (state, action) => {
       const products = action.payload.products || [];
 
-      // Map over the products and create cartItems
-      state.cartItems = products.map((item) => {
-        const variant = item.product.variants?.find(
-          (v) => v.color === item.color
-        );
+      state.cartItems = products.map((item) => ({
+        cartItemId: item._id,                // ✅ ONLY ID we use
+        productId: item.product._id,
+        name: item.product.name,
+        image: item.product.images?.[0]?.url || "/fallback.png",
+        price: item.product.price,
+        quantity: item.quantity,
+        color: item.color,
+        size: item.size,
+        stock: item.product.stock,
+        blacklisted: item.product.blacklisted,
+      }));
 
-        return {
-          cartItemId: item._id,       // ✅ Cart item ID, for remove API
-          productId: item.product._id, // ✅ Product ID
-          quantity: item.quantity,
-          color: item.color,
-          size: item.size,
-          price: item.product.price,
-          name: item.product.name,
-          image: variant?.images?.[0]?.url || "/fallback.png",
-          stock: item.product.stock,
-          blacklisted: item.product.blacklisted,
-        };
-      });
-
-
-      // Calculate totals
-      state.totalQuantity = state.cartItems.reduce(
-        (acc, item) => acc + item.quantity,
-        0
-      );
-      state.totalPrice = state.cartItems.reduce(
-        (acc, item) => acc + item.price * item.quantity,
-        0
-      );
+      recalcTotals(state);
     },
 
-
-    // Add an item to cart
+    /* =====================
+       ADD TO CART
+    ===================== */
     addToCart: (state, action) => {
-      const existingItem = state.cartItems.find(
+      const incoming = action.payload;
+
+      const existing = state.cartItems.find(
         (item) =>
-          item._id === action.payload._id &&
-          item.color === action.payload.color &&
-          item.size === action.payload.size
+          item.productId === incoming.productId &&
+          item.color === incoming.color &&
+          item.size === incoming.size
       );
-      if (existingItem) {
-        existingItem.quantity += action.payload.quantity;
+
+      if (existing) {
+        existing.quantity += incoming.quantity;
       } else {
-        state.cartItems.push(action.payload);
+        state.cartItems.push(incoming);
       }
 
-      // recalc totals
-      state.totalQuantity = state.cartItems.reduce(
-        (acc, item) => acc + item.quantity,
-        0
-      );
-      state.totalPrice = state.cartItems.reduce(
-        (acc, item) => acc + item.price * item.quantity,
-        0
-      );
+      recalcTotals(state);
     },
 
-    // Remove a single item from cart
+    /* =====================
+       REMOVE / DECREASE
+    ===================== */
     removeFromCart: (state, action) => {
-      const { productId, color, size } = action.payload;
-      console.log(action.payload, "payload");
-      console.log(state.cartItems);
-      const existingItem = state.cartItems.find(
-        (item) =>
-          item._id === action.payload._id &&
-          item.color === action.payload.color &&
-          item.size === action.payload.size
+      const { cartItemId } = action.payload;
+
+      const item = state.cartItems.find(
+        (i) => i.cartItemId === cartItemId
       );
 
-      console.log(existingItem, "existing item");
-      if (existingItem) {
-        if (existingItem.quantity > 1) {
-          existingItem.quantity -= 1; // decrease by 1
-        } else {
-          state.cartItems = state.cartItems.filter(
-            (item) =>
-              !(
-                item._id === productId &&
-                item.color === color &&
-                item.size === size
-              )
-          );
-        }
+      if (!item) return;
+
+      if (item.quantity > 1) {
+        item.quantity -= 1;
+      } else {
+        state.cartItems = state.cartItems.filter(
+          (i) => i.cartItemId !== cartItemId
+        );
       }
 
-      // recalc totals
-      state.totalQuantity = state.cartItems.reduce(
-        (acc, item) => acc + item.quantity,
-        0
-      );
-      state.totalPrice = state.cartItems.reduce(
-        (acc, item) => acc + item.price * item.quantity,
-        0
-      );
+      recalcTotals(state);
     },
 
-    // Empty the entire cart
+    /* =====================
+       EMPTY CART
+    ===================== */
     emptyCart: (state) => {
       state.cartItems = [];
       state.totalQuantity = 0;
@@ -120,6 +99,11 @@ const cartSlice = createSlice({
   },
 });
 
-export const { setCart, addToCart, removeFromCart, emptyCart } =
-  cartSlice.actions;
+export const {
+  setCart,
+  addToCart,
+  removeFromCart,
+  emptyCart,
+} = cartSlice.actions;
+
 export default cartSlice.reducer;

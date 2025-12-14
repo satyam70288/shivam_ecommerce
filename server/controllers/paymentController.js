@@ -1,124 +1,102 @@
-const Razorpay = require("razorpay");
-const User = require("../models/User");
-const Product = require("../models/Product");
-const Order = require("../models/Order");
 const crypto = require("crypto");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+const Cart = require("../models/Cart");
 
-var {
-  validatePaymentVerification,
-} = require("razorpay/dist/utils/razorpay-utils");
-
-var instance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_RW5A57UKh8Dv3F",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "YourKeySecretHereHgijUZmybpNNR67lBrY4OumS",
-
-});
-console.log("Razorpay instance created with key_id:", process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET);
-console.log("Razorpay key_secret is set");
-const generatePayment = async (req, res) => {
-  const userId = req.id;
-  console.log("Generating payment for user:", userId);
-  if (!userId) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }
+exports.verifyPayment = async (req, res) => {
   try {
-    const { amount } = req.body;
-    console.log("Amount received for payment generation:", amount);
-    const options = {
-      amount: amount * 100, // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
-      currency: "INR",
-      receipt: Math.random().toString(36).substring(2),
-    };
+    const userId = req.id;
 
-    const user = await User.findById(userId);
-    console.log("User found:", user ? user.name : "Not found");
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    instance.orders.create(options, async (err, order) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ success: false, message: err });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: {
-          ...order,
-          name: user.name,
-        },
-      });
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-const verifyPayment = async (req, res) => {
-  const userId = req.id;
-  try {
     const {
+      orderId,
       razorpay_order_id,
       razorpay_payment_id,
-      amount,
-      productArray,
-      address,
+      razorpay_signature,
     } = req.body;
 
-    const signature = crypto
+    // 1️⃣ Basic validation
+    if (
+      !orderId ||
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing payment details",
+      });
+    }
+
+    // 2️⃣ Fetch order from DB
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // 3️⃣ Prevent double payment
+    if (order.isPaid) {
+      return res.status(400).json({
+        success: false,
+        message: "Order already paid",
+      });
+    }
+
+    // 4️⃣ Verify Razorpay signature
+    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .update(body)
       .digest("hex");
 
-    const validatedPayment = validatePaymentVerification(
-      { order_id: razorpay_order_id, payment_id: razorpay_payment_id },
-      signature,
-      process.env.RAZORPAY_KEY_SECRET
-    );
-
-    if (!validatedPayment) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Payment verification failed" });
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment verification failed",
+      });
     }
 
-    for (const product of productArray) {
-      await User.findByIdAndUpdate(
-        { _id: userId },
-        { $push: { purchasedProducts: product.id } }
-      );
+    // 5️⃣ Reduce stock (AFTER successful payment)
+    for (const item of order.products) {
+      const product = await Product.findById(item.productId);
 
-      await Product.findByIdAndUpdate(
-        { _id: product.id },
-        { $inc: { stock: -product.quantity } }
-      );
+      if (!product || product.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Stock issue for ${item.name}`,
+        });
+      }
+
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { stock: -item.quantity },
+      });
     }
 
-    // remove purchased items from cart
-    const purchasedProductIds = productArray.map((p) => p.id);
+    // 6️⃣ Update order as PAID
+    order.isPaid = true;
+    order.status = "confirmed";
+    order.razorpayOrderId = razorpay_order_id;
+    order.razorpayPaymentId = razorpay_payment_id;
+    order.razorpaySignature = razorpay_signature;
 
-    await Cart.updateOne(
-      { user: userId },
-      { $pull: { products: { product: { $in: purchasedProductIds } } } }
-    );
+    await order.save();
 
-    await Order.create({
-      amount: amount / 100,
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id,
-      razorpaySignature: signature,
-      products: productArray,
-      address: address,
-      userId: userId,
+    // 7️⃣ Clear cart (only if cart-based order)
+    await Cart.deleteOne({ user: userId });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified, order confirmed",
+      orderId: order._id,
     });
 
-    return res.status(200).json({ success: true, message: "Payment Verified" });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Verify Payment Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
-module.exports = { generatePayment, verifyPayment };

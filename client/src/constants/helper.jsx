@@ -3,22 +3,42 @@ import { Colors } from "./colors";
 
 export const starsGenerator = (
   rating,
-  stroke = "0",
-  size,
-  fill = Colors.customYellow
+  size = 12,                // 👈 SMALL DEFAULT
+  fill = Colors.customYellow,
+  stroke = "0"
 ) => {
-  return Array.from({ length: 5 }, (elem, index) => {
-    const number = index + 0.5;
+  return Array.from({ length: 5 }, (_, index) => {
+    const half = index + 0.5;
+
+    if (rating >= index + 1) {
+      return (
+        <Star
+          key={index}
+          size={size}
+          fill={fill}
+          stroke={stroke}
+        />
+      );
+    }
+
+    if (rating >= half) {
+      return (
+        <StarHalf
+          key={index}
+          size={size}
+          fill={fill}
+          stroke={stroke}
+        />
+      );
+    }
+
     return (
-      <span key={index}>
-        {rating >= index + 1 ? (
-          <Star fill={fill} stroke={stroke} size={size} />
-        ) : rating >= number ? (
-          <StarHalf fill={fill} stroke={stroke} size={size} />
-        ) : (
-          <Star stroke={Colors.customYellow} size={size} />
-        )}
-      </span>
+      <Star
+        key={index}
+        size={size}
+        stroke={fill}
+        fill="none"
+      />
     );
   });
 };

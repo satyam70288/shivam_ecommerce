@@ -18,7 +18,7 @@ const CartDrawer = () => {
   const { cartItems, totalQuantity, totalPrice } = useSelector(
     (state) => state.cart
   );
-
+console.log(cartItems,"cartItems")
   const navigate = useNavigate();
 
   return (

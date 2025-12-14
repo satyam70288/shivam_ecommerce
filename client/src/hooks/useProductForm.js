@@ -4,41 +4,57 @@ import useErrorLogout from "@/hooks/use-error-logout";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_GENERAL_IMAGES = 8;
-const MAX_VARIANT_IMAGES = 8;
 
 export const useProductForm = (productId) => {
   const { toast } = useToast();
   const { handleErrorLogout } = useErrorLogout();
 
-  // STATES
+  // ================================
+  // BASIC PRODUCT STATES
+  // ================================
   const [isLoading, setIsLoading] = useState(false);
-  const [productType, setProductType] = useState("simple");
   const [categories, setCategories] = useState([]);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
 
-  // === SIMPLE PRODUCT ===
+  // ================================
+  // SIMPLE PRODUCT FIELDS
+  // ================================
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [images, setImages] = useState([]);
   const generalInputRef = useRef(null);
 
-  // === VARIANT PRODUCT ===
-  const [variants, setVariants] = useState([]);
-  const variantFileRefs = useRef({});
+  // ================================
+  // NEW SCHEMA FIELDS
+  // ================================
+  const [material, setMaterial] = useState("");
+  const [ageGroup, setAgeGroup] = useState([]);
+  const [colors, setColors] = useState([]);
+  const [sizes, setSizes] = useState([]);
+  const [brand, setBrand] = useState("");
 
-  // === OFFER FIELDS ===
+  const [tags, setTags] = useState(""); // comma string
+  const [keywords, setKeywords] = useState(""); // comma string
+
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [isNewArrival, setIsNewArrival] = useState(false);
+  const [isBestSeller, setIsBestSeller] = useState(false);
+
+  // ================================
+  // OFFER FIELDS
+  // ================================
   const [discount, setDiscount] = useState("");
   const [offerTitle, setOfferTitle] = useState("");
   const [offerDescription, setOfferDescription] = useState("");
   const [offerValidFrom, setOfferValidFrom] = useState("");
   const [offerValidTill, setOfferValidTill] = useState("");
 
-  /* ------------------------------------------------------
-     1. LOAD CATEGORIES
-  ------------------------------------------------------*/
+  // ================================
+  // LOAD CATEGORIES
+  // ================================
   useEffect(() => {
     axios
       .get(`${import.meta.env.VITE_API_URL}/categories`)
@@ -46,9 +62,9 @@ export const useProductForm = (productId) => {
       .catch(() => {});
   }, []);
 
-  /* ------------------------------------------------------
-     2. LOAD PRODUCT (EDIT MODE)
-  ------------------------------------------------------*/
+  // ================================
+  // LOAD PRODUCT IN EDIT MODE
+  // ================================
   useEffect(() => {
     if (!productId) return;
 
@@ -67,33 +83,33 @@ export const useProductForm = (productId) => {
 
         const p = res.data.data;
 
-        setProductType(p.productType || "simple");
-        setName(p.name || "");
-        setDescription(p.description || "");
-        setCategoryId(p.category?._id || p.category || "");
+        setName(p.name);
+        setDescription(p.description);
+        setCategoryId(p.category?._id || p.category);
 
-        // SIMPLE
         setPrice(p.price ?? "");
         setStock(p.stock ?? "");
 
+        setMaterial(p.material || "");
+
+        setAgeGroup(p.ageGroup || []);
+        setColors(p.colors || []);
+        setSizes(p.sizes || []);
+
+        setBrand(p.brand || "");
+
+        setTags((p.tags || []).join(", "));
+        setKeywords((p.keywords || []).join(", "));
+
+        setIsFeatured(p.isFeatured || false);
+        setIsNewArrival(p.isNewArrival || false);
+        setIsBestSeller(p.isBestSeller || false);
+
+        // Images
         setImages(
           (p.images || []).map((img) => ({
             file: null,
             preview: img.url,
-          }))
-        );
-
-        // VARIANTS
-        setVariants(
-          (p.variants || []).map((v) => ({
-            color: v.color,
-            size: v.size,
-            price: v.price,
-            stock: v.stock,
-            images: (v.images || []).map((i) => ({
-              file: null,
-              preview: i.url,
-            })),
           }))
         );
 
@@ -113,109 +129,68 @@ export const useProductForm = (productId) => {
     loadProduct();
   }, [productId]);
 
-  /* ------------------------------------------------------
-     3. IMAGE HANDLERS (GENERAL)
-  ------------------------------------------------------*/
+  // ================================
+  // IMAGE HANDLING
+  // ================================
   const handleGeneralImages = (e) => {
     const files = [...e.target.files];
     const add = files.slice(0, MAX_GENERAL_IMAGES - images.length);
-
-    setImages((prev) => [
-      ...prev,
-      ...add.map((f) => ({ file: f, preview: URL.createObjectURL(f) })),
-    ]);
-
-    e.target.value = "";
-  };
-
-  const removeGeneralImage = (i) =>
-    setImages((prev) => prev.filter((_, idx) => idx !== i));
-
-  /* ------------------------------------------------------
-     4. VARIANT HANDLERS
-  ------------------------------------------------------*/
-  const addVariant = () => {
-    setVariants((prev) => [
-      ...prev,
-      { color: "", size: "", price: "", stock: "", images: [] },
-    ]);
-  };
-
-  const removeVariant = (i) =>
-    setVariants((prev) => prev.filter((_, idx) => idx !== i));
-
-  const updateVariant = (i, key, value) => {
-    setVariants((prev) =>
-      prev.map((v, idx) => (idx === i ? { ...v, [key]: value } : v))
-    );
-  };
-
-  const handleVariantImages = (i) => (e) => {
-    const files = [...e.target.files];
-    const add = files.slice(
-      0,
-      MAX_VARIANT_IMAGES - (variants[i].images?.length || 0)
-    );
 
     const mapped = add.map((f) => ({
       file: f,
       preview: URL.createObjectURL(f),
     }));
 
-    setVariants((prev) =>
-      prev.map((v, idx) =>
-        idx === i ? { ...v, images: [...v.images, ...mapped] } : v
-      )
-    );
-
-    e.target.value = "";
+    setImages((prev) => [...prev, ...mapped]);
   };
 
-  const removeVariantImage = (i, imgIdx) => {
-    setVariants((prev) =>
-      prev.map((v, idx) =>
-        idx === i
-          ? { ...v, images: v.images.filter((_, k) => k !== imgIdx) }
-          : v
-      )
+  const removeGeneralImage = (i) => {
+    setImages((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  // ================================
+  // TOGGLE HANDLERS FOR NEW FIELDS
+  // ================================
+  const toggleColor = (color) => {
+    setColors((prev) =>
+      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
     );
   };
 
-  /* ------------------------------------------------------
-     5. VALIDATION
-  ------------------------------------------------------*/
+  const toggleSize = (size) => {
+    setSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+    );
+  };
+
+  const toggleAgeGroup = (item) => {
+    setAgeGroup((prev) =>
+      prev.includes(item) ? prev.filter((g) => g !== item) : [...prev, item]
+    );
+  };
+
+  // ================================
+  // VALIDATION
+  // ================================
   const validate = () => {
     if (!name.trim()) return "Enter product name";
     if (!description.trim()) return "Enter description";
     if (!categoryId) return "Select category";
 
-    if (productType === "simple") {
-      if (!price) return "Enter price";
-      if (!stock) return "Enter stock";
-      if (!images.length) return "Upload at least 1 image";
-    }
+    if (!price) return "Enter price";
+    if (!stock) return "Enter stock";
 
-    if (productType === "variant") {
-      if (!variants.length) return "Add at least one variant";
+    if (!images.length) return "Upload at least 1 image";
 
-      for (let i = 0; i < variants.length; i++) {
-        if (!variants[i].price) return `Variant ${i + 1}: price required`;
-        if (!variants[i].stock) return `Variant ${i + 1}: stock required`;
-        if (!variants[i].images.length)
-          return `Variant ${i + 1}: upload at least 1 image`;
-      }
-    }
-
-    if (offerValidFrom && offerValidTill && offerValidFrom > offerValidTill) {
+    if (offerValidFrom && offerValidTill && offerValidFrom > offerValidTill)
       return "Offer start date cannot be after end date";
-    }
 
     return null;
   };
 
-  /* ------------------------------------------------------
-     6. SUBMIT (FORMDATA)
-  ------------------------------------------------------*/
+  // ================================
+  // SUBMIT PRODUCT
+  // ================================
   const submitProduct = async () => {
     const err = validate();
     if (err) {
@@ -227,65 +202,58 @@ export const useProductForm = (productId) => {
       setIsLoading(true);
 
       const form = new FormData();
-      form.append("productType", productType);
+      form.append("productType", "simple");
+
       form.append("name", name);
       form.append("description", description);
       form.append("category", categoryId);
 
-      // OFFER FIELDS
-      if (discount) form.append("discount", discount);
-      if (offerTitle) form.append("offerTitle", offerTitle);
-      if (offerDescription) form.append("offerDescription", offerDescription);
-      if (offerValidFrom) form.append("offerValidFrom", offerValidFrom);
-      if (offerValidTill) form.append("offerValidTill", offerValidTill);
+      form.append("price", price);
+      form.append("stock", stock);
 
-      // SIMPLE PRODUCT
-      if (productType === "simple") {
-        form.append("price", price);
-        form.append("stock", stock);
+      // NEW FIELDS
+      form.append("material", material);
+      form.append("brand", brand);
 
-        images.forEach((img) => {
-          if (img.file) form.append("images", img.file);
-        });
-      }
+      form.append("ageGroup", JSON.stringify(ageGroup));
+      form.append("colors", JSON.stringify(colors));
+      form.append("sizes", JSON.stringify(sizes));
 
-      // VARIANT PRODUCT
-      if (productType === "variant") {
-        const variantPayload = variants.map((v, idx) => ({
-          color: v.color,
-          size: v.size,
-          price: v.price,
-          stock: v.stock,
-          imagesKey: `variant_${idx}`,
-        }));
+      if (tags)
+        form.append(
+          "tags",
+          JSON.stringify(tags.split(",").map((t) => t.trim()))
+        );
+      if (keywords)
+        form.append(
+          "keywords",
+          JSON.stringify(keywords.split(",").map((k) => k.trim()))
+        );
 
-        // auto generate colors + sizes for product-level schema
-        const colors = [...new Set(variants.map((v) => v.color))];
-        const sizes = [...new Set(variants.map((v) => v.size))];
+      form.append("isFeatured", isFeatured);
+      form.append("isNewArrival", isNewArrival);
+      form.append("isBestSeller", isBestSeller);
 
-        form.append("colors", JSON.stringify(colors));
-        form.append("sizes", JSON.stringify(sizes));
-        form.append("variants", JSON.stringify(variantPayload));
+      // OFFER
+      form.append("discount", discount);
+      form.append("offerTitle", offerTitle);
+      form.append("offerDescription", offerDescription);
+      form.append("offerValidFrom", offerValidFrom);
+      form.append("offerValidTill", offerValidTill);
 
-        variants.forEach((v, idx) => {
-          v.images.forEach((img) => {
-            if (img.file) form.append(`variant_${idx}`, img.file);
-          });
-        });
-      }
+      // IMAGES
+      images.forEach((img) => {
+        if (img.file) form.append("images", img.file);
+      });
 
       if (productId) form.append("productId", productId);
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/create-product`,
-        form,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      await axios.post(`${import.meta.env.VITE_API_URL}/create-product`, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
       toast({ title: "Success", description: "Product saved successfully" });
       return true;
@@ -298,11 +266,8 @@ export const useProductForm = (productId) => {
   };
 
   return {
-    // main
+    // Main states
     isLoading,
-    productType,
-    setProductType,
-
     name,
     setName,
     description,
@@ -311,16 +276,40 @@ export const useProductForm = (productId) => {
     categoryId,
     setCategoryId,
 
-    // simple
     price,
     setPrice,
     stock,
     setStock,
     images,
+    handleGeneralImages,
+    removeGeneralImage,
+    generalInputRef,
 
-    // variants
-    variants,
+    // New fields
+    material,
+    setMaterial,
+    ageGroup,
+    toggleAgeGroup,
+    colors,
+    toggleColor,
+    sizes,
+    toggleSize,
 
+    brand,
+    setBrand,
+    tags,
+    setTags,
+    keywords,
+    setKeywords,
+
+    isFeatured,
+    setIsFeatured,
+    isNewArrival,
+    setIsNewArrival,
+    isBestSeller,
+    setIsBestSeller,
+
+    // Offer
     discount,
     setDiscount,
     offerTitle,
@@ -332,20 +321,7 @@ export const useProductForm = (productId) => {
     offerValidTill,
     setOfferValidTill,
 
-    // refs
-    generalInputRef,
-    variantFileRefs,
-
-    // handlers
-    handleGeneralImages,
-    removeGeneralImage,
-    addVariant,
-    removeVariant,
-    updateVariant,
-    handleVariantImages,
-    removeVariantImage,
-
-    // submit
+    // Submit
     submitProduct,
   };
 };

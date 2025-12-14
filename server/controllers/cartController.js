@@ -2,53 +2,112 @@ var Cart = require("../models/Cart");
 var Product = require("../models/Product");
 
 // Add product to cart
-exports.addToCart = async function(req, res) {
+exports.addToCart = async function (req, res) {
   console.log("Adding product to cart", req.body);
-  try {
-    var userId = req.body.userId;
-    var productId = req.body.productId;
-    var quantity = req.body.quantity;
-    var color = req.body.color;
-    var size = req.body.size;
 
-    var cart = await Cart.findOne({ user: userId });
+  try {
+    const { userId, productId, quantity, color, size } = req.body;
+
+    // 🔑 Always fetch product to get price
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
-      cart = new Cart({
+      const newCart = new Cart({
         user: userId,
-        products: [{ product: productId, quantity: quantity, color: color, size: size }],
-      });
-    } else {
-      var existingProductIndex = cart.products.findIndex(function(p) {
-        return p.product.toString() === productId && p.color === color && p.size === size;
+        products: [
+          {
+            product: productId,
+            quantity,
+            color,
+            size,
+            price: product.price, // ✅ REQUIRED
+          },
+        ],
       });
 
-      if (existingProductIndex > -1) {
-        cart.products[existingProductIndex].quantity += quantity;
-      } else {
-        cart.products.push({ product: productId, quantity: quantity, color: color, size: size });
-      }
+      await newCart.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Product added to cart",
+        cart: newCart,
+      });
+    }
+
+    const index = cart.products.findIndex(
+      (p) =>
+        p.product.toString() === productId &&
+        p.color === color &&
+        p.size === size
+    );
+
+    if (index > -1) {
+      cart.products[index].quantity += quantity;
+    } else {
+      cart.products.push({
+        product: productId,
+        quantity,
+        color,
+        size,
+        price: product.price, // ✅ REQUIRED
+      });
     }
 
     await cart.save();
-    res.status(200).json({ success: true, message: "Product added to cart", cart: cart });
+
+    return res.status(200).json({
+      success: true,
+      message: "Product added to cart",
+      cart,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("addToCart error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
+
 // Get user's cart
-exports.getCart = async function(req, res) {
+exports.getCart = async function (req, res) {
   try {
-    var userId = req.params.userId;
-    var cart = await Cart.findOne({ user: userId }).populate("products.product");
-    res.status(200).json({ success: true, cart: cart });
+    const userId = req.params.userId;
+
+    const cart = await Cart.findOne({ user: userId }).populate({
+      path: "products.product",
+      select: "name price images stock blacklisted", // ✅ only what cart needs
+    });
+
+    if (!cart) {
+      return res.status(200).json({
+        success: true,
+        cart: { products: [] },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      cart,
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error("getCart error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 
 // Remove product from cart
 
