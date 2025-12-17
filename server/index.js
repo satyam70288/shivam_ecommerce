@@ -79,9 +79,9 @@ app.use(
     origin: function (origin, callback) {
       const allowedOrigins = [
         "http://localhost:5173",
-        "https://swag-fashion-bcah.vercel.app",
-        "https://swagfashion.in",
-        "https://www.swagfashion.in",
+        "shivam-ecommerce-312550lhu-satyam70288s-projects.vercel.app",
+        "shivam-ecommerce.vercel.app",
+   
       ];
       const isVercelPreview =
         origin && /^https:\/\/swag-fashion.*\.vercel\.app$/.test(origin);
