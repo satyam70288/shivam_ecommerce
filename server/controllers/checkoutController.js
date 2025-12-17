@@ -3,20 +3,22 @@ const Product = require("../models/Product");
 
 exports.checkoutInit = async (req, res) => {
   try {
-    // ✅ FIX 1
     const userId = req.id;
     const { productId, qty } = req.query;
 
+    console.log("✅ CHECKOUT INIT");
+    console.log("USER ID:", userId);
+    console.log("BUY NOW PRODUCT ID:", productId);
+
     let items = [];
-    let originalSubtotal = 0;
-    let discountedSubtotal = 0;
+    let subtotal = 0;
     let totalDiscount = 0;
 
-    /* =====================================================
-       CASE 1️⃣ : SINGLE BUY NOW
-    ===================================================== */
+    /* ================= BUY NOW ================= */
     if (productId) {
       const product = await Product.findById(productId);
+
+      console.log("BUY NOW PRODUCT:", product);
 
       if (!product || product.blacklisted) {
         return res.status(404).json({ message: "Product not found" });
@@ -24,36 +26,35 @@ exports.checkoutInit = async (req, res) => {
 
       const quantity = Number(qty) || 1;
 
-      const originalPrice = product.price;
-      const discountedPrice = product.getDiscountedPrice();
-      const discountAmount = originalPrice - discountedPrice;
+      if (product.stock < quantity) {
+        return res.status(400).json({ message: "Out of stock" });
+      }
 
-      originalSubtotal = originalPrice * quantity;
-      discountedSubtotal = discountedPrice * quantity;
-      totalDiscount = discountAmount * quantity;
+      const price = product.price;
+      const finalPrice = product.getDiscountedPrice();
+      const discountAmount = price - finalPrice;
+
+      subtotal += price * quantity;
+      totalDiscount += discountAmount * quantity;
 
       items.push({
         productId: product._id,
         name: product.name,
-
         image: product.images?.[0]?.url || "/placeholder.png",
-
-        originalPrice,
-        discountedPrice,
-        discountPercent: product.discount || 0,
-        discountAmount,
-
-        qty: quantity,
+        price,
+        finalPrice,
+        quantity,
       });
     }
 
-    /* =====================================================
-       CASE 2️⃣ : CART CHECKOUT
-    ===================================================== */
+    /* ================= CART CHECKOUT ================= */
     else {
       const cart = await Cart.findOne({ user: userId });
 
+      console.log("🛒 CART FOUND:", cart);
+
       if (!cart || !cart.products || cart.products.length === 0) {
+        console.log("⚠️ CART EMPTY");
         return res.status(200).json({
           items: [],
           summary: {
@@ -65,64 +66,81 @@ exports.checkoutInit = async (req, res) => {
         });
       }
 
+      console.log("CART PRODUCTS:", cart.products);
+
       const productIds = cart.products.map(p => p.product);
+      console.log("PRODUCT IDS FROM CART:", productIds);
 
       const products = await Product.find({
         _id: { $in: productIds },
-        blacklisted: false,
+        blacklisted: false, // ✅ CORRECT FIELD
       });
 
-      items = cart.products.map(cartItem => {
-        const product = products.find(
-          p => p._id.toString() === cartItem.product.toString()
-        );
+      console.log("DB PRODUCTS FOUND:", products);
 
-        if (!product) return null;
+      items = cart.products
+        .map(cartItem => {
+          const product = products.find(
+            p => p._id.toString() === cartItem.product.toString()
+          );
 
-        const originalPrice = product.price;
-        const discountedPrice = product.getDiscountedPrice();
-        const discountAmount = originalPrice - discountedPrice;
+          if (!product) {
+            console.log("❌ PRODUCT NOT FOUND / BLACKLISTED:", cartItem.product);
+            return null;
+          }
 
-        originalSubtotal += originalPrice * cartItem.quantity;
-        discountedSubtotal += discountedPrice * cartItem.quantity;
-        totalDiscount += discountAmount * cartItem.quantity;
+          if (product.stock < cartItem.quantity) {
+            console.log("❌ OUT OF STOCK:", product.name);
+            return null;
+          }
 
-        return {
-          productId: product._id,
-          name: product.name,
+          const price = product.price;
+          const finalPrice = product.getDiscountedPrice();
+          const discountAmount = price - finalPrice;
 
-          image: product.images?.[0]?.url || "/placeholder.png",
+          subtotal += price * cartItem.quantity;
+          totalDiscount += discountAmount * cartItem.quantity;
 
-          originalPrice,
-          discountedPrice,
-          discountPercent: product.discount || 0,
-          discountAmount,
-
-          qty: cartItem.quantity,
-          color: cartItem.color,
-          size: cartItem.size,
-        };
-      }).filter(Boolean);
+          return {
+            productId: product._id,
+            name: product.name,
+            image: product.images?.[0]?.url || "/placeholder.png",
+            price,
+            finalPrice,
+            quantity: cartItem.quantity,
+            color: cartItem.color,
+            size: cartItem.size,
+          };
+        })
+        .filter(Boolean);
     }
 
-    /* =====================================================
-       SHIPPING + TOTAL
-    ===================================================== */
-    const shipping = discountedSubtotal > 500 ? 0 : 50;
-    const total = discountedSubtotal + shipping;
+    const payable = subtotal - totalDiscount;
+
+    const shipping =
+      payable === 0 ? 0 : payable > 500 ? 0 : 50;
+
+    const total = payable + shipping;
+
+    console.log("✅ FINAL ITEMS:", items);
+    console.log("✅ SUMMARY:", {
+      subtotal,
+      discount: totalDiscount,
+      shipping,
+      total,
+    });
 
     return res.status(200).json({
       items,
       summary: {
-        subtotal: originalSubtotal,
+        subtotal,
         discount: totalDiscount,
         shipping,
         total,
       },
     });
-
   } catch (error) {
-    console.error("checkoutInit error:", error);
+    console.error("❌ checkoutInit error:", error);
     return res.status(500).json({
       message: "Failed to initialize checkout",
     });

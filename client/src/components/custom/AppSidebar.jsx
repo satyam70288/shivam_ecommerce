@@ -31,38 +31,14 @@ import { setUserLogout } from "@/redux/slices/authSlice";
 
 // Menu items.
 const items = [
-  {
-    title: "Create Products",
-    url: "/admin/dashboard",
-    icon: FilePlus2Icon,
-  },
-  {
-    title: "All Products",
-    url: "/admin/dashboard/all-products",
-    icon: GalleryVerticalEnd,
-  },
-  {
-    title: "Orders",
-    url: "/admin/dashboard/orders",
-    icon: PackageSearch,
-  },
-  {
-    title: "Analytics",
-    url: "/admin/dashboard/analytics",
-    icon: ChartBar,
-  },
-   {
-    title: "Delete Product",
-    url: "/admin/dashboard/Delete-product",
-    icon: CircleX,
-  },
-  {
-    title: "Settings",
-    url: "/admin/dashboard/settings",
-    icon: Settings,
-  },
- 
+  { title: "Dashboard", url: "/admin", icon: Home },
+  { title: "Products", url: "/admin/products", icon: GalleryVerticalEnd },
+  { title: "Create Product", url: "/admin/products/create", icon: FilePlus2Icon },
+  { title: "Orders", url: "/admin/orders", icon: PackageSearch },
+  { title: "Analytics", url: "/admin/analytics", icon: ChartBar },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
+
 
 const AppSidebar = () => {
   const { pathname } = useLocation();

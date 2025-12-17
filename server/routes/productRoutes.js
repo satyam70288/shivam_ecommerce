@@ -43,6 +43,7 @@ router.put("/blacklist-product/:id", verifyToken, blacklistProduct);
 
 router.put("/remove-from-blacklist/:id", verifyToken, removeFromBlacklist);
 
-router.get("/:id", getProductById); // ALWAYS LAST
+router.get("/product/:id", getProductById); // ALWAYS LAST
+router.get("/admin/products/:id", getProductById); // ALWAYS LAST
 
 module.exports = router;

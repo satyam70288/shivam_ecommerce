@@ -13,32 +13,45 @@ const getOrdersByUserId = async (req, res) => {
   const userId = req.id;
 
   try {
-    const orders = await Order.find({ userId })
-      .populate({
-        path: "products.productId",
-        select: "images",
-      })
-      .lean();
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 }).lean();
 
-    const simplifiedOrders = orders.map(order => ({
-      orderId: order._id,
-      date: order.createdAt,
-      status: order.status,
-      amount: order.amount,
-      products: order.products.map(p => ({
-        productId: p.productId?._id,
-        name: p.name,           // snapshot
-        price: p.price,         // snapshot
-        quantity: p.quantity,
-        image: p.productId?.images?.[0]?.url || null,
-      })),
-    }));
+    const simplifiedOrders = orders.map((order) => {
+      const items = order.items || [];
+
+      return {
+        orderId: order._id,
+        date: order.createdAt,
+        status: order.status,
+
+        // ✅ NEW SCHEMA SOURCE OF TRUTH
+        amount: order.totalAmount,
+
+        products: items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId || null,
+
+          name: item.name,
+          sku: item.sku,
+          image: item.image || null,
+
+          price: item.finalPrice, // 👈 what user paid
+          originalPrice: item.price, // optional (UI strike-through)
+          discount: item.discount,
+
+          quantity: item.quantity,
+          color: item.color || "Default",
+          size: item.size || "",
+          weight: item.weight || 0,
+        })),
+      };
+    });
 
     return res.status(200).json({
       success: true,
       data: simplifiedOrders,
     });
   } catch (error) {
+    console.error("getOrdersByUserId error:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
@@ -50,43 +63,89 @@ const getAllOrders = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
-      message: "You are not authorized to access this resource",
+      message: "You are not authorized",
     });
   }
 
-  const { page, limit } = req.query;
+  let { page = 1, limit = 10 } = req.query;
+  page = Number(page);
+  limit = Number(limit);
+
+  const filter = {}; // future-proof
 
   try {
-    const orders = await Order.find()
-      .populate({
-        path: "products.id",
-        select: "name price category variants",
-      })
-      .populate({
-        path: "userId",
-        select: "name email",
-      })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 });
+    const [orders, count] = await Promise.all([
+      Order.find(filter)
+        .populate({
+          path: "userId",
+          select: "name email",
+        })
+        .populate({
+          path: "items.productId",
+          select: "_id",
+        })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
 
-    if (!orders)
-      return res
-        .status(404)
-        .json({ success: false, message: "No orders to show" });
+      Order.countDocuments(filter),
+    ]);
 
-    const count = await Order.countDocuments();
+    const data = orders.map((order) => ({
+      _id: order._id,
+
+      user: {
+        name: order.userId?.name || "",
+        email: order.userId?.email || "",
+      },
+
+      items: (order.items || []).map((item) => ({
+        productId: item.productId?._id,
+        name: item.name,
+        image: item.image || null,
+        price: item.finalPrice ?? item.price,
+        quantity: item.quantity,
+        color: item.color,
+        size: item.size,
+      })),
+
+      address: order.shippingAddress,
+
+      totalAmount: order.totalAmount,
+
+      payment: {
+        method: order.paymentMethod,
+        status: order.paymentStatus ?? (order.isPaid ? "PAID" : "PENDING"),
+        paymentId:
+          order.paymentGateway?.paymentId ||
+          order.razorpayPaymentId ||
+          null,
+      },
+
+      status: order.status,
+      createdAt: order.createdAt,
+    }));
 
     return res.status(200).json({
       success: true,
-      data: orders,
-      totalPages: Math.ceil(count / limit),
-      currentPage: Number(page),
+      data,
+      pagination: {
+        totalOrders: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        pageSize: limit,
+      },
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("getAllOrders error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
 
 const updateOrderStatus = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -135,156 +194,260 @@ const getMetrics = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
-      message: "You are not authorized to access this route",
+      message: "Not authorized",
     });
   }
 
-  const { startDate, endDate } = req.query;
-
   try {
-    const start = new Date(
-      startDate || new Date().setMonth(new Date().getMonth() - 1)
-    );
-    const end = new Date(endDate || new Date());
+    const now = new Date();
 
-    // Orders in selected date range
-    const ordersInRange = await Order.find({
-      createdAt: { $gte: start, $lte: end },
-    });
-
-    const totalSales = ordersInRange.reduce(
-      (acc, order) => acc + (order.amount || 0),
-      0
+    /* =========================
+       DATE RANGES
+    ========================= */
+    const startOfThisMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
     );
 
-    // This month & last month orders
-    const thisMonthOrders = ordersInRange;
-    const lastMonth = new Date(new Date().setMonth(new Date().getMonth() - 1));
-
-    const lastMonthOrders = await Order.find({
-      createdAt: { $gte: lastMonth, $lte: start },
-    });
-
-    const totalThisMonth = thisMonthOrders.reduce(
-      (acc, order) => acc + (order.amount || 0),
-      0
+    const startOfLastMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1
     );
-    const totalLastMonth = lastMonthOrders.reduce(
-      (acc, order) => acc + (order.amount || 0),
-      0
+
+    const startOfNextMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1
     );
+
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    /* =========================
+       SALES (TOTAL + MONTHLY)
+    ========================= */
+    const [
+      totalSalesAgg,
+      thisMonthSalesAgg,
+      lastMonthSalesAgg,
+    ] = await Promise.all([
+      // 🔥 ALL-TIME SALES
+      Order.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+
+      // THIS MONTH
+      Order.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: startOfThisMonth,
+              $lt: startOfNextMonth,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+
+      // LAST MONTH
+      Order.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $gte: startOfLastMonth,
+              $lt: startOfThisMonth,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+    ]);
+
+    const totalSales = totalSalesAgg[0]?.total || 0;
+    const totalThisMonth = thisMonthSalesAgg[0]?.total || 0;
+    const totalLastMonth = lastMonthSalesAgg[0]?.total || 0;
 
     const salesGrowth = totalLastMonth
       ? ((totalThisMonth - totalLastMonth) / totalLastMonth) * 100
       : 0;
 
-    // Users this month vs last month
-    const thisMonthUsers = await User.find({
-      createdAt: { $gte: start, $lte: end },
-    });
-    const lastMonthUsers = await User.find({
-      createdAt: { $gte: lastMonth, $lte: start },
-    });
 
-    const usersGrowth = lastMonthUsers.length
-      ? ((thisMonthUsers.length - lastMonthUsers.length) /
-          lastMonthUsers.length) *
-        100
+    /* =========================
+       USERS (THIS VS LAST MONTH)
+    ========================= */
+    const [thisMonthUsers, lastMonthUsers] = await Promise.all([
+      User.countDocuments({
+        createdAt: { $gte: startOfThisMonth, $lt: startOfNextMonth },
+      }),
+      User.countDocuments({
+        createdAt: { $gte: startOfLastMonth, $lt: startOfThisMonth },
+      }),
+    ]);
+
+    const usersGrowth = lastMonthUsers
+      ? ((thisMonthUsers - lastMonthUsers) / lastMonthUsers) * 100
       : 0;
 
-    // Active now (last hour) vs previous day
-    const lastHour = new Date(new Date().setHours(new Date().getHours() - 1));
-    const lastHourOrders = await Order.find({
-      createdAt: { $gte: lastHour, $lte: new Date() },
+    /* =========================
+       ACTIVE ORDERS (LAST HOUR)
+    ========================= */
+    const activeNow = await Order.countDocuments({
+      createdAt: { $gte: oneHourAgo },
     });
 
-    const previousDayOrders = await Order.find({
-      createdAt: {
-        $gte: new Date(new Date().setDate(new Date().getDate() - 1)),
-      },
-    });
-
-    const lastHourGrowth = previousDayOrders.length
-      ? (lastHourOrders.length / previousDayOrders.length) * 100
-      : 0;
-
-    // Recent sales
+    /* =========================
+       RECENT ORDERS
+    ========================= */
     const recentOrders = await Order.find()
       .populate({ path: "userId", select: "name email" })
-      .select("amount")
+      .select("totalAmount userId createdAt")
       .sort({ createdAt: -1 })
-      .limit(9);
+      .limit(8)
+      .lean();
 
-    // Products delivered in last 6 months grouped by category/month
+    /* =========================
+       6 MONTH CATEGORY CHART
+    ========================= */
     const sixMonthsAgo = new Date(
-      new Date().setMonth(new Date().getMonth() - 6)
+      now.getFullYear(),
+      now.getMonth() - 5,
+      1
     );
 
-    const sixMonthsOrders = await Order.find({
+    const categoryChart = await Order.aggregate([
+  { $match: { createdAt: { $gte: sixMonthsAgo } } },
+
+  { $unwind: "$items" },
+
+  // 🔗 Order → Product
+  {
+    $lookup: {
+      from: "products",
+      localField: "items.productId",
+      foreignField: "_id",
+      as: "product",
+    },
+  },
+  { $unwind: "$product" },
+
+  // 🔗 Product → Category
+  {
+    $lookup: {
+      from: "categories",
+      localField: "product.category",
+      foreignField: "_id",
+      as: "category",
+    },
+  },
+  { $unwind: "$category" },
+
+  // 📊 GROUP
+  {
+    $group: {
+      _id: {
+        month: { $month: "$createdAt" },
+        category: "$category.name", // ✅ HUMAN READABLE
+      },
+      count: { $sum: "$items.quantity" },
+    },
+  },
+]);
+const monthlySalesTrend = await Order.aggregate([
+  {
+    $match: {
       createdAt: { $gte: sixMonthsAgo },
-    }).populate({
-      path: "products.id",
-      select: "category",
-    });
 
-    const monthWise = sixMonthsOrders.reduce((acc, order) => {
-      const month = new Date(order.createdAt).toLocaleString("default", {
-        month: "short",
-      });
+      // ❗ CANCELLED orders excluded
+      status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] }
+    }
+  },
+  {
+    $group: {
+      _id: {
+        year: { $year: "$createdAt" },
+        month: { $month: "$createdAt" }
+      },
+      totalAmount: { $sum: "$totalAmount" },
+      totalOrders: { $sum: 1 }
+    }
+  },
+  {
+    $addFields: {
+      aov: {
+        $cond: [
+          { $eq: ["$totalOrders", 0] },
+          0,
+          { $divide: ["$totalAmount", "$totalOrders"] }
+        ]
+      }
+    }
+  },
+  {
+    $sort: {
+      "_id.year": 1,
+      "_id.month": 1
+    }
+  }
+]);
 
-      order.products.forEach((product) => {
-        // Skip missing or unlinked products
-        if (!product.id || !product.id.category) return;
 
-        if (!acc[month]) acc[month] = {};
-        if (!acc[month][product.id.category]) {
-          acc[month][product.id.category] = 1;
-        } else {
-          acc[month][product.id.category]++;
-        }
-      });
-
-      return acc;
-    }, {});
 
     return res.status(200).json({
       success: true,
       data: {
-        totalSales: { count: totalSales, growth: salesGrowth },
-        users: { count: thisMonthUsers.length, growth: usersGrowth },
-        sales: { count: totalThisMonth, growth: salesGrowth },
-        activeNow: { count: lastHourOrders.length, growth: lastHourGrowth },
-        recentSales: { count: totalThisMonth, users: recentOrders },
-        sixMonthsBarChartData: monthWise,
+        sales: {
+          total: totalSales,          // 🔥 all-time
+          thisMonth: totalThisMonth,  // 🔥 current month
+          growth: salesGrowth,
+        },
+        users: {
+          count: thisMonthUsers,
+          growth: usersGrowth,
+        },
+        activeNow: {
+          count: activeNow,
+        },
+        recentSales: recentOrders,
+        sixMonthsBarChartData: categoryChart,
+        monthlySalesTrend
       },
     });
   } catch (error) {
-    console.error("Error in getMetrics:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("getMetrics error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 const createOrder = async (req, res) => {
   try {
-    console.log("inside")
     const userId = req.id;
-console.log( req.body);
-    const {
-      paymentMode,        // "COD" | "ONLINE"
-      addressId,
-      buyNow = false,
-      productId,
-      qty = 1,
-      color,
-      size,
-    } = req.body;
+    const { paymentMode, addressId } = req.body;
 
     if (!paymentMode || !addressId) {
       return res.status(400).json({ message: "Missing fields" });
     }
 
     /* =========================
-       FETCH ADDRESS (SNAPSHOT)
+       ADDRESS SNAPSHOT
     ========================= */
     const addressDoc = await address.findById(addressId);
     if (!addressDoc) {
@@ -295,142 +458,94 @@ console.log( req.body);
       name: addressDoc.name,
       phone: addressDoc.phone,
       email: addressDoc.email,
-      address_line1: addressDoc.address_line1,
-      address_line2: addressDoc.address_line2,
+      addressLine1: addressDoc.address_line1,
+      addressLine2: addressDoc.address_line2,
       city: addressDoc.city,
       state: addressDoc.state,
       pincode: addressDoc.pincode,
-      country: addressDoc.country,
+      country: addressDoc.country || "India",
     };
 
-    let items = [];
-    let totalAmount = 0;
-
     /* =========================
-       CASE 1️⃣ BUY NOW
+       FETCH CART
     ========================= */
-    if (buyNow) {
-      if (!productId) {
-        return res.status(400).json({ message: "Product ID required" });
-      }
+    const cart = await Cart.findOne({ user: userId }).populate(
+      "products.product"
+    );
+    if (!cart || cart.products.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
 
-      const product = await Product.findById(productId);
-      if (!product || product.blacklisted) {
-        return res.status(400).json({ message: "Product unavailable" });
-      }
+    let items = [];
+    let subtotal = 0;
 
-      if (product.stock < qty) {
+    for (const cartItem of cart.products) {
+      const product = cartItem.product;
+
+      // if (!product || !product.isActive) {
+      //   return res.status(400).json({ message: "Product unavailable" });
+      // }
+
+      if (product.stock < cartItem.quantity) {
         return res.status(400).json({
           message: `${product.name} out of stock`,
         });
       }
 
-      const price = product.getDiscountedPrice();
-      totalAmount = price * qty;
+      const discount = product.isOfferActive() ? product.discount : 0;
+
+      const finalPrice = product.getDiscountedPrice();
+
+      subtotal += finalPrice * cartItem.quantity;
 
       items.push({
         productId: product._id,
         name: product.name,
-        price,
-        quantity: qty,
-        color,
-        size,
+        image: product.images?.[0]?.url,
+        price: product.price,
+        discount,
+        finalPrice,
+        quantity: cartItem.quantity,
+        color: cartItem.color,
+        size: cartItem.size,
       });
     }
 
+    const shippingCharge = 0;
+    const taxAmount = 0;
+    const totalAmount = subtotal + shippingCharge + taxAmount;
+
     /* =========================
-       CASE 2️⃣ CART CHECKOUT
+       CREATE ORDER
     ========================= */
-    else {
-      const cart = await Cart.findOne({ user: userId }).populate("products.product");
-
-      if (!cart || cart.products.length === 0) {
-        return res.status(400).json({ message: "Cart is empty" });
-      }
-
-      for (const item of cart.products) {
-        const product = item.product;
-
-        if (!product || product.blacklisted) {
-          return res.status(400).json({ message: "Product unavailable" });
-        }
-
-        if (product.stock < item.quantity) {
-          return res.status(400).json({
-            message: `${product.name} out of stock`,
-          });
-        }
-
-        const price = product.getDiscountedPrice();
-        totalAmount += price * item.quantity;
-
-        items.push({
-          productId: product._id,
-          name: product.name,
-          price,
-          quantity: item.quantity,
-          color: item.color,
-          size: item.size,
-        });
-      }
-    }
+    const order = await Order.create({
+      userId,
+      items,
+      subtotal,
+      shippingCharge,
+      taxAmount,
+      totalAmount,
+      shippingAddress,
+      paymentMethod: paymentMode === "COD" ? "COD" : "RAZORPAY",
+      paymentStatus: paymentMode === "COD" ? "PENDING" : "PENDING",
+      status: "PLACED",
+    });
 
     /* =========================
-       COD ORDER
-    ========================= */
-    if (paymentMode === "COD") {
-      // reduce stock immediately
-      for (const item of items) {
-        await Product.findByIdAndUpdate(item.productId, {
-          $inc: { stock: -item.quantity },
-        });
-      }
-
-      const order = await Order.create({
-        userId,
-        amount: totalAmount,
-        shippingCharge: 0,
-        shippingAddress,
-        paymentMode: "COD",
-        isPaid: false,
-        status: "confirmed",
-        products: items,
-      });
-
-      if (!buyNow) {
-        await Cart.deleteOne({ user: userId });
-      }
-
-      return res.status(201).json({
-        success: true,
-        message: "COD order placed",
-        orderId: order._id,
-      });
-    }
-
-    /* =========================
-       ONLINE ORDER (RAZORPAY)
+       ONLINE PAYMENT
     ========================= */
     if (paymentMode === "ONLINE") {
       const razorpayOrder = await razorpay.orders.create({
         amount: totalAmount * 100,
         currency: "INR",
-        receipt: `order_${Date.now()}`,
+        receipt: `order_${order._id}`,
       });
 
-      const order = await Order.create({
-        userId,
-        amount: totalAmount,
-        shippingCharge: 0,
-        shippingAddress,
-        paymentMode: "Razorpay",
-        isPaid: false,
-        status: "pending",
-        razorpay: {
-          orderId: razorpayOrder.id,
-        },
-        products: items,
-      });
+      order.paymentGateway = {
+        orderId: razorpayOrder.id,
+      };
+
+      await order.save();
 
       return res.status(201).json({
         success: true,
@@ -439,11 +554,19 @@ console.log( req.body);
       });
     }
 
-    return res.status(400).json({ message: "Invalid payment mode" });
+    /* =========================
+       COD
+    ========================= */
+    await Cart.deleteOne({ user: userId });
 
-  } catch (error) {
-    console.error("Create Order Error:", error);
-    res.status(500).json({ message: error.message });
+    return res.status(201).json({
+      success: true,
+      message: "Order placed",
+      orderId: order._id,
+    });
+  } catch (err) {
+    console.error("Create Order Error:", err);
+    res.status(500).json({ message: "Order creation failed" });
   }
 };
 

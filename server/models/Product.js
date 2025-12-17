@@ -7,7 +7,7 @@ const variantSchema = new mongoose.Schema(
     size: String,
     stock: { type: Number, default: 0 },
     price: Number,
-    images: [{ url: String, id: String }]
+    images: [{ url: String, id: String }],
   },
   { _id: true }
 );
@@ -18,7 +18,7 @@ const productSchema = new mongoose.Schema(
     productType: {
       type: String,
       enum: ["simple", "variant"],
-      default: "simple"
+      default: "simple",
     },
 
     name: { type: String, required: true },
@@ -40,19 +40,46 @@ const productSchema = new mongoose.Schema(
 
     sizes: {
       type: [String],
-      enum: ["XS", "S", "M", "L", "XL", "XXL", "Free Size"]
+      enum: ["XS", "S", "M", "L", "XL", "XXL", "Free Size"],
     },
 
-    material: {
-      type: String,
-      enum: ["Plastic", "Wood", "Metal", "Cotton", "Synthetic", "Alloy", "Paper", "Other"],
-      default: "Other"
+    features: {
+      type: [String],
+      default: [],
+    },
+
+    specifications: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+
+    materials: {
+      type: [String],
+      enum: [
+        "Plastic",
+        "Wood",
+        "Metal",
+        "Cotton",
+        "Synthetic",
+        "Alloy",
+        "Paper",
+        "Other",
+      ],
+      default: [],
+    },
+
+    dimensions: {
+      length: String,
+      width: String,
+      height: String,
+      weight: String,
     },
 
     ageGroup: {
       type: [String],
       enum: ["0-3", "3-6", "6-9", "9-12", "12+"],
-      default: []
+      default: [],
     },
 
     brand: { type: String, default: "Generic" },
@@ -68,7 +95,7 @@ const productSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: true
+      required: true,
     },
 
     // DISCOUNT / OFFERS
@@ -84,10 +111,20 @@ const productSchema = new mongoose.Schema(
     isNewArrival: { type: Boolean, default: false },
     isBestSeller: { type: Boolean, default: false },
 
+    freeShipping: {
+      type: Boolean,
+      default: false,
+    },
+
+    handlingTime: {
+      type: Number, // days you take before handing to courier
+      default: 1,
+    },
+
     // SEARCH ENGINE FIELDS
     slug: { type: String, unique: true },
     tags: { type: [String], default: [] },
-    keywords: { type: [String], default: [] }
+    keywords: { type: [String], default: [] },
   },
   { timestamps: true }
 );
@@ -114,9 +151,12 @@ productSchema.methods.isOfferActive = function () {
 
 // ⭐ Discounted Price
 productSchema.methods.getDiscountedPrice = function () {
+  if (typeof this.price !== "number" || this.price <= 0) return 0;
+
   if (this.discount > 0 && this.isOfferActive()) {
-    return Math.round(this.price * (1 - this.discount / 100));
+    return Math.round(this.price - (this.price * this.discount) / 100);
   }
+
   return this.price;
 };
 

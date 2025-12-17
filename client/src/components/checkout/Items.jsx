@@ -7,7 +7,8 @@ const Items = () => {
   return (
     <div className="space-y-4">
       {items.map((item) => {
-        const itemTotal = item.discountedPrice * item.qty;
+        const itemTotal = item.finalPrice * item.quantity;
+        const discountAmount = item.price - item.finalPrice;
 
         return (
           <div
@@ -24,23 +25,25 @@ const Items = () => {
             {/* MIDDLE: DETAILS */}
             <div className="flex-1">
               <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-gray-500">Qty: {item.qty}</p>
+              <p className="text-sm text-gray-500">
+                Qty: {item.quantity}
+              </p>
 
-              {item.discountAmount > 0 ? (
+              {discountAmount > 0 ? (
                 <div className="text-sm mt-1">
                   <span className="line-through text-gray-400 mr-2">
-                    ₹{item.originalPrice}
+                    ₹{item.price}
                   </span>
                   <span className="font-semibold">
-                    ₹{item.discountedPrice}
+                    ₹{item.finalPrice}
                   </span>
                   <p className="text-green-600 text-xs">
-                    You saved ₹{item.discountAmount}
+                    You saved ₹{discountAmount}
                   </p>
                 </div>
               ) : (
                 <p className="font-semibold mt-1">
-                  ₹{item.originalPrice}
+                  ₹{item.price}
                 </p>
               )}
             </div>

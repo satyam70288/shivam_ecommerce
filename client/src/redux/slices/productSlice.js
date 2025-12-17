@@ -8,12 +8,27 @@ const productSlice = createSlice({
   },
 
   reducers: {
+    // For first page / filters / search
     setProducts: (state, action) => {
       state.products = action.payload;
+    },
+
+    // For mobile "Load more"
+    appendProducts: (state, action) => {
+      state.products.push(...action.payload);
+    },
+
+    // Optional but useful
+    clearProducts: (state) => {
+      state.products = [];
     },
   },
 });
 
-export const { setProducts } = productSlice.actions;
+export const {
+  setProducts,
+  appendProducts,
+  clearProducts,
+} = productSlice.actions;
 
 export default productSlice.reducer;

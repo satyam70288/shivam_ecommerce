@@ -1,47 +1,60 @@
 import React from "react";
 
-const OrderProductTile = ({ id, name, price, quantity, color, size }) => {
-  const imageUrl = id?.variants?.[0]?.images?.[0]?.url;
-
+const OrderProductTile = ({
+  name,
+  price,
+  quantity,
+  color,
+  size,
+  image,
+}) => {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 dark:border-zinc-800">
-      {/* Product Info */}
-      <div className="flex flex-row items-center gap-3 w-full sm:w-auto">
+    <div className="group flex gap-4 p-4 rounded-2xl border bg-white dark:bg-zinc-900 hover:shadow-md transition-shadow">
+      {/* IMAGE */}
+      <div className="relative shrink-0">
         <img
-          src={imageUrl || "/placeholder.png"}
-          alt={id?.name || name}
-          className="w-20 sm:w-24 h-20 sm:h-24 object-cover rounded-lg border border-gray-200 dark:border-zinc-700"
+          src={image || "/placeholder.png"}
+          alt={name}
+          className="w-20 h-20 rounded-xl object-cover border"
         />
-        <div className="flex flex-col gap-1">
-          <h1 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-white">
-            {id?.name || name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-600 dark:text-customGray">
-            {/* Color */}
-            <span className="flex items-center gap-1 font-semibold">
-              Color:
-              <span
-                className="inline-block w-4 h-4 rounded-full border border-gray-300"
-                style={{ backgroundColor: color }}
-              ></span>
-            </span>
-            {/* Size */}
-            <span className="font-semibold">
-              Size: <span className="font-medium">{size || "—"}</span>
-            </span>
-            {/* Quantity */}
-            <span className="font-semibold">
-              Qty:{" "}
-              <span className="font-bold text-customYellow">{quantity}</span>
-            </span>
-            {/* Price */}
-            <span className="font-semibold">
-              Price:{" "}
-              <span className="font-bold text-customYellow">
-                ₹{price || id?.price}
-              </span>
-            </span>
-          </div>
+
+        {/* QTY BADGE */}
+        <span className="absolute -top-2 -right-2 bg-black text-white text-xs px-2 py-0.5 rounded-full">
+          ×{quantity}
+        </span>
+      </div>
+
+      {/* CONTENT */}
+      <div className="flex flex-col justify-between flex-1">
+        <div>
+          <h3 className="font-semibold leading-tight line-clamp-2">
+            {name}
+          </h3>
+
+          {(color || size) && (
+            <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
+              {color && (
+                <span className="px-2 py-0.5 rounded-full border">
+                  {color}
+                </span>
+              )}
+              {size && (
+                <span className="px-2 py-0.5 rounded-full border">
+                  {size}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* PRICE */}
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-sm text-muted-foreground">
+            Price
+          </p>
+          <p className="font-semibold text-base">
+            ₹{price}
+          </p>
         </div>
       </div>
     </div>

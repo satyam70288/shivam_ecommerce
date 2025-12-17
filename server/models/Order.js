@@ -1,69 +1,124 @@
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+/* =========================
+   ORDER ITEM (SNAPSHOT)
+========================= */
+const orderItemSchema = new mongoose.Schema(
+  {
+    // Reference (analytics / admin only)
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
 
-  amount: { type: Number, required: true },
-  shippingCharge: { type: Number, default: 0 },
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
 
-  shippingAddress: {
-    name: String,
-    phone: String,
-    email: String,
-    address_line1: String,
-    address_line2: String,
-    city: String,
-    state: String,
-    pincode: String,
-    country: { type: String, default: "India" },
-  },
+    // SNAPSHOT DATA (IMMUTABLE)
+    name: { type: String, required: true },
+    sku: { type: String },
+    image: { type: String },
 
-  paymentMode: {
-    type: String,
-    enum: ["Razorpay", "COD"],
-    required: true,
-  },
+    price: { type: Number, required: true },        // original price
+    discount: { type: Number, default: 0 },          // % at order time
+    finalPrice: { type: Number, required: true },    // after discount
 
-  isPaid: { type: Boolean, default: false },
+    quantity: { type: Number, required: true, min: 1 },
 
-  razorpay: {
-    orderId: String,
-    paymentId: String,
-    signature: String,
-  },
-
-  products: [{
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-    variantId: mongoose.Schema.Types.ObjectId,
-    name: String,
-    price: Number,
-    quantity: Number,
+    // Variant snapshot (optional but useful)
     color: String,
     size: String,
     weight: { type: Number, default: 0 },
-  }],
-
-  status: {
-    type: String,
-    enum: [
-      "pending",
-      "confirmed",
-      "packed",
-      "in_transit",
-      "delivered",
-      "cancelled",
-      "returned",
-      "failed",
-    ],
-    default: "pending",
   },
+  { _id: false }
+);
 
-  shiprocketOrderId: String,
-  awbCode: String,
-  courierName: String,
-  estimatedDelivery: String,
+/* =========================
+   ORDER SCHEMA
+========================= */
+const orderSchema = new mongoose.Schema(
+  {
+    /* 👤 USER */
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-}, { timestamps: true });
+    /* 📦 ITEMS */
+    items: {
+      type: [orderItemSchema],
+      required: true,
+    },
 
+    /* 💰 AMOUNTS (CLEAR ACCOUNTING) */
+    subtotal: { type: Number, required: true },
+    shippingCharge: { type: Number, default: 0 },
+    taxAmount: { type: Number, default: 0 },
+    totalAmount: { type: Number, required: true },
+
+    /* 📍 SHIPPING ADDRESS (SNAPSHOT) */
+    shippingAddress: {
+      name: { type: String, required: true },
+      phone: { type: String, required: true },
+      email: String,
+      addressLine1: { type: String, required: true },
+      addressLine2: String,
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: { type: String, required: true },
+      country: { type: String, default: "India" },
+    },
+
+    /* 💳 PAYMENT */
+    paymentMethod: {
+      type: String,
+      enum: ["COD", "RAZORPAY", "CARD", "UPI", "NETBANKING"],
+      required: true,
+    },
+
+    paymentStatus: {
+      type: String,
+      enum: ["PENDING", "PAID", "FAILED", "REFUNDED"],
+      default: "PENDING",
+    },
+
+    paymentGateway: {
+      orderId: String,
+      paymentId: String,
+      signature: String,
+    },
+
+    /* 🚚 ORDER STATUS */
+    status: {
+      type: String,
+      enum: [
+        "PLACED",
+        "CONFIRMED",
+        "PACKED",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "RETURNED",
+      ],
+      default: "PLACED",
+    },
+
+    /* 🚛 SHIPPING / COURIER (OPTIONAL INTEGRATION) */
+    shippingProvider: String,          // Shiprocket, Delhivery, etc
+    shippingOrderId: String,
+    awbCode: String,
+    courierName: String,
+    estimatedDelivery: Date,
+
+    /* 🔁 META */
+    cancelReason: String,
+    deliveredAt: Date,
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Order", orderSchema);

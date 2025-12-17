@@ -32,6 +32,7 @@ import TermsAndConditions from "./components/TermsAndConditions";
 import AccountLayout from "./layouts/AccountLayout";
 import MyProfile from "./components/custom/MyProfile";
 import CategoryPage from "./pages/CategoryPage";
+import AdminProductDetails from "./components/Admin/AdminProductDetails";
 
 export default function App() {
   const router = createBrowserRouter([
@@ -42,7 +43,7 @@ export default function App() {
         { path: "signup", element: <Signup /> },
         { path: "login", element: <Login /> },
         { path: "category/:slug", element: <CategoryPage /> },
-        { path: "product/:productName", element: <Product /> },
+        { path: "product/:id", element: <Product /> },
         { path: "contact", element: <Contact /> },
         { path: "faq", element: <FaqPage /> },
         { path: "about", element: <AboutPage /> },
@@ -75,12 +76,34 @@ export default function App() {
         </ProtectedRoute>
       ),
       children: [
-        { index: true, element: <CreateProducts /> }, // /admin
-        { path: "products", element: <AllProducts /> }, // /admin/products
-        { path: "products/create", element: <CreateProducts /> }, // /admin/products/create
-        { path: "analytics", element: <Analytics /> }, // /admin/analytics
-        { path: "orders", element: <Orders /> }, // /admin/orders
-        { path: "settings", element: <Settings /> }, // /admin/settings
+        {
+          index: true,
+          element: <Analytics />, // 👉 /admin  (Dashboard home)
+        },
+        {
+          path: "products",
+          element: <AllProducts />, // 👉 /admin/products
+        },
+        {
+          path: "products/create",
+          element: <CreateProducts />, // 👉 /admin/products/create
+        },
+        {
+          path: "orders",
+          element: <Orders />, // 👉 /admin/orders
+        },
+        {
+          path: "analytics",
+          element: <Analytics />, // 👉 /admin/analytics
+        },
+        {
+          path: "settings",
+          element: <Settings />, // 👉 /admin/settings
+        },
+        {
+          path: "/admin/products/:id",
+          element: <AdminProductDetails />,
+        },
       ],
     },
 
@@ -104,7 +127,5 @@ export default function App() {
     </>
   );
 }
-
-
 
 // mQkimJ4UeyRnldla     satyamb971_db_user

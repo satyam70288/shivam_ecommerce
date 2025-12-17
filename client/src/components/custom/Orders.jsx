@@ -22,182 +22,184 @@ import axios from "axios";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
- console.log("Current Page:", orders);
+
   const { handleErrorLogout } = useErrorLogout();
 
-// pura product dekho
+  /* ================= FETCH ORDERS ================= */
   useEffect(() => {
-    const fetchOrders = () => {
-      try {
-        axios
-          .get(
-            import.meta.env.VITE_API_URL +
-              `/get-all-orders?page=${currentPage}&limit=10`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          )
-          .then((res) => {
-            const { data, totalPages, currentPage } = res.data;
-            setOrders(data);
-            setTotalPages(totalPages);
-            setCurrentPage(currentPage);
-          });
-      } catch (error) {
-        return handleErrorLogout(error, error.response.data.message);
-      }
-    };
-    fetchOrders();
-  }, [currentPage]);
-
-  const updateOrderStatus = async (status, paymentId) => {
+  const fetchOrders = async () => {
     try {
-      const res = await axios.put(
-        import.meta.env.VITE_API_URL + `/update-order-status/${paymentId}`,
-        { status },
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_URL}/get-all-orders`,
         {
+          params: {
+            page: currentPage,
+            limit: 10,
+          },
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
+
+      setOrders(res.data.data);
+      setTotalPages(res.data.pagination.totalPages);
     } catch (error) {
-      return handleErrorLogout(error, error.response.data.message);
+      handleErrorLogout(error, error.response?.data?.message);
     }
   };
 
-  return (
-    <>
-      <h1 className="text-3xl font-bold mb-2 ml-3">Orders</h1>
-      <div className="flex flex-col gap-5 mx-auto ">
-        <div className="space-y-8">
-          <div className="p-4 space-y-4">
-            <h2 className="text-xl font-medium">Order Summary</h2>
-            <div className="grid space-y-1 gap-2 sm:w-[80vw]">
-              {orders.length === 0 ? (
-                <h2 className="text-primary text-3xl">
-                  Nothing To Show, Please add some products...
-                </h2>
-              ) : (
-                orders.map((item) => (
-                  <Card key={item._id} className="space-y-2 p-3 shadow-md">
-                    <div className="grid sm:grid-cols-3 gap-2">
-                      {item?.products?.map((product) => (
-                        <OrderProductTile
-                        key={product._id}
-                        name={product.name}
-                       price={product.price}
-                       quantity={product.quantity}
-                       color={product.color} 
-                       size={product.size}
-                        id={product.id} 
-                        />
+  fetchOrders();
+}, [currentPage]);
 
-                      ))}
-                    </div>
-                    <hr />
-                    <div>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Total:</span>
-                        <span className="text-sm text-customGray">
-                          ₹{item?.amount}
-                        </span>
-                      </p>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Address:</span>
-                        <span className="text-sm text-customGray">
-                          {item?.address?.name}, {item?.address?.phone}, {item?.address?.street}, {item?.address?.city}, {item?.address?.state}, {item?.address?.zip}, {item?.address?.country}
-                        </span>
-                      </p>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Name:</span>
-                        <span className="text-sm text-customGray">
-                          {item?.userId?.name}
-                        </span>
-                      </p>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Email:</span>
-                        <span className="text-sm text-customGray">
-                          {item?.userId?.email}
-                        </span>
-                      </p>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Payment Mode:</span>
-                        <span className="text-sm text-customGray">
-                          {item?.paymentMode}
-                        </span>
-                      </p>
-                      <p className="flex justify-between sm:justify-start gap-2 items-center px-3">
-                        <span className="font-bold">Payment Id:</span>
-                        <span className="text-sm text-customGray">
-                          {item?.razorpayPaymentId}
-                        </span>
-                      </p>
-                    </div>
-                    <Select
-                      onValueChange={(value) => {
-                        alert("Do you really want to update the status?");
-                        updateOrderStatus(value, item.razorpayPaymentId ||item._id);
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="pending" />
-                      </SelectTrigger>
-                      <SelectContent className="capitalize">
-                        <SelectItem value="pending">pending</SelectItem>
-                        <SelectItem value="packed">packed</SelectItem>
-                        <SelectItem value="in transit">in transit</SelectItem>
-                        <SelectItem value="completed">completed</SelectItem>
-                        <SelectItem value="failed">failed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Card>
-                ))
-              )}
+
+ return (
+  <>
+    <h1 className="text-3xl font-bold mb-6 ml-3">Orders</h1>
+
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto px-2">
+      {orders.length === 0 ? (
+        <h2 className="text-muted-foreground text-xl ml-3">
+          No orders found
+        </h2>
+      ) : (
+        orders.map((order) => (
+          <Card
+            key={order._id}
+            className="p-5 rounded-2xl shadow-sm border space-y-4"
+          >
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Order ID
+                </p>
+                <p className="font-mono text-sm">{order._id}</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(order.createdAt).toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <p className="text-lg font-semibold">
+                  ₹{order.totalAmount}
+                </p>
+
+                <Select
+                  value={order.status}
+                  onValueChange={(value) => {
+                    if (window.confirm("Update order status?")) {
+                      updateOrderStatus(value, order._id);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[150px] capitalize">
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent className="capitalize">
+                    <SelectItem value="PLACED">Placed</SelectItem>
+                    <SelectItem value="PACKED">Packed</SelectItem>
+                    <SelectItem value="SHIPPED">Shipped</SelectItem>
+                    <SelectItem value="DELIVERED">Delivered</SelectItem>
+                    <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <hr />
+
+            {/* PRODUCTS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {order.items.map((product) => (
+                <OrderProductTile
+                  key={product.productId}
+                  {...product}
+                />
+              ))}
+            </div>
+
+            <hr />
+
+            {/* INFO GRID */}
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              {/* LEFT */}
+              <div className="space-y-1">
+                <p className="font-semibold">Shipping Address</p>
+                <p className="text-muted-foreground">
+                  {order.address?.name} <br />
+                  {order.address?.phone} <br />
+                  {order.address?.addressLine1},{" "}
+                  {order.address?.city},{" "}
+                  {order.address?.state} -{" "}
+                  {order.address?.pincode}
+                </p>
+              </div>
+
+              {/* RIGHT */}
+              <div className="space-y-1">
+                <p>
+                  <b>User:</b> {order.user?.name}
+                </p>
+                <p className="text-muted-foreground">
+                  {order.user?.email}
+                </p>
+
+                <p>
+                  <b>Payment:</b>{" "}
+                  <span className="capitalize">
+                    {order.payment.method}
+                  </span>{" "}
+                  ({order.payment.status})
+                </p>
+              </div>
+            </div>
+          </Card>
+        ))
+      )}
+
+      {/* PAGINATION */}
+      {totalPages > 1 && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious
-                href="#"
-                onClick={() => {
-                  setCurrentPage((currentPage) =>
-                    currentPage >= 2 ? currentPage - 1 : 1
-                  );
-                }}
+                onClick={() =>
+                  setCurrentPage((p) => Math.max(1, p - 1))
+                }
               />
             </PaginationItem>
-            <PaginationItem>
-              {Array.from({ length: totalPages }, (data, i) => (
+
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <PaginationItem key={i}>
                 <PaginationLink
-                  href="#"
+                  isActive={currentPage === i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  key={i}
                 >
                   {i + 1}
                 </PaginationLink>
-              ))}
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationEllipsis />
-            </PaginationItem>
+              </PaginationItem>
+            ))}
+
             <PaginationItem>
               <PaginationNext
-                href="#"
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() =>
+                  setCurrentPage((p) =>
+                    Math.min(totalPages, p + 1)
+                  )
+                }
               />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      </div>
-    </>
-  );
+      )}
+    </div>
+  </>
+);
+
 };
 
 export default Orders;

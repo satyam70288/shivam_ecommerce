@@ -18,6 +18,7 @@ const ProductCard = ({
   variants = [],
 }) => {
   const slug = name.split(" ").join("-");
+  console.log(_id,"id")
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const { addToCart } = useCartActions();
@@ -95,7 +96,7 @@ const ProductCard = ({
     hover:-translate-y-1
   "
     >
-      <Link to={`/product/${slug}`}>
+      <Link to={`/product/${_id}`}>
         {/* ❤️ WISHLIST BUTTON */}
         <button
           onClick={toggleWishlist}

@@ -30,7 +30,7 @@ export const useProductForm = (productId) => {
   // ================================
   // NEW SCHEMA FIELDS
   // ================================
-  const [material, setMaterial] = useState("");
+  const [materials, setMaterials] = useState([]);
   const [ageGroup, setAgeGroup] = useState([]);
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
@@ -42,6 +42,20 @@ export const useProductForm = (productId) => {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isNewArrival, setIsNewArrival] = useState(false);
   const [isBestSeller, setIsBestSeller] = useState(false);
+  const [featuresText, setFeaturesText] = useState("");
+  const [specifications, setSpecifications] = useState([]);
+  const [dimensions, setDimensions] = useState({
+    length: "",
+    width: "",
+    height: "",
+    weight: "",
+  });
+  const [freeShipping, setFreeShipping] = useState(false);
+  const [handlingTime, setHandlingTime] = useState(1);
+  const [canDispatchFast, setCanDispatchFast] = useState(true);
+  const [returnEligible, setReturnEligible] = useState(true);
+  const [codAvailable, setCodAvailable] = useState(true);
+  const [qualityVerified, setQualityVerified] = useState(true);
 
   // ================================
   // OFFER FIELDS
@@ -90,7 +104,7 @@ export const useProductForm = (productId) => {
         setPrice(p.price ?? "");
         setStock(p.stock ?? "");
 
-        setMaterial(p.material || "");
+        setMaterials(p.materials || []);
 
         setAgeGroup(p.ageGroup || []);
         setColors(p.colors || []);
@@ -104,6 +118,7 @@ export const useProductForm = (productId) => {
         setIsFeatured(p.isFeatured || false);
         setIsNewArrival(p.isNewArrival || false);
         setIsBestSeller(p.isBestSeller || false);
+        setFeaturesText((p.features || []).join("\n"));
 
         // Images
         setImages(
@@ -119,6 +134,25 @@ export const useProductForm = (productId) => {
         setOfferDescription(p.offerDescription || "");
         setOfferValidFrom(p.offerValidFrom?.split("T")[0] || "");
         setOfferValidTill(p.offerValidTill?.split("T")[0] || "");
+        setDimensions(
+          p.dimensions || {
+            length: "",
+            width: "",
+            height: "",
+            weight: "",
+          }
+        );
+        setFreeShipping(p.freeShipping || false);
+        setHandlingTime(p.handlingTime ?? 1);
+
+        setSpecifications(
+          p.specifications
+            ? Object.entries(p.specifications).map(([k, v]) => ({
+                key: k,
+                value: v,
+              }))
+            : []
+        );
       } catch (err) {
         handleErrorLogout(err, "Error loading product");
       } finally {
@@ -142,6 +176,31 @@ export const useProductForm = (productId) => {
     }));
 
     setImages((prev) => [...prev, ...mapped]);
+  };
+  const addSpec = () =>
+    setSpecifications((prev) => [...prev, { key: "", value: "" }]);
+
+  const updateSpecKey = (i, val) =>
+    setSpecifications((prev) => {
+      const copy = [...prev];
+      copy[i].key = val;
+      return copy;
+    });
+
+  const updateSpecValue = (i, val) =>
+    setSpecifications((prev) => {
+      const copy = [...prev];
+      copy[i].value = val;
+      return copy;
+    });
+
+  const removeSpec = (i) =>
+    setSpecifications((prev) => prev.filter((_, idx) => idx !== i));
+
+  const toggleMaterial = (m) => {
+    setMaterials((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
+    );
   };
 
   const removeGeneralImage = (i) => {
@@ -212,7 +271,7 @@ export const useProductForm = (productId) => {
       form.append("stock", stock);
 
       // NEW FIELDS
-      form.append("material", material);
+      form.append("materials", JSON.stringify(materials));
       form.append("brand", brand);
 
       form.append("ageGroup", JSON.stringify(ageGroup));
@@ -233,6 +292,27 @@ export const useProductForm = (productId) => {
       form.append("isFeatured", isFeatured);
       form.append("isNewArrival", isNewArrival);
       form.append("isBestSeller", isBestSeller);
+      form.append(
+        "features",
+        JSON.stringify(
+          featuresText
+            .split("\n")
+            .map((f) => f.trim())
+            .filter(Boolean)
+        )
+      );
+      form.append(
+        "specifications",
+        JSON.stringify(
+          specifications.reduce((acc, s) => {
+            if (s.key && s.value) acc[s.key] = s.value;
+            return acc;
+          }, {})
+        )
+      );
+      form.append("dimensions", JSON.stringify(dimensions));
+      form.append("freeShipping", freeShipping);
+      form.append("handlingTime", handlingTime);
 
       // OFFER
       form.append("discount", discount);
@@ -240,7 +320,10 @@ export const useProductForm = (productId) => {
       form.append("offerDescription", offerDescription);
       form.append("offerValidFrom", offerValidFrom);
       form.append("offerValidTill", offerValidTill);
-
+      form.append("canDispatchFast", canDispatchFast ? "true" : "false");
+      form.append("returnEligible", returnEligible ? "true" : "false");
+      form.append("codAvailable", codAvailable ? "true" : "false");
+      form.append("qualityVerified", qualityVerified ? "true" : "false");
       // IMAGES
       images.forEach((img) => {
         if (img.file) form.append("images", img.file);
@@ -258,6 +341,7 @@ export const useProductForm = (productId) => {
       toast({ title: "Success", description: "Product saved successfully" });
       return true;
     } catch (err) {
+      console.log(err,"eeeeeee")
       handleErrorLogout(err, "Error saving product");
       return false;
     } finally {
@@ -286,8 +370,7 @@ export const useProductForm = (productId) => {
     generalInputRef,
 
     // New fields
-    material,
-    setMaterial,
+
     ageGroup,
     toggleAgeGroup,
     colors,
@@ -320,8 +403,36 @@ export const useProductForm = (productId) => {
     setOfferValidFrom,
     offerValidTill,
     setOfferValidTill,
+    materials,
+    toggleMaterial,
 
+    featuresText,
+    setFeaturesText,
+
+    specifications,
+    addSpec,
+    updateSpecKey,
+    updateSpecValue,
+    removeSpec,
+
+    dimensions,
+    setDimensions,
+
+    freeShipping,
+    setFreeShipping,
+    handlingTime,
+    setHandlingTime,
+canDispatchFast,
+setCanDispatchFast,
+returnEligible,
+setReturnEligible,
+codAvailable,
+setCodAvailable,
+qualityVerified,
+setQualityVerified,
     // Submit
     submitProduct,
   };
 };
+
+

@@ -2,46 +2,46 @@ var Cart = require("../models/Cart");
 var Product = require("../models/Product");
 
 // Add product to cart
-exports.addToCart = async function (req, res) {
-  console.log("Adding product to cart", req.body);
-
+exports.addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity, color, size } = req.body;
+        const { userId, productId, quantity, color, size } = req.body;
 
-    // 🔑 Always fetch product to get price
+    console.log(userId,req.body)
+    // 1️⃣ Validate product
     const product = await Product.findById(productId);
-    if (!product) {
+    if (!product || product.blacklisted) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
 
-    const cart = await Cart.findOne({ user: userId });
+    // 2️⃣ Find cart
+    let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
-      const newCart = new Cart({
+      cart = new Cart({
         user: userId,
         products: [
           {
-            product: productId,
+            product: product._id,     // ✅ ObjectId only
             quantity,
             color,
             size,
-            price: product.price, // ✅ REQUIRED
+            price: product.price,     // snapshot
           },
         ],
       });
 
-      await newCart.save();
+      await cart.save();
 
       return res.status(200).json({
         success: true,
         message: "Product added to cart",
-        cart: newCart,
       });
     }
 
+    // 3️⃣ Check existing item
     const index = cart.products.findIndex(
       (p) =>
         p.product.toString() === productId &&
@@ -53,11 +53,11 @@ exports.addToCart = async function (req, res) {
       cart.products[index].quantity += quantity;
     } else {
       cart.products.push({
-        product: productId,
+        product: product._id,
         quantity,
         color,
         size,
-        price: product.price, // ✅ REQUIRED
+        price: product.price,
       });
     }
 
@@ -66,7 +66,6 @@ exports.addToCart = async function (req, res) {
     return res.status(200).json({
       success: true,
       message: "Product added to cart",
-      cart,
     });
   } catch (error) {
     console.error("addToCart error:", error);
@@ -76,6 +75,7 @@ exports.addToCart = async function (req, res) {
     });
   }
 };
+
 
 
 // Get user's cart

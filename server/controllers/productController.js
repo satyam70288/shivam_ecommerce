@@ -3,144 +3,326 @@ const Product = require("../models/Product");
 const cloudinary = require("../utils/cloudinary");
 const Category = require("../models/Category");
 const { default: mongoose } = require("mongoose");
-
-
+const ProductCapabilities = require("../models/ProductCapabilities");
+const PromiseMaster = require("../models/PromiseMaster");
 
 const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(401).json({ success: false, message: "Access denied" });
   }
+  const toBool = (v) => v === "true" || v === true;
 
   try {
     const {
       name,
       description,
       category,
-      productType,
+      productType, // "simple" or "variant"
+
+      // SIMPLE PRODUCT FIELDS
       price,
       stock,
+      sku,
+
+      // VARIANT PRODUCT FIELDS
+      variants, // JSON string: [{ color, size, stock, price, sku, discount }]
+
+      // COMMON FIELDS
       discount,
       offerTitle,
       offerDescription,
       offerValidFrom,
       offerValidTill,
-
-      // NEW FIELDS
-      material,
+      materials,
+      features,
+      specifications,
+      dimensions,
+      freeShipping,
+      handlingTime,
       brand,
       ageGroup,
-      colors,
-      sizes,
       tags,
       keywords,
       isFeatured,
       isNewArrival,
       isBestSeller,
+      canDispatchFast,
+      returnEligible,
+      codAvailable,
+      qualityVerified,
     } = req.body;
-
-    // ----------------------------------------------------
-    // REQUIRED VALIDATION
-    // ----------------------------------------------------
-    if (!name || !description || !category) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing required fields" });
-    }
-
-    if (!productType || productType !== "simple") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or missing product type",
-      });
-    }
-
-    if (!price || !stock) {
-      return res.status(400).json({
-        success: false,
-        message: "Price & stock are required for simple products",
-      });
-    }
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one product image is required",
-      });
-    }
-
-    // ----------------------------------------------------
-    // UPLOAD SIMPLE PRODUCT IMAGES
-    // ----------------------------------------------------
-    const uploadedImages = [];
-
-    for (const file of req.files) {
-      const uploadRes = await cloudinaryUploadBuffer(file.buffer);
-      uploadedImages.push({
-        url: uploadRes.secure_url,
-        id: uploadRes.public_id,
-      });
-    }
-
-    // ----------------------------------------------------
-    // PARSE JSON FIELDS (IF SENT AS STRINGS)
-    // ----------------------------------------------------
     const parsedAgeGroup = ageGroup ? JSON.parse(ageGroup) : [];
-    const parsedColors = colors ? JSON.parse(colors) : [];
-    const parsedSizes = sizes ? JSON.parse(sizes) : [];
-
     const parsedTags = tags ? JSON.parse(tags) : [];
     const parsedKeywords = keywords ? JSON.parse(keywords) : [];
+    const parsedMaterials = materials ? JSON.parse(materials) : [];
+    const parsedFeatures = features ? JSON.parse(features) : [];
+    let parsedSpecifications = {};
+    try {
+      console.log(specifications);
+      parsedSpecifications = specifications ? JSON.parse(specifications) : {};
+      console.log(parsedSpecifications);
+    } catch {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid specifications format",
+      });
+    }
 
-    // ----------------------------------------------------
-    // CREATE PRODUCT DOCUMENT
-    // ----------------------------------------------------
-   const product = new Product({
-  productType: "simple",
+    const parsedDimensions = dimensions ? JSON.parse(dimensions) : null;
 
-  // Basic
-  name,
-  description,
-  category,
+    const parsedFreeShipping = freeShipping === "true";
+    const parsedHandlingTime =
+      handlingTime !== undefined ? Number(handlingTime) : 1;
 
-  // Simple fields
-  price,
-  stock,
+    // ============================================
+    // BASIC VALIDATION
+    // ============================================
+    if (!name || !description || !category) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, description, and category are required",
+      });
+    }
 
-  images: uploadedImages,
+    if (!productType || !["simple", "variant"].includes(productType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Product type must be 'simple' or 'variant'",
+      });
+    }
 
-  // NEW FIELDS
-  material: material || "",
-  brand: brand || "",
+    // ============================================
+    // SIMPLE PRODUCT VALIDATION
+    // ============================================
+    if (productType === "simple") {
+      if (!price || !stock) {
+        return res.status(400).json({
+          success: false,
+          message: "Price, stock, and SKU are required for simple products",
+        });
+      }
 
-  ageGroup: parsedAgeGroup || [],
-  colors: parsedColors || [],
-  sizes: parsedSizes || [],
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "At least one image is required for simple products",
+        });
+      }
+    }
+    if (parsedHandlingTime < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Handling time cannot be negative",
+      });
+    }
+    if (parsedFeatures.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one feature is required",
+      });
+    }
 
-  tags: parsedTags || [],
-  keywords: parsedKeywords || [],
+    // ============================================
+    // VARIANT PRODUCT VALIDATION
+    // ============================================
+    if (productType === "variant") {
+      if (!variants) {
+        return res.status(400).json({
+          success: false,
+          message: "Variants are required for variant products",
+        });
+      }
 
-  isFeatured: isFeatured === "true",
-  isNewArrival: isNewArrival === "true",
-  isBestSeller: isBestSeller === "true",
+      let parsedVariants;
+      try {
+        parsedVariants = JSON.parse(variants);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid variants format",
+        });
+      }
 
-  // Offer
-  discount: discount || 0,
-  offerTitle,
-  offerDescription,
-  offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
-  offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
-});
+      if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "At least one variant is required",
+        });
+      }
 
+      // Validate each variant
+      for (const variant of parsedVariants) {
+        if (!variant.color || !variant.price || !variant.sku) {
+          return res.status(400).json({
+            success: false,
+            message: "Each variant must have color, price, and SKU",
+          });
+        }
+      }
+    }
 
-    await product.save();
+    // ============================================
+    // GENERATE SLUG
+    // ============================================
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
 
-    return res.status(201).json({
-      success: true,
-      message: "Product created successfully",
-      data: product,
-    });
+    // ============================================
+    // HANDLE SIMPLE PRODUCT
+    // ============================================
+    if (productType === "simple") {
+      const uploadedImages = [];
+
+      for (const file of req.files) {
+        const uploadRes = await cloudinaryUploadBuffer(file.buffer);
+        uploadedImages.push({
+          url: uploadRes.secure_url,
+          id: uploadRes.public_id,
+        });
+      }
+
+      const product = new Product({
+        productType: "simple",
+        name,
+        description,
+        category,
+        slug,
+
+        // Simple product fields
+        price: Number(price),
+        stock: Number(stock),
+        sku,
+        images: uploadedImages,
+
+        // Common fields
+        materials: parsedMaterials,
+        features: parsedFeatures,
+        specifications: parsedSpecifications,
+        dimensions: parsedDimensions,
+        freeShipping: parsedFreeShipping,
+        handlingTime: parsedHandlingTime,
+        brand: brand || "Generic",
+        ageGroup: parsedAgeGroup,
+        tags: parsedTags,
+        keywords: parsedKeywords,
+
+        // Flags
+        isFeatured: isFeatured === "true",
+        isNewArrival: isNewArrival === "true",
+        isBestSeller: isBestSeller === "true",
+
+        // Offer fields
+        discount: Number(discount) || 0,
+        offerTitle: offerTitle || null,
+        offerDescription: offerDescription || null,
+        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
+        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+      });
+
+      await product.save();
+      await ProductCapabilities.create({
+        productId: product._id,
+        // sellerId: req.user._id,
+        canDispatchFast: toBool(canDispatchFast),
+        returnEligible: toBool(returnEligible),
+        codAvailable: toBool(codAvailable),
+        qualityVerified: toBool(qualityVerified),
+      });
+      return res.status(201).json({
+        success: true,
+        message: "Simple product created successfully",
+        data: product,
+      });
+    }
+
+    // ============================================
+    // HANDLE VARIANT PRODUCT
+    // ============================================
+    if (productType === "variant") {
+      const parsedVariants = JSON.parse(variants);
+      const processedVariants = [];
+
+      // Process each variant
+      for (let i = 0; i < parsedVariants.length; i++) {
+        const variant = parsedVariants[i];
+
+        // Check if images are provided for this variant
+        const variantImages = [];
+        const variantFiles = req.files.filter(
+          (file) => file.fieldname === `variant_${i}_images`
+        );
+
+        if (variantFiles.length > 0) {
+          for (const file of variantFiles) {
+            const uploadRes = await cloudinaryUploadBuffer(file.buffer);
+            variantImages.push({
+              url: uploadRes.secure_url,
+              id: uploadRes.public_id,
+            });
+          }
+        }
+
+        processedVariants.push({
+          color: variant.color,
+          size: variant.size || null,
+          stock: Number(variant.stock) || 0,
+          price: Number(variant.price),
+          sku: variant.sku,
+          discount: Number(variant.discount) || 0,
+          images: variantImages,
+        });
+      }
+
+      const product = new Product({
+        productType: "variant",
+        name,
+        description,
+        category,
+        slug,
+
+        // Variants
+        variants: processedVariants,
+
+        // Common fields
+        material: material || "Other",
+        brand: brand || "Generic",
+        ageGroup: parsedAgeGroup,
+        tags: parsedTags,
+        keywords: parsedKeywords,
+
+        // Flags
+        isFeatured: isFeatured === "true",
+        isNewArrival: isNewArrival === "true",
+        isBestSeller: isBestSeller === "true",
+
+        // Offer fields (applies to all variants if they don't have individual discounts)
+        offerTitle: offerTitle || null,
+        offerDescription: offerDescription || null,
+        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
+        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+      });
+
+      await product.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "Variant product created successfully",
+        data: product,
+      });
+    }
   } catch (error) {
     console.error("PRODUCT CREATE ERROR:", error);
+
+    // Handle duplicate SKU error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "SKU already exists. Please use a unique SKU.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Server error while creating product",
@@ -148,9 +330,6 @@ const createProduct = async (req, res) => {
     });
   }
 };
-
-
-
 
 const getProductsforadmin = async (req, res) => {
   console.log("inside");
@@ -202,6 +381,25 @@ const getProductsforadmin = async (req, res) => {
     // AGGREGATION PIPELINE
     const pipeline = [
       { $match: query },
+
+      // 🔥 POPULATE CATEGORY
+      {
+        $lookup: {
+          from: "categories", // collection name
+          localField: "category", // Product.category
+          foreignField: "_id", // Category._id
+          as: "category",
+        },
+      },
+
+      // category array → object
+      {
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
       {
         $facet: {
           products: [
@@ -439,6 +637,66 @@ const getProductByName = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+const getProductById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const product = await Product.findById(id).populate("reviews");
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    let discountedPrice = null;
+    if (product.productType === "simple") {
+      discountedPrice = product.getDiscountedPrice();
+    }
+
+    const productObj = product.toObject();
+
+    productObj.specifications = product.specifications
+      ? Object.fromEntries(product.specifications)
+      : {};
+
+    productObj.discountedPrice = discountedPrice;
+    const cap = await ProductCapabilities.findOne({
+      productId: product._id,
+    });
+
+    const codes = [];
+    if (cap?.canDispatchFast) codes.push("READY_TO_SHIP");
+    if (cap?.returnEligible) codes.push("EASY_RETURNS");
+    if (cap?.codAvailable) codes.push("SECURE_PAYMENTS");
+    if (cap?.qualityVerified) codes.push("QUALITY_CHECKED");
+
+    const promises = await PromiseMaster.find({
+      code: { $in: codes },
+      isActive: true,
+    }).select("code title description iconId");
+    return res.status(200).json({
+      success: true,
+      message: "Product found",
+      data: productObj,
+      promises
+    });
+  } catch (error) {
+    // Invalid ObjectId handling
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product id",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 const blacklistProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -498,29 +756,38 @@ const removeFromBlacklist = async (req, res) => {
   }
 };
 
-const getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product)
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+// const getProductById = async (req, res) => {
+//   try {
+//     const product = await Product.findById(req.params.id).populate(
+//       "category",
+//       "name slug"
+//     );
 
-    const discountedPrice = product.getDiscountedPrice();
+//     if (!product) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Product not found",
+//       });
+//     }
 
-    return res.status(200).json({
-      success: true,
-      message: "Product fetched successfully",
-      data: {
-        product,
-        discountedPrice,
-        isOfferActive: product.isOfferActive(),
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
+//     const finalPrice = product.getDiscountedPrice();
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Product fetched successfully",
+//       data: {
+//         ...product.toObject(), // 👈 flatten
+//         finalPrice, // 👈 normalized
+//         isOfferActive: product.isOfferActive(),
+//       },
+//     });
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
 
 const getProductsByCategory = async (req, res) => {
   try {
@@ -620,7 +887,6 @@ const getProductsByCategory = async (req, res) => {
       total: products.length,
       data: products,
     });
-
   } catch (error) {
     console.error("GetProductsByCategory Error:", error);
     return res.status(500).json({
@@ -629,7 +895,6 @@ const getProductsByCategory = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   createProduct,
@@ -642,4 +907,5 @@ module.exports = {
   getProductById,
   getProductsforadmin,
   getProductsByCategory,
+  // getProductById
 };

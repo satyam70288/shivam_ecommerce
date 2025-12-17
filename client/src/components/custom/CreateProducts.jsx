@@ -86,6 +86,7 @@ const CreateProducts = ({ productId }) => {
                 onChange={(e) => f.setDescription(e.target.value)}
               />
             </div>
+            
 
             <div>
               <Label>Category</Label>
@@ -105,28 +106,18 @@ const CreateProducts = ({ productId }) => {
             </div>
 
             <div>
-              <Label>Material</Label>
-              <Select value={f.material} onValueChange={f.setMaterial}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Material" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[
-                    "Plastic",
-                    "Metal",
-                    "Wood",
-                    "Cotton",
-                    "Synthetic",
-                    "Alloy",
-                    "Paper",
-                    "Other",
-                  ].map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Materials</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {MATERIAL_OPTIONS.map((m) => (
+                  <label key={m} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={f.materials.includes(m)}
+                      onCheckedChange={() => f.toggleMaterial(m)}
+                    />
+                    {m}
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -162,7 +153,7 @@ const CreateProducts = ({ productId }) => {
             <div>
               <Label>Age Group</Label>
               <div className="grid grid-cols-2 gap-2 mt-2">
-                {["0-3", "3-6", "6-9", "9-12", "12+"].map((ag) => (
+                {AGE_GROUPS.map((ag) => (
                   <label key={ag} className="flex items-center gap-2">
                     <Checkbox
                       checked={f.ageGroup.includes(ag)}
@@ -170,56 +161,6 @@ const CreateProducts = ({ productId }) => {
                     />
                     {ag} years
                   </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Colors */}
-            <div>
-              <Label>Colors</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {[
-                  "Red",
-                  "Blue",
-                  "Black",
-                  "White",
-                  "Pink",
-                  "Gold",
-                  "Silver",
-                ].map((col) => (
-                  <button
-                    type="button"
-                    key={col}
-                    onClick={() => f.toggleColor(col)}
-                    className={`px-3 py-1 rounded-full border text-sm ${
-                      f.colors.includes(col)
-                        ? "bg-red-500 text-white"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    {col}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sizes */}
-            <div>
-              <Label>Sizes</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {["XS", "S", "M", "L", "XL", "XXL", "Free Size"].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => f.toggleSize(s)}
-                    className={`px-3 py-1 rounded border text-sm ${
-                      f.sizes.includes(s)
-                        ? "bg-black text-white"
-                        : "bg-gray-200"
-                    }`}
-                  >
-                    {s}
-                  </button>
                 ))}
               </div>
             </div>
@@ -277,6 +218,142 @@ const CreateProducts = ({ productId }) => {
             </div>
           </CardContent>
         </Card>
+        <Card>
+  <CardHeader>
+    <CardTitle>Delivery & Policy</CardTitle>
+  </CardHeader>
+
+  <CardContent className="space-y-3">
+    <label className="flex items-center gap-2">
+      <Checkbox
+        checked={f.canDispatchFast}
+        onCheckedChange={f.setCanDispatchFast}
+      />
+      Ready to Ship
+    </label>
+
+    <label className="flex items-center gap-2">
+      <Checkbox
+        checked={f.returnEligible}
+        onCheckedChange={f.setReturnEligible}
+      />
+      Easy Returns
+    </label>
+
+    <label className="flex items-center gap-2">
+      <Checkbox
+        checked={f.codAvailable}
+        onCheckedChange={f.setCodAvailable}
+      />
+      Secure Payments (COD)
+    </label>
+
+    <label className="flex items-center gap-2">
+      <Checkbox
+        checked={f.qualityVerified}
+        onCheckedChange={f.setQualityVerified}
+      />
+      Quality Checked
+    </label>
+  </CardContent>
+</Card>
+
+        <div>
+              <Label>Features (one per line)</Label>
+              <Textarea
+                rows={4}
+                value={f.featuresText}
+                onChange={(e) => f.setFeaturesText(e.target.value)}
+                placeholder="Powerful spring action
+Safe suction darts
+Lightweight design"
+              />
+            </div>
+        <div className="space-y-4 pt-4 border-t">
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={f.freeShipping}
+              onCheckedChange={f.setFreeShipping}
+            />
+            Free Shipping
+          </label>
+
+          <div>
+            <Label>Handling Time (Days)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={f.handlingTime}
+              onChange={(e) => f.setHandlingTime(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Specifications</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          {f.specifications.map((spec, i) => (
+            <div key={i} className="flex gap-2 mb-2">
+              <Input
+                placeholder="Key"
+                value={spec.key}
+                onChange={(e) => f.updateSpecKey(i, e.target.value)}
+              />
+              <Input
+                placeholder="Value"
+                value={spec.value}
+                onChange={(e) => f.updateSpecValue(i, e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => f.removeSpec(i)}
+              >
+                <X size={14} />
+              </Button>
+            </div>
+          ))}
+
+          <Button type="button" variant="outline" onClick={f.addSpec}>
+            + Add Specification
+          </Button>
+        </CardContent>
+      </Card>
+      <div className="mt-6">
+        <Label>Dimensions</Label>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <Input
+            placeholder="Length"
+            value={f.dimensions.length}
+            onChange={(e) =>
+              f.setDimensions({ ...f.dimensions, length: e.target.value })
+            }
+          />
+          <Input
+            placeholder="Width"
+            value={f.dimensions.width}
+            onChange={(e) =>
+              f.setDimensions({ ...f.dimensions, width: e.target.value })
+            }
+          />
+          <Input
+            placeholder="Height"
+            value={f.dimensions.height}
+            onChange={(e) =>
+              f.setDimensions({ ...f.dimensions, height: e.target.value })
+            }
+          />
+          <Input
+            placeholder="Weight"
+            value={f.dimensions.weight}
+            onChange={(e) =>
+              f.setDimensions({ ...f.dimensions, weight: e.target.value })
+            }
+          />
+        </div>
       </div>
 
       {/* ================================

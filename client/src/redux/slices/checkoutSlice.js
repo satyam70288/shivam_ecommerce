@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL;
+
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("token")}`,
 });
@@ -10,22 +11,32 @@ const authHeader = () => ({
    ASYNC THUNKS
 ===================================================== */
 
-/* 1️⃣ INIT CHECKOUT (cart or buy-now UI only) */
+/* 1️⃣ INIT CHECKOUT (PREVIEW ONLY) */
 export const initCheckout = createAsyncThunk(
   "checkout/init",
-  async (_, { rejectWithValue }) => {
+  async ({ productId, qty } = {}, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API}/checkout/init`, {
-        headers: authHeader(),
-      });
+      const params = new URLSearchParams();
+
+      if (productId) {
+        params.append("productId", productId);
+        params.append("qty", qty || 1);
+      }
+
+      const res = await axios.get(
+        `${API}/checkout/init?${params.toString()}`,
+        {
+          headers: authHeader(),
+        }
+      );
+
       return res.data; // { items, summary }
     } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Checkout init failed"
-      );
+      return rejectWithValue("Checkout init failed");
     }
   }
 );
+
 
 /* 2️⃣ FETCH ADDRESSES */
 export const fetchAddresses = createAsyncThunk(
@@ -35,8 +46,8 @@ export const fetchAddresses = createAsyncThunk(
       const res = await axios.get(`${API}/addresses`, {
         headers: authHeader(),
       });
-      return res.data.data; // ✅ FIXED (backend sends { data })
-    } catch (err) {
+      return res.data.data;
+    } catch {
       return rejectWithValue("Failed to load addresses");
     }
   }
@@ -51,7 +62,7 @@ export const createAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return res.data.data;
-    } catch (err) {
+    } catch {
       return rejectWithValue("Failed to add address");
     }
   }
@@ -66,7 +77,7 @@ export const updateAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return res.data.data;
-    } catch (err) {
+    } catch {
       return rejectWithValue("Failed to update address");
     }
   }
@@ -81,13 +92,13 @@ export const deleteAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return id;
-    } catch (err) {
+    } catch {
       return rejectWithValue("Failed to delete address");
     }
   }
 );
 
-/* 6️⃣ APPLY COUPON */
+/* 6️⃣ APPLY COUPON (PREVIEW ONLY) */
 export const applyCoupon = createAsyncThunk(
   "checkout/applyCoupon",
   async (code, { rejectWithValue }) => {
@@ -98,29 +109,34 @@ export const applyCoupon = createAsyncThunk(
         { headers: authHeader() }
       );
       return { code, summary: res.data.summary };
-    } catch (err) {
+    } catch {
       return rejectWithValue("Invalid coupon");
     }
   }
 );
 
-/* 7️⃣ PLACE ORDER (COD / ONLINE) */
+/* 7️⃣ PLACE ORDER (COD / RAZORPAY) */
 export const placeOrder = createAsyncThunk(
   "checkout/placeOrder",
   async (_, { getState, rejectWithValue }) => {
     try {
-      const { addressId, coupon, paymentMethod } = getState().checkout;
+      const { addressId, coupon, paymentMethod:paymentMode } =
+        getState().checkout;
 
       if (!addressId) {
         return rejectWithValue("Please select delivery address");
       }
+
+      // ✅ Backend expects: COD | RAZORPAY
+      const apiPaymentMethod =
+        paymentMode === "COD" ? "COD" : "RAZORPAY";
 
       const res = await axios.post(
         `${API}/orders/create`,
         {
           addressId,
           couponCode: coupon?.code || null,
-          paymentMode:paymentMethod, // "COD" | "ONLINE"
+          paymentMode: apiPaymentMethod, // ✅ FIXED
         },
         { headers: authHeader() }
       );
@@ -142,14 +158,8 @@ const checkoutSlice = createSlice({
   name: "checkout",
 
   initialState: {
+    /* PREVIEW DATA */
     items: [],
-
-    addresses: [],
-    addressId: null,
-
-    coupon: null, // { code }
-    paymentMethod: "COD",
-
     summary: {
       subtotal: 0,
       discount: 0,
@@ -157,9 +167,22 @@ const checkoutSlice = createSlice({
       total: 0,
     },
 
+    /* ADDRESS */
+    addresses: [],
+    addressId: null,
+
+    /* PAYMENT */
+    paymentMethod: "COD", // "COD" | "RAZORPAY"
+
+    /* COUPON */
+    coupon: null,
+
+    /* ORDER RESULT */
+    order: null, // { id, paymentMethod, totalAmount, razorpayOrder? }
+
+    /* UI */
     loading: false,
     error: null,
-    order: null,
   },
 
   reducers: {
@@ -168,7 +191,8 @@ const checkoutSlice = createSlice({
     },
 
     setPaymentMethod(state, action) {
-      state.paymentMethod = action.payload;
+      state.paymentMethod =
+        action.payload === "COD" ? "COD" : "RAZORPAY";
     },
 
     resetCheckout() {
@@ -240,7 +264,12 @@ const checkoutSlice = createSlice({
       })
       .addCase(placeOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.order = action.payload;
+        state.order = {
+          id: action.payload.orderId,
+          paymentMethod: action.payload.paymentMethod,
+          totalAmount: action.payload.totalAmount,
+          razorpayOrder: action.payload.razorpayOrder || null,
+        };
       })
       .addCase(placeOrder.rejected, (state, action) => {
         state.loading = false;
