@@ -74,28 +74,31 @@ app.use(hpp());
 
 /* ========== CORS ========== */
 // you already have a whitelist function; keep that
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "shivam-ecommerce-312550lhu-satyam70288s-projects.vercel.app",
-        "shivam-ecommerce.vercel.app"
-      ];
-      const isVercelPreview =
-        origin && /^https:\/\/swag-fashion.*\.vercel\.app$/.test(origin);
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://shivam-ecommerce.vercel.app",
+];
 
-      if (!origin || allowedOrigins.includes(origin) || isVercelPreview) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/shivam-ecommerce-.*\.vercel\.app$/.test(origin)
+    ) {
+      return callback(null, true);
+    }
+
+    return callback(null, false); // ❌ error throw mat kar
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+app.options("*", cors());
+
 
 /* ========== COOKIE PARSER (for csurf or cookie auth) ========== */
 // app.use(cookieParser());
