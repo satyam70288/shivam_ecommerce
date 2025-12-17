@@ -80,8 +80,7 @@ app.use(
       const allowedOrigins = [
         "http://localhost:5173",
         "shivam-ecommerce-312550lhu-satyam70288s-projects.vercel.app",
-        "shivam-ecommerce.vercel.app",
-   
+        "shivam-ecommerce.vercel.app"
       ];
       const isVercelPreview =
         origin && /^https:\/\/swag-fashion.*\.vercel\.app$/.test(origin);
