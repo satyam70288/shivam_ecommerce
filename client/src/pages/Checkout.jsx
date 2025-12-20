@@ -1,4 +1,4 @@
-// checkout/CheckoutPage.jsx
+// CheckoutPage.jsx में add करें
 import React, { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { initCheckout } from "@/redux/slices/checkoutSlice";
@@ -9,6 +9,36 @@ import PlaceOrderButton from "@/components/checkout/PlaceOrderButton";
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
+  
+  // ✅ DEBUG: Check for duplicate buttons
+  useEffect(() => {
+    console.log("🔍 CheckoutPage mounted");
+    
+    // Check DOM for duplicate buttons
+    setTimeout(() => {
+      const buttons = document.querySelectorAll('button');
+      const payButtons = Array.from(buttons).filter(btn => 
+        btn.textContent.includes('Pay Now') || 
+        btn.textContent.includes('Place Order')
+      );
+      
+      console.log(`📊 Found ${payButtons.length} payment buttons:`, 
+        payButtons.map(b => ({
+          text: b.textContent,
+          id: b.id || 'no-id',
+          parent: b.parentElement?.className || 'unknown'
+        }))
+      );
+      
+      // Highlight all payment buttons
+      payButtons.forEach((btn, i) => {
+        btn.style.border = `3px solid ${i === 0 ? 'green' : 'red'}`;
+        btn.style.margin = '2px';
+      });
+    }, 100);
+    
+  }, []);
+  
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const productId = params.get("productId");
@@ -26,7 +56,10 @@ const CheckoutPage = () => {
       </div>
 
       <div>
+        {/* ✅ Ensure only ONE PlaceOrderButton */}
         <PlaceOrderButton />
+        
+        {/* ❌ NO OTHER BUTTONS HERE */}
       </div>
     </div>
   );

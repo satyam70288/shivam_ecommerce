@@ -1,102 +1,225 @@
+// controllers/paymentController.js
+const razorpay = require("../config/razorpay");
 const crypto = require("crypto");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
+const Address = require("../models/address");
+const { calculateOrder } = require("../helper/createOrder");
+const { default: mongoose } = require("mongoose");
 
-exports.verifyPayment = async (req, res) => {
+exports.createRazorpayOrder = async (req, res) => {
   try {
     const userId = req.id;
+    const { productId, quantity, addressId } = req.body;
 
-    const {
-      orderId,
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    } = req.body;
+    /* ================= BASIC VALIDATION ================= */
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    // 1️⃣ Basic validation
+    if (!addressId) {
+      return res.status(400).json({ message: "Address is required" });
+    }
+
+    /* ================= SERVER-SIDE PRICE CALC ================= */
+    const orderData = await calculateOrder(userId, {
+      productId,
+      quantity,
+    });
+
+    /**
+     * orderData structure:
+     * {
+     *   items: [],
+     *   summary: { subtotal, discount, shipping, total },
+     *   checkoutType
+     * }
+     */
+
     if (
-      !orderId ||
-      !razorpay_order_id ||
-      !razorpay_payment_id ||
-      !razorpay_signature
+      !orderData ||
+      !orderData.summary ||
+      typeof orderData.summary.total !== "number"
     ) {
       return res.status(400).json({
-        success: false,
-        message: "Missing payment details",
+        message: "Invalid order calculation",
       });
     }
 
-    // 2️⃣ Fetch order from DB
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
-
-    // 3️⃣ Prevent double payment
-    if (order.isPaid) {
+    if (orderData.summary.total <= 0) {
       return res.status(400).json({
-        success: false,
-        message: "Order already paid",
+        message: "Order amount must be greater than zero",
       });
     }
 
-    // 4️⃣ Verify Razorpay signature
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest("hex");
+    /* ================= RAZORPAY AMOUNT ================= */
+    const amountInPaise = Math.round(orderData.summary.total * 100);
 
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment verification failed",
-      });
-    }
+    /* ================= CREATE RAZORPAY ORDER ================= */
+    const rpOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: "INR",
+      receipt: `rcpt_${Date.now()}_${userId.slice(-5)}`,
+      notes: {
+        userId,
+        checkoutType: orderData.checkoutType,
+        addressId,
+      },
+    });
 
-    // 5️⃣ Reduce stock (AFTER successful payment)
-    for (const item of order.products) {
-      const product = await Product.findById(item.productId);
-
-      if (!product || product.stock < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Stock issue for ${item.name}`,
-        });
-      }
-
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: -item.quantity },
-      });
-    }
-
-    // 6️⃣ Update order as PAID
-    order.isPaid = true;
-    order.status = "confirmed";
-    order.razorpayOrderId = razorpay_order_id;
-    order.razorpayPaymentId = razorpay_payment_id;
-    order.razorpaySignature = razorpay_signature;
-
-    await order.save();
-
-    // 7️⃣ Clear cart (only if cart-based order)
-    await Cart.deleteOne({ user: userId });
-
+    /* ================= SUCCESS RESPONSE ================= */
     return res.status(200).json({
       success: true,
-      message: "Payment verified, order confirmed",
-      orderId: order._id,
+      razorpayOrderId: rpOrder.id,
+      amount: rpOrder.amount,
+      currency: rpOrder.currency,
+      key: process.env.RAZORPAY_KEY_ID,
+      orderSummary: orderData.summary, // frontend ke liye
     });
 
   } catch (error) {
-    console.error("Verify Payment Error:", error);
+    console.error("❌ Create Razorpay Order Error:", error);
+
     return res.status(500).json({
-      success: false,
-      message: error.message,
+      message: "Failed to initiate payment",
     });
   }
 };
+exports.verifyRazorpayPayment = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const userId = req.id;
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      productId,
+      quantity,
+      addressId,
+    } = req.body;
+
+    /* ================= BASIC VALIDATION ================= */
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      throw new Error("Missing payment details");
+    }
+
+    /* ================= SIGNATURE VERIFY ================= */
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (expectedSignature !== razorpay_signature) {
+      throw new Error("Invalid payment signature");
+    }
+
+    /* ================= IDEMPOTENCY ================= */
+    const existingOrder = await Order.findOne(
+      { "paymentGateway.paymentId": razorpay_payment_id },
+      null,
+      { session }
+    );
+    if (existingOrder) {
+      await session.commitTransaction();
+      session.endSession();
+      return res.json({ success: true, orderId: existingOrder._id });
+    }
+
+    /* ================= RE-CALCULATE ORDER ================= */
+    const orderData = await calculateOrder(userId, {
+      productId,
+      quantity,
+    });
+
+    /* ================= AMOUNT VERIFY ================= */
+    const rpOrder = await razorpay.orders.fetch(razorpay_order_id);
+
+    const expectedAmount = Math.round(
+      orderData.summary.total * 100
+    );
+
+    if (rpOrder.amount !== expectedAmount) {
+      throw new Error("Payment amount mismatch");
+    }
+
+    /* ================= ADDRESS SNAPSHOT ================= */
+    const addressDoc = await Address.findById(addressId).session(session);
+    if (!addressDoc) {
+      throw new Error("Invalid address");
+    }
+
+    const shippingAddress = {
+      name: addressDoc.name,
+      phone: addressDoc.phone,
+      email: addressDoc.email,
+      addressLine1: addressDoc.address_line1,
+      addressLine2: addressDoc.address_line2 || "",
+      city: addressDoc.city,
+      state: addressDoc.state,
+      pincode: addressDoc.pincode,
+      country: addressDoc.country || "India",
+    };
+
+    /* ================= CREATE ORDER FIRST ================= */
+    const order = await Order.create(
+      [
+        {
+          userId,
+          items: orderData.items,
+          subtotal: orderData.summary.subtotal,
+          shippingCharge: orderData.summary.shipping,
+          totalAmount: orderData.summary.total,
+          shippingAddress,
+          paymentMethod: "RAZORPAY",
+          paymentStatus: "PAID",
+          paymentGateway: {
+            provider: "razorpay",
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            signature: razorpay_signature,
+          },
+          status: "PLACED",
+        },
+      ],
+      { session }
+    );
+
+    /* ================= STOCK REDUCTION ================= */
+    for (const item of orderData.items) {
+      const updated = await Product.findOneAndUpdate(
+        { _id: item.productId, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { session }
+      );
+
+      if (!updated) {
+        throw new Error(`${item.name} out of stock`);
+      }
+    }
+
+    /* ================= CLEAR CART ================= */
+    if (orderData.checkoutType === "CART") {
+      await Cart.deleteOne({ user: userId }).session(session);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({
+      success: true,
+      message: "Payment verified, order placed",
+      orderId: order[0]._id,
+    });
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("❌ Verify Razorpay Payment Error:", err);
+    return res.status(400).json({ message: err.message });
+  }
+};
+

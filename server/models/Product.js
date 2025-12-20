@@ -69,12 +69,12 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
 
-    dimensions: {
-      length: String,
-      width: String,
-      height: String,
-      weight: String,
-    },
+   dimensions: {
+  length: { type: Number, required: true }, // cm
+  width:  { type: Number, required: true }, // cm
+  height: { type: Number, required: true }, // cm
+  weight: { type: Number, required: true }, // kg
+},
 
     ageGroup: {
       type: [String],

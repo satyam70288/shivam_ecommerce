@@ -5,36 +5,32 @@ const mongoose = require("mongoose");
 ========================= */
 const orderItemSchema = new mongoose.Schema(
   {
-    // Reference (analytics / admin only)
-    productId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
 
-    variantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
-
-    // SNAPSHOT DATA (IMMUTABLE)
     name: { type: String, required: true },
-    sku: { type: String },
-    image: { type: String },
+    image: String,
 
-    price: { type: Number, required: true },        // original price
-    discount: { type: Number, default: 0 },          // % at order time
-    finalPrice: { type: Number, required: true },    // after discount
+    price: Number,
+    discountPercent: Number,
+    discountAmount: Number,
+    finalPrice: Number,
 
-    quantity: { type: Number, required: true, min: 1 },
+    quantity: Number,
+    lineTotal: Number,
 
-    // Variant snapshot (optional but useful)
+    // 🔥 DIMENSIONS SNAPSHOT (REQUIRED)
+    weight: { type: Number, required: true }, // kg
+    length: { type: Number, required: true }, // cm
+    width:  { type: Number, required: true },
+    height: { type: Number, required: true },
+
     color: String,
     size: String,
-    weight: { type: Number, default: 0 },
   },
   { _id: false }
 );
+
+
 
 /* =========================
    ORDER SCHEMA

@@ -40,20 +40,7 @@ const CartProduct = ({
       return;
     }
 
-    if (quantity > stock) {
-      toast({ title: "Product out of stock" });
-      return;
-    }
-
-    if (blacklisted) {
-      toast({ title: "Product isn't available for purchase" });
-      return;
-    }
-
-    if (!color) {
-      toast({ title: "Please select a color" });
-      return;
-    }
+    
 
     const order = await generatePayment(price * quantity);
     await verifyPayment(

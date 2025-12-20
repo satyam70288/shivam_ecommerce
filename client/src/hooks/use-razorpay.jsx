@@ -1,97 +1,143 @@
-import axios from "axios";
+// hooks/use-razorpay.js
+import { useDispatch } from "react-redux";
 import { useToast } from "./use-toast";
-import { useNavigate } from "react-router-dom";
+import { verifyRazorpayPayment } from "@/redux/slices/checkoutSlice";
 
 const useRazorpay = () => {
-  const navigate = useNavigate();
-  const {toast} = useToast()
-console.log("useRazorpay hook initialized",import.meta.env.VITE_RAZORPAY_KEY_ID,import.meta.env.VITE_API_URL);
-  const generatePayment = async (amount) => {
+  const dispatch = useDispatch();
+  const { toast } = useToast();
+
+  /* =========================
+     LOAD RAZORPAY SCRIPT
+  ========================= */
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+
+      document.body.appendChild(script);
+    });
+  };
+
+  /* =========================
+     OPEN RAZORPAY MODAL
+  ========================= */
+  const openRazorpayModal = async ({
+    razorpayOrderId,
+    amount,
+    key,
+    userDetails = {},
+    onSuccess,
+    onFailure,
+  }) => {
     try {
-      console.log("Generating payment for amount:", amount);
-      const res = await axios.post(
-        import.meta.env.VITE_API_URL + "/generate-payment",
-        { amount },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+      // 1️⃣ Load Razorpay script
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        toast({
+          title: "Payment gateway failed to load",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 2️⃣ Razorpay options
+      const options = {
+        key: key || import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount,
+        currency: "INR",
+        name: "Your Store",
+        description: "Order Payment",
+        order_id: razorpayOrderId,
+
+        prefill: {
+          name: userDetails.name || "",
+          email: userDetails.email || "",
+          contact: userDetails.phone || "",
+        },
+
+        theme: {
+          color: "#3399cc",
+        },
+
+        /* =========================
+           PAYMENT SUCCESS HANDLER
+        ========================= */
+        handler: async (response) => {
+          try {
+            const resultAction = await dispatch(
+              verifyRazorpayPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+            );
+
+            if (verifyRazorpayPayment.fulfilled.match(resultAction)) {
+              toast({
+                title: "Payment Successful!",
+                description: "Your order has been placed.",
+              });
+
+              if (onSuccess) {
+                onSuccess(resultAction.payload.orderId);
+              }
+            } else {
+              throw new Error(
+                resultAction.payload || "Payment verification failed"
+              );
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+
+            if (onFailure) onFailure(error);
+
+            toast({
+              title: "Payment verification failed",
+              description: error.message || "Please contact support",
+              variant: "destructive",
+            });
+          }
+        },
+
+        /* =========================
+           MODAL CLOSE HANDLER
+        ========================= */
+        modal: {
+          ondismiss: () => {
+            toast({
+              title: "Payment cancelled",
+              description: "You can try again",
+            });
           },
-        }
-      );
-      console.log("Payment generated successfully:", res.data);
-      const data = await res.data;
-      return data.data;
+        },
+      };
+
+      // 3️⃣ Open Razorpay modal
+      const razorpayInstance = new window.Razorpay(options);
+      razorpayInstance.open();
+
+      return razorpayInstance;
     } catch (error) {
-      return toast({
-        title: error.response.data.message,
+      console.error("Open Razorpay Error:", error);
+      toast({
+        title: "Failed to open payment",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const loadScript = (src) => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = src;
-      script.onload = () => {
-        resolve(true);
-      };
-      script.onerror = () => {
-        resolve(false);
-      };
-      document.body.appendChild(script);
-    });
-  };
-
-  const verifyPayment = async (options, productArray, address, navigate) => {
-  const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
-  if (!res) {
-    return toast({
-      title: "Failed to load Razorpay",
-      variant: "destructive",
-    });
-  }
-
-  const paymentObject = new window.Razorpay({
-    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-    ...options,
-    handler: async (response) => {
-      try {
-        const res = await axios.post(
-          import.meta.env.VITE_API_URL + "/verify-payment",
-          {
-            razorpay_order_id: options.id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            amount: options.amount,
-            address,
-            productArray,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const { data } = await res;
-        toast({ title: data.message });
-    window.location.href = "/success";
-      } catch (error) {
-        toast({
-          title: error.response?.data?.message || "Payment verification failed",
-          variant: "destructive",
-        });
-      }
-    },
-    theme: {
-      color: "#3399cc",
-    },
-  });
-
-  paymentObject.open();
-};
-
-
-  return { generatePayment, verifyPayment };
+  return { openRazorpayModal };
 };
 
 export default useRazorpay;

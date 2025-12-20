@@ -1,8 +1,8 @@
 const router = require("express").Router();
 const rateLimit = require("express-rate-limit");
 const {
-  generatePayment,
-  verifyPayment,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
 } = require("../controllers/paymentController");
 const verifyToken = require("../middlewares/verifyToken");
 
@@ -14,7 +14,7 @@ const paymentLimiter = rateLimit({
 });
 
 // Routes with limiter applied
-// router.post("/generate-payment", verifyToken, paymentLimiter, generatePayment);
-// router.post("/verify-payment", verifyToken, paymentLimiter, verifyPayment);
+router.post("/generate-payment", verifyToken, paymentLimiter, createRazorpayOrder);
+router.post("/verify-payment", verifyToken, paymentLimiter, verifyRazorpayPayment);
 
 module.exports = router;

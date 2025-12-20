@@ -24,8 +24,8 @@ const PaymentMethod = () => {
       <label className="flex gap-2">
         <input
           type="radio"
-          checked={paymentMethod === "online"}
-          onChange={() => dispatch(setPaymentMethod("online"))}
+          checked={paymentMethod === "RAZORPAY"}
+          onChange={() => dispatch(setPaymentMethod("RAZORPAY"))}
         />
         Online Payment
       </label>

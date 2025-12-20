@@ -18,7 +18,6 @@ const ProductCard = ({
   variants = [],
 }) => {
   const slug = name.split(" ").join("-");
-  console.log(_id,"id")
   const { isAuthenticated } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const { addToCart } = useCartActions();

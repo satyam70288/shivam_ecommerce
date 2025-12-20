@@ -1,66 +1,136 @@
-import React from "react";
+// PlaceOrderButton.jsx - FINAL WORKING VERSION
+import React, { useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { placeOrder } from "@/redux/slices/checkoutSlice";
 import { Button } from "@/components/ui/button";
 import useRazorpay from "@/hooks/use-razorpay";
 import { useToast } from "@/hooks/use-toast";
+import { createRazorpayOrder, placeCodOrder } from "@/redux/slices/checkoutSlice";
 
 const PlaceOrderButton = () => {
   const dispatch = useDispatch();
   const { toast } = useToast();
-  const { openRazorpay } = useRazorpay();
+  
+  // ✅ Make sure hook returns openRazorpayModal
+  const { openRazorpayModal } = useRazorpay();
+  
+  console.log("🔍 Hook functions:", { 
+    hasOpenRazorpayModal: !!openRazorpayModal,
+    type: typeof openRazorpayModal 
+  });
+  
+  const isProcessing = useRef(false);
 
   const {
     paymentMethod,
     addressId,
-    order,
+    productId,
+    qty,
     loading,
   } = useSelector((s) => s.checkout);
 
   const handlePlaceOrder = async () => {
+    if (isProcessing.current) {
+      console.log("⏸️ Already processing");
+      return;
+    }
+    
     if (!addressId) {
-      toast({ title: "Please select address" });
+      toast({ 
+        title: "Please select an address",
+        variant: "destructive" 
+      });
       return;
     }
 
-    try {
-      const res = await dispatch(placeOrder()).unwrap();
+    // ✅ Check if openRazorpayModal exists
+    if (paymentMethod === "RAZORPAY" && !openRazorpayModal) {
+      console.error("❌ openRazorpayModal is not defined!");
+      toast({
+        title: "Payment system error",
+        description: "Please refresh the page",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    isProcessing.current = true;
+    
+    try {
       /* =========================
          COD FLOW
       ========================= */
       if (paymentMethod === "COD") {
-        toast({ title: "Order placed successfully" });
-        // redirect to orders page
-        window.location.href = "/orders";
+        await dispatch(placeCodOrder()).unwrap();
+        
+        toast({ 
+          title: "COD Order placed successfully!",
+          description: "You will pay on delivery"
+        });
+        
+        setTimeout(() => {
+          window.location.href = "/orders";
+        }, 1500);
         return;
       }
 
       /* =========================
-         ONLINE FLOW
+         RAZORPAY FLOW
       ========================= */
-      if (paymentMethod === "ONLINE") {
-        openRazorpay({
-          orderId: res.razorpayOrder.id,
-          amount: res.razorpayOrder.amount,
-          onSuccess: () => {
-            window.location.href = "/orders";
+      if (paymentMethod === "RAZORPAY") {
+        // Step 1: Create Razorpay order via Redux
+        const result = await dispatch(createRazorpayOrder()).unwrap();
+        console.log("✅ Razorpay order created:", result);
+        
+        // Step 2: Get user details
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        
+        // Step 3: Open Razorpay modal
+        await openRazorpayModal({
+          razorpayOrderId: result.razorpayOrderId,
+          amount: result.amount,
+          key: result.key,
+          userDetails: {
+            name: user.name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            addressId: addressId,      // Pass for verification
+            productId: productId,
+            quantity: qty || 1
           },
+          onSuccess: (orderId) => {
+            console.log("🎉 Payment success, order:", orderId);
+            window.location.href = `/orders`;
+          },
+          onFailure: (error) => {
+            toast({
+              title: "Payment failed",
+              description: error.message || "Please try again",
+              variant: "destructive"
+            });
+          }
         });
       }
 
     } catch (err) {
-      toast({ title: err });
+      console.error("❌ Place Order Error:", err);
+      toast({ 
+        title: typeof err === "string" ? err : "Failed to place order",
+        variant: "destructive" 
+      });
+    } finally {
+      setTimeout(() => {
+        isProcessing.current = false;
+      }, 2000);
     }
   };
 
   return (
     <Button
       className="w-full h-12 text-lg"
-      disabled={loading}
+      disabled={loading || !addressId || isProcessing.current}
       onClick={handlePlaceOrder}
     >
-      {paymentMethod === "COD" ? "Place Order" : "Pay Now"}
+      {loading ? "Processing..." : paymentMethod === "COD" ? "Place Order" : "Pay Now"}
     </Button>
   );
 };

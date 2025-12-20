@@ -1,3 +1,4 @@
+// redux/slices/checkoutSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
@@ -32,11 +33,10 @@ export const initCheckout = createAsyncThunk(
 
       return res.data; // { items, summary }
     } catch (err) {
-      return rejectWithValue("Checkout init failed");
+      return rejectWithValue(err.response?.data?.message || "Checkout init failed");
     }
   }
 );
-
 
 /* 2️⃣ FETCH ADDRESSES */
 export const fetchAddresses = createAsyncThunk(
@@ -47,8 +47,8 @@ export const fetchAddresses = createAsyncThunk(
         headers: authHeader(),
       });
       return res.data.data;
-    } catch {
-      return rejectWithValue("Failed to load addresses");
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to load addresses");
     }
   }
 );
@@ -62,8 +62,8 @@ export const createAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return res.data.data;
-    } catch {
-      return rejectWithValue("Failed to add address");
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to add address");
     }
   }
 );
@@ -77,8 +77,8 @@ export const updateAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return res.data.data;
-    } catch {
-      return rejectWithValue("Failed to update address");
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to update address");
     }
   }
 );
@@ -92,59 +92,149 @@ export const deleteAddress = createAsyncThunk(
         headers: authHeader(),
       });
       return id;
-    } catch {
-      return rejectWithValue("Failed to delete address");
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Failed to delete address");
     }
   }
 );
 
-/* 6️⃣ APPLY COUPON (PREVIEW ONLY) */
+/* 6️⃣ APPLY COUPON */
 export const applyCoupon = createAsyncThunk(
   "checkout/applyCoupon",
-  async (code, { rejectWithValue }) => {
+  async (code, { rejectWithValue, getState }) => {
     try {
+      const state = getState();
+      const { productId, qty } = state.checkout;
+      
+      const params = new URLSearchParams();
+      if (productId) {
+        params.append("productId", productId);
+        params.append("qty", qty || 1);
+      }
+      
       const res = await axios.post(
-        `${API}/coupons/apply`,
+        `${API}/coupons/apply?${params.toString()}`,
         { code },
         { headers: authHeader() }
       );
-      return { code, summary: res.data.summary };
-    } catch {
-      return rejectWithValue("Invalid coupon");
+      
+      return { 
+        code, 
+        summary: res.data.summary,
+        discount: res.data.discount || 0
+      };
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Invalid coupon");
     }
   }
 );
 
-/* 7️⃣ PLACE ORDER (COD / RAZORPAY) */
-export const placeOrder = createAsyncThunk(
-  "checkout/placeOrder",
-  async (_, { getState, rejectWithValue }) => {
+/* 7️⃣ PLACE COD ORDER */
+export const placeCodOrder = createAsyncThunk(
+  "checkout/placeCodOrder",
+  async (_, { rejectWithValue, getState }) => {
     try {
-      const { addressId, coupon, paymentMethod:paymentMode } =
-        getState().checkout;
+      const state = getState();
+      const { addressId, productId, qty } = state.checkout;
 
       if (!addressId) {
-        return rejectWithValue("Please select delivery address");
+        return rejectWithValue("Address is required");
       }
 
-      // ✅ Backend expects: COD | RAZORPAY
-      const apiPaymentMethod =
-        paymentMode === "COD" ? "COD" : "RAZORPAY";
+      // ✅ FIX: template string
+      const endpoint = `${API}/orders/create`;
 
-      const res = await axios.post(
-        `${API}/orders/create`,
-        {
-          addressId,
-          couponCode: coupon?.code || null,
-          paymentMode: apiPaymentMethod, // ✅ FIXED
-        },
-        { headers: authHeader() }
-      );
+      // ✅ Payload matches backend logic
+      const payload = productId
+        ? { addressId, productId, quantity: qty || 1 } // BUY NOW
+        : { addressId }; // CART
+
+      const res = await axios.post(endpoint, payload, {
+        headers: authHeader(),
+      });
 
       return res.data;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Order failed"
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to place COD order"
+      );
+    }
+  }
+);
+
+
+/* 8️⃣ CREATE RAZORPAY ORDER (Payment Initiation) */
+export const createRazorpayOrder = createAsyncThunk(
+  "checkout/createRazorpayOrder",
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const state = getState();
+      const { addressId, productId, qty, summary } = state.checkout;
+      
+      if (!addressId) {
+        throw new Error("Address is required");
+      }
+      
+      // Create Razorpay order for payment initiation
+      const res = await axios.post(
+        `${API}/generate-payment`,
+        {
+          addressId,
+          productId,
+          quantity: qty || 1,
+          amount: summary.total // Total amount from checkout summary
+        },
+        {
+          headers: authHeader(),
+        }
+      );
+      
+      if (!res.data.success) {
+        throw new Error(res.data.message);
+      }
+      
+      return res.data; // { razorpayOrderId, amount, key, success: true }
+      
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to create payment order"
+      );
+    }
+  }
+);
+
+/* 9️⃣ VERIFY RAZORPAY PAYMENT & CREATE FINAL ORDER */
+export const verifyRazorpayPayment = createAsyncThunk(
+  "checkout/verifyRazorpayPayment",
+  async (paymentData, { rejectWithValue, getState }) => {
+    try {
+      const state = getState();
+      const { addressId, productId, qty } = state.checkout;
+      
+      const res = await axios.post(
+        `${API}/verify-payment`,
+        {
+          ...paymentData,
+          addressId,
+          productId,
+          quantity: qty || 1
+        },
+        {
+          headers: authHeader(),
+        }
+      );
+      
+      if (!res.data.success) {
+        throw new Error(res.data.message);
+      }
+      
+      return res.data; // { orderId, success: true, message }
+      
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Payment verification failed"
       );
     }
   }
@@ -167,6 +257,10 @@ const checkoutSlice = createSlice({
       total: 0,
     },
 
+    /* CHECKOUT TYPE */
+    productId: null,
+    qty: 1,
+
     /* ADDRESS */
     addresses: [],
     addressId: null,
@@ -176,9 +270,13 @@ const checkoutSlice = createSlice({
 
     /* COUPON */
     coupon: null,
+    appliedCoupon: null,
+
+    /* PAYMENT DATA */
+    razorpayOrder: null, // { id, amount, key }
 
     /* ORDER RESULT */
-    order: null, // { id, paymentMethod, totalAmount, razorpayOrder? }
+    placedOrder: null, // { id, paymentMethod, totalAmount }
 
     /* UI */
     loading: false,
@@ -191,12 +289,33 @@ const checkoutSlice = createSlice({
     },
 
     setPaymentMethod(state, action) {
-      state.paymentMethod =
-        action.payload === "COD" ? "COD" : "RAZORPAY";
+      state.paymentMethod = action.payload;
+    },
+    
+    setProductId(state, action) {
+      state.productId = action.payload;
+    },
+    
+    setQuantity(state, action) {
+      state.qty = action.payload;
+    },
+    
+    setRazorpayOrder(state, action) {
+      state.razorpayOrder = action.payload;
+    },
+    
+    clearCoupon(state) {
+      state.coupon = null;
+      state.appliedCoupon = null;
+      // Reset summary to original (you might need to recalculate)
     },
 
     resetCheckout() {
       return checkoutSlice.getInitialState();
+    },
+    
+    clearError(state) {
+      state.error = null;
     },
   },
 
@@ -206,6 +325,7 @@ const checkoutSlice = createSlice({
       /* INIT CHECKOUT */
       .addCase(initCheckout.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(initCheckout.fulfilled, (state, action) => {
         state.loading = false;
@@ -218,20 +338,30 @@ const checkoutSlice = createSlice({
       })
 
       /* FETCH ADDRESSES */
+      .addCase(fetchAddresses.pending, (state) => {
+        state.loading = true;
+      })
       .addCase(fetchAddresses.fulfilled, (state, action) => {
+        state.loading = false;
         state.addresses = action.payload;
+      })
+      .addCase(fetchAddresses.rejected, (state) => {
+        state.loading = false;
       })
 
       /* CREATE ADDRESS */
       .addCase(createAddress.fulfilled, (state, action) => {
         state.addresses.unshift(action.payload);
+        // Auto-select new address
+        state.addressId = action.payload._id;
       })
 
       /* UPDATE ADDRESS */
       .addCase(updateAddress.fulfilled, (state, action) => {
-        state.addresses = state.addresses.map((addr) =>
-          addr._id === action.payload._id ? action.payload : addr
-        );
+        const index = state.addresses.findIndex(addr => addr._id === action.payload._id);
+        if (index !== -1) {
+          state.addresses[index] = action.payload;
+        }
       })
 
       /* DELETE ADDRESS */
@@ -240,17 +370,19 @@ const checkoutSlice = createSlice({
           (addr) => addr._id !== action.payload
         );
         if (state.addressId === action.payload) {
-          state.addressId = null;
+          state.addressId = state.addresses[0]?._id || null;
         }
       })
 
       /* APPLY COUPON */
       .addCase(applyCoupon.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(applyCoupon.fulfilled, (state, action) => {
         state.loading = false;
         state.coupon = { code: action.payload.code };
+        state.appliedCoupon = action.payload.code;
         state.summary = action.payload.summary;
       })
       .addCase(applyCoupon.rejected, (state, action) => {
@@ -258,22 +390,60 @@ const checkoutSlice = createSlice({
         state.error = action.payload;
       })
 
-      /* PLACE ORDER */
-      .addCase(placeOrder.pending, (state) => {
+      /* PLACE COD ORDER */
+      .addCase(placeCodOrder.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
-      .addCase(placeOrder.fulfilled, (state, action) => {
+      .addCase(placeCodOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.order = {
+        state.placedOrder = {
           id: action.payload.orderId,
-          paymentMethod: action.payload.paymentMethod,
-          totalAmount: action.payload.totalAmount,
-          razorpayOrder: action.payload.razorpayOrder || null,
+          paymentMethod: "COD",
+          totalAmount: action.payload.totalAmount || state.summary.total,
         };
       })
-      .addCase(placeOrder.rejected, (state, action) => {
+      .addCase(placeCodOrder.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      /* CREATE RAZORPAY ORDER */
+      .addCase(createRazorpayOrder.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createRazorpayOrder.fulfilled, (state, action) => {
+        state.loading = false;
+        state.razorpayOrder = {
+          id: action.payload.razorpayOrderId,
+          amount: action.payload.amount,
+          key: action.payload.key,
+        };
+      })
+      .addCase(createRazorpayOrder.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      /* VERIFY RAZORPAY PAYMENT */
+      .addCase(verifyRazorpayPayment.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyRazorpayPayment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.placedOrder = {
+          id: action.payload.orderId,
+          paymentMethod: "RAZORPAY",
+          totalAmount: action.payload.totalAmount || state.summary.total,
+        };
+        state.razorpayOrder = null; // Clear after successful verification
+      })
+      .addCase(verifyRazorpayPayment.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.razorpayOrder = null; // Clear on failure
       });
   },
 });
@@ -281,7 +451,12 @@ const checkoutSlice = createSlice({
 export const {
   setAddress,
   setPaymentMethod,
+  setProductId,
+  setQuantity,
+  setRazorpayOrder,
+  clearCoupon,
   resetCheckout,
+  clearError,
 } = checkoutSlice.actions;
 
 export default checkoutSlice.reducer;

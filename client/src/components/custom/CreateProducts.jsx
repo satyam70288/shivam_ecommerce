@@ -13,6 +13,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Loader2, Upload, X } from "lucide-react";
 import { Textarea } from "../ui/textarea";
+import "react-quill/dist/quill.snow.css";
 import {
   Select,
   SelectTrigger,
@@ -22,6 +23,7 @@ import {
 } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { useProductForm } from "@/hooks/useProductForm";
+import ReactQuill from "react-quill";
 
 const MAX_GENERAL_IMAGES = 8;
 
@@ -80,13 +82,17 @@ const CreateProducts = ({ productId }) => {
 
             <div>
               <Label>Description</Label>
-              <Textarea
+              {/* <Textarea
                 rows={4}
                 value={f.description}
                 onChange={(e) => f.setDescription(e.target.value)}
+              /> */}
+              <ReactQuill
+                value={f.description}
+                onChange={f.setDescription}
+                placeholder="Product description..."
               />
             </div>
-            
 
             <div>
               <Label>Category</Label>
@@ -219,56 +225,56 @@ const CreateProducts = ({ productId }) => {
           </CardContent>
         </Card>
         <Card>
-  <CardHeader>
-    <CardTitle>Delivery & Policy</CardTitle>
-  </CardHeader>
+          <CardHeader>
+            <CardTitle>Delivery & Policy</CardTitle>
+          </CardHeader>
 
-  <CardContent className="space-y-3">
-    <label className="flex items-center gap-2">
-      <Checkbox
-        checked={f.canDispatchFast}
-        onCheckedChange={f.setCanDispatchFast}
-      />
-      Ready to Ship
-    </label>
+          <CardContent className="space-y-3">
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={f.canDispatchFast}
+                onCheckedChange={f.setCanDispatchFast}
+              />
+              Ready to Ship
+            </label>
 
-    <label className="flex items-center gap-2">
-      <Checkbox
-        checked={f.returnEligible}
-        onCheckedChange={f.setReturnEligible}
-      />
-      Easy Returns
-    </label>
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={f.returnEligible}
+                onCheckedChange={f.setReturnEligible}
+              />
+              Easy Returns
+            </label>
 
-    <label className="flex items-center gap-2">
-      <Checkbox
-        checked={f.codAvailable}
-        onCheckedChange={f.setCodAvailable}
-      />
-      Secure Payments (COD)
-    </label>
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={f.codAvailable}
+                onCheckedChange={f.setCodAvailable}
+              />
+              Secure Payments (COD)
+            </label>
 
-    <label className="flex items-center gap-2">
-      <Checkbox
-        checked={f.qualityVerified}
-        onCheckedChange={f.setQualityVerified}
-      />
-      Quality Checked
-    </label>
-  </CardContent>
-</Card>
+            <label className="flex items-center gap-2">
+              <Checkbox
+                checked={f.qualityVerified}
+                onCheckedChange={f.setQualityVerified}
+              />
+              Quality Checked
+            </label>
+          </CardContent>
+        </Card>
 
         <div>
-              <Label>Features (one per line)</Label>
-              <Textarea
-                rows={4}
-                value={f.featuresText}
-                onChange={(e) => f.setFeaturesText(e.target.value)}
-                placeholder="Powerful spring action
+          <Label>Features (one per line)</Label>
+          <Textarea
+            rows={4}
+            value={f.featuresText}
+            onChange={(e) => f.setFeaturesText(e.target.value)}
+            placeholder="Powerful spring action
 Safe suction darts
 Lightweight design"
-              />
-            </div>
+          />
+        </div>
         <div className="space-y-4 pt-4 border-t">
           <label className="flex items-center gap-2">
             <Checkbox
@@ -324,33 +330,54 @@ Lightweight design"
       </Card>
       <div className="mt-6">
         <Label>Dimensions</Label>
+
         <div className="grid grid-cols-2 gap-3 mt-2">
           <Input
-            placeholder="Length"
+            type="number"
+            placeholder="Length (cm)"
             value={f.dimensions.length}
             onChange={(e) =>
-              f.setDimensions({ ...f.dimensions, length: e.target.value })
+              f.setDimensions({
+                ...f.dimensions,
+                length: Number(e.target.value),
+              })
             }
           />
+
           <Input
-            placeholder="Width"
+            type="number"
+            placeholder="Width (cm)"
             value={f.dimensions.width}
             onChange={(e) =>
-              f.setDimensions({ ...f.dimensions, width: e.target.value })
+              f.setDimensions({
+                ...f.dimensions,
+                width: Number(e.target.value),
+              })
             }
           />
+
           <Input
-            placeholder="Height"
+            type="number"
+            placeholder="Height (cm)"
             value={f.dimensions.height}
             onChange={(e) =>
-              f.setDimensions({ ...f.dimensions, height: e.target.value })
+              f.setDimensions({
+                ...f.dimensions,
+                height: Number(e.target.value),
+              })
             }
           />
+
           <Input
-            placeholder="Weight"
+            type="number"
+            step="0.01"
+            placeholder="Weight (kg)"
             value={f.dimensions.weight}
             onChange={(e) =>
-              f.setDimensions({ ...f.dimensions, weight: e.target.value })
+              f.setDimensions({
+                ...f.dimensions,
+                weight: Number(e.target.value),
+              })
             }
           />
         </div>

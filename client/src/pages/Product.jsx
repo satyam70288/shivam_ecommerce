@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import useBuyNow from "@/hooks/useBuyNow";
 import useAddToCart from "@/hooks/useAddToCart";
 import useProductDetails from "@/hooks/useProductDetails";
@@ -12,14 +12,13 @@ import ProductVariants from "@/components/Product/ProductVariants";
 import ProductActions from "@/components/Product/ProductActions";
 import ProductTabs from "@/components/Product/ProductTabs";
 
-
 import MobileStickyCTA from "@/components/Product/MobileStickyCTA";
 import ReviewsComponent from "@/components/custom/ReviewsComponent";
 // import RelatedProductsCarousel from "./RelatedProductsCarousel";
 
 const Product = () => {
   const { id } = useParams();
-  
+
   const {
     product,
     quantity,
@@ -33,16 +32,18 @@ const Product = () => {
     images,
     displayPrice,
     isOfferActive,
-    promise
+    promise,
   } = useProductDetails(id);
 
   const { buyNow } = useBuyNow();
   const { handleAddToCart } = useAddToCart();
-
+  const navigate = useNavigate();
   if (!product) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-    </div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   const handleAddToCartClick = () => {
@@ -56,16 +57,18 @@ const Product = () => {
   };
 
   const handleBuyNowClick = () => {
-    buyNow({ 
-      productId: product._id, 
-      quantity, 
-    });
-  };
+  console.log("HANDLE BUY NOW");
+  buyNow({
+    productId: product._id,
+    quantity,
+  });
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Breadcrumb */}
-      <Breadcrumb 
+      <Breadcrumb
         category={product.category}
         subcategory={product.subcategory}
         productName={product.name}
@@ -75,9 +78,8 @@ const Product = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            
             {/* Left Column - Images */}
-            <ProductImages 
+            <ProductImages
               images={images}
               selectedImage={selectedImage}
               onSelect={setSelectedImage}
@@ -87,7 +89,7 @@ const Product = () => {
             {/* Right Column - Product Info */}
             <div className="space-y-6">
               {/* Basic Info */}
-              <ProductInfo 
+              <ProductInfo
                 name={product.name}
                 rating={product.rating}
                 reviewCount={product.reviewCount}
@@ -100,7 +102,7 @@ const Product = () => {
               />
 
               {/* Services */}
-              <ProductServices 
+              <ProductServices
                 freeDelivery={product.freeDelivery}
                 deliveryCharge={product.deliveryCharge}
                 warranty={product.warranty}
@@ -128,27 +130,22 @@ const Product = () => {
               {/* CTA Buttons */}
               <div className="hidden lg:block">
                 <ProductActions
-                stock={product.stock}
-                onAddToCart={handleAddToCartClick}
-                onBuyNow={handleBuyNowClick}
-                paymentOptions={product.paymentOptions}
-                highlights={product.highlights}
-              />
+                  stock={product.stock}
+                  onAddToCart={handleAddToCartClick}
+                  onBuyNow={handleBuyNowClick}
+                  paymentOptions={product.paymentOptions}
+                  highlights={product.highlights}
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs Section */}
-        <ProductTabs
-          product={product}
-        />
+        <ProductTabs product={product} />
 
         {/* Reviews Section */}
-        <ReviewsComponent
-          productId={product._id}
-          product={product}
-        />
+        <ReviewsComponent productId={product._id} product={product} />
       </main>
 
       {/* Related Products */}
