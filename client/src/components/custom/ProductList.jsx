@@ -91,13 +91,15 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
           </div>
 
           {/* PAGINATION */}
-          <div className="flex justify-center py-4 sm:py-6">
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-            />
-          </div>
+          {!loading && totalPages > 0 && (
+  <div className="flex justify-center py-4 sm:py-6">
+    <Pagination
+      currentPage={page} // ✅ यह variable check करें
+      totalPages={totalPages}
+      onPageChange={setPage}
+    />
+  </div>
+)}
         </>
       ) : (
         <div className="text-center py-10">
