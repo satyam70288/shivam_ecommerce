@@ -93,11 +93,11 @@ const FilterMenu = ({ onSearch }) => {
                   "
                   title="Advanced filters"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span className="text-sm font-medium">Filters</span>
+                  {/* <SlidersHorizontal className="h-4 w-4" /> */}
+                  {/* <span className="text-sm font-medium">Filters</span> */}
                 </button>
                 <div className="h-6 w-px bg-gray-200 dark:bg-zinc-700"></div>
-                <kbd className="
+                {/* <kbd className="
                   hidden sm:inline-flex items-center gap-1
                   px-2 py-1 rounded-md
                   text-xs font-mono font-medium
@@ -106,7 +106,7 @@ const FilterMenu = ({ onSearch }) => {
                   border border-gray-200 dark:border-zinc-700
                 ">
                   ⌘K
-                </kbd>
+                </kbd> */}
               </div>
             )}
           </div>
