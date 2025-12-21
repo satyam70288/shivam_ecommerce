@@ -3,16 +3,16 @@ import axios from "axios";
 import ProductCard from "./ProductCard";
 import Pagination from "../Pagination";
 import { useDispatch } from "react-redux";
-import { setProducts as setReduxProducts } from "@/redux/slices/productSlice"; // FIXED
+import { setProducts as setReduxProducts } from "@/redux/slices/productSlice";
 
-const ProductList = ({ category, price, search }) => {
+const ProductList = ({ category = "All", price = "", search = "" }) => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
   const dispatch = useDispatch();
-  const limit = 12; // test purpose
+  const limit = 12;
 
   const fetchProducts = async () => {
     try {
@@ -36,10 +36,10 @@ const ProductList = ({ category, price, search }) => {
       // Set frontend products
       setProducts(Array.isArray(data) ? data : []);
 
-      // Update Redux (if needed)
+      // Update Redux
       dispatch(setReduxProducts(data));
 
-      // FIX: Always calculate correct total pages
+      // Calculate total pages
       const total = pagination?.totalProducts || 0;
       setTotalPages(Math.ceil(total / limit));
     } catch (err) {
@@ -68,30 +68,49 @@ const ProductList = ({ category, price, search }) => {
   }
 
   return (
-  <>
-    {products.length > 0 && (
-       <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center my-10">
-        {products.map((p) => (
-          <div key={p._id} className="w-full">
-            <ProductCard {...p} />
+    <>
+      {products.length > 0 ? (
+        <>
+          {/* Search info (optional) */}
+          {search && (
+            <div className="w-[93vw] mx-auto mb-6 text-gray-600">
+              Showing results for: <span className="font-semibold">"{search}"</span>
+              <span className="ml-2 text-sm text-gray-500">
+                ({products.length} products found)
+              </span>
+            </div>
+          )}
+
+          {/* Products Grid */}
+          <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center my-10">
+            {products.map((p) => (
+              <div key={p._id} className="w-full">
+                <ProductCard {...p} />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    )}
 
-    {/* PAGINATION */}
-    <div className="flex justify-center py-4 sm:py-6">
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={setPage}
-      />
-    </div>
-  </>
-);
-
-
-
+          {/* PAGINATION */}
+          <div className="flex justify-center py-4 sm:py-6">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-10">
+          <p className="text-gray-500">No products found</p>
+          {(search || category !== "All" || price) && (
+            <p className="text-sm text-gray-400 mt-2">
+              Try different search terms or filters
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  );
 };
 
 export default ProductList;
