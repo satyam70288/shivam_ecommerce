@@ -3,26 +3,23 @@ import { useSelector } from "react-redux";
 import { Navigate, useLocation, Outlet } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname, search } = location;
+
   const { isAuthenticated, role } = useSelector((state) => state.auth);
   const { cartItems } = useSelector((state) => state.cart);
 
-  const render = children || <Outlet />;  
-  // If children passed → use children
-  // If used as wrapper → use Outlet
+  const params = new URLSearchParams(search);
+  const isBuyNow = Boolean(params.get("productId"));
+
+  const render = children || <Outlet />;
 
   // ============================
   // ADMIN ROUTES
   // ============================
   if (pathname.startsWith("/admin")) {
-
     if (!isAuthenticated) return <Navigate to="/admin/login" replace />;
-
     if (role !== "admin") return <Navigate to="/" replace />;
-
-    if (role === "admin" && pathname === "/admin/login") {
-      return <Navigate to="/admin/dashboard" replace />;
-    }
   }
 
   // ============================
@@ -32,7 +29,12 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (pathname === "/checkout" && cartItems.length === 0) {
+  // 🟢 FIX: allow buy-now checkout
+  if (
+    pathname === "/checkout" &&
+    cartItems.length === 0 &&
+    !isBuyNow
+  ) {
     return <Navigate to="/" replace />;
   }
 

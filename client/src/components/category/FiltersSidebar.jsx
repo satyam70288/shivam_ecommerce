@@ -1,6 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-
 import {
   ChevronDown,
   Package,
@@ -22,15 +21,40 @@ const categories = [
   { label: "Bags", icon: <Backpack size={16} /> },
 ];
 
-export default function FiltersSidebar({ selectedFilters, updateFilter }) {
+export default function FiltersSidebar({ selectedFilters = {}, updateFilter }) {
+  // Ensure selectedFilters has all keys with default empty arrays
+  const safeSelectedFilters = {
+    categories: selectedFilters.categories || [],
+    priceRange: selectedFilters.priceRange || [],
+    discount: selectedFilters.discount || [],
+    ratings: selectedFilters.ratings || [],
+    ageGroup: selectedFilters.ageGroup || [],
+    colors: selectedFilters.colors || [],
+    material: selectedFilters.material || [],
+    availability: selectedFilters.availability || [],
+  };
+
   return (
     <div className="space-y-6">
+      {/* CATEGORIES */}
+      <FilterSection title="Categories">
+        <CheckboxList
+          filterKey="categories"
+          selectedFilters={safeSelectedFilters}
+          updateFilter={updateFilter}
+          options={categories.map(cat => ({
+            label: cat.label,
+            value: cat.label.toLowerCase().replace(/\s+/g, '_'),
+            icon: cat.icon
+          }))}
+        />
+      </FilterSection>
 
       {/* PRICE RANGE */}
       <FilterSection title="Price Range">
         <CheckboxList
           filterKey="priceRange"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "₹0 – ₹199", value: "0-199" },
@@ -46,7 +70,7 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
       <FilterSection title="Discount">
         <CheckboxList
           filterKey="discount"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "10% or more", value: "10" },
@@ -62,7 +86,7 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
       <FilterSection title="Ratings">
         <CheckboxList
           filterKey="ratings"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "4 ★ & above", value: "4" },
@@ -75,7 +99,7 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
       <FilterSection title="Age Group">
         <CheckboxList
           filterKey="ageGroup"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "0 – 3 years", value: "0-3" },
@@ -91,7 +115,7 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
       <FilterSection title="Material">
         <CheckboxList
           filterKey="material"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "Plastic", value: "plastic" },
@@ -109,7 +133,7 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
       <FilterSection title="Availability">
         <CheckboxList
           filterKey="availability"
-          selectedFilters={selectedFilters}
+          selectedFilters={safeSelectedFilters}
           updateFilter={updateFilter}
           options={[
             { label: "In Stock", value: "in" },
@@ -121,8 +145,6 @@ export default function FiltersSidebar({ selectedFilters, updateFilter }) {
     </div>
   );
 }
-
-
 
 function FilterSection({ title, children }) {
   const [open, setOpen] = useState(true);
@@ -146,20 +168,28 @@ function FilterSection({ title, children }) {
 }
 
 function CheckboxList({ options, filterKey, selectedFilters, updateFilter }) {
-  // console.log( filterKey);
-  return options.map((opt, i) => (
-    <label key={i} className="flex items-center gap-3 cursor-pointer text-sm">
-      <Checkbox
-        checked={selectedFilters[filterKey]?.includes(opt.value)}
-        onCheckedChange={() => updateFilter(filterKey, opt.value)}
-      />
+  // Safe check if selectedFilters exists
+  if (!selectedFilters || !selectedFilters[filterKey]) {
+    console.warn(`selectedFilters.${filterKey} is undefined`);
+    return null;
+  }
 
-      <span className="flex items-center gap-2">
-        {opt.icon}
-        {opt.label}
-      </span>
-    </label>
-  ));
+  return (
+    <div className="space-y-2">
+      {options.map((opt, i) => (
+        <label key={i} className="flex items-center gap-3 cursor-pointer text-sm">
+          <Checkbox
+            checked={selectedFilters[filterKey]?.includes(opt.value)}
+            onCheckedChange={() => updateFilter(filterKey, opt.value)}
+          />
+          <span className="flex items-center gap-2">
+            {opt.icon}
+            {opt.label}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
 }
 
 function ColorList({ colors }) {

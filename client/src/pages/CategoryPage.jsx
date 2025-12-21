@@ -61,7 +61,8 @@ const [selectedFilters, setSelectedFilters] = useState({
     >
       {/* MOBILE FILTER BUTTON */}
       <div className="md:hidden">
-        <MobileFilterButton />
+        <MobileFilterButton selectedFilters={selectedFilters}
+  updateFilter={updateFilter}/>
       </div>
 
       {/* LEFT SIDEBAR */}
