@@ -17,7 +17,7 @@ import AllProducts from "./components/custom/AllProducts";
 import Analytics from "./components/custom/Analytics";
 import Orders from "./components/custom/Orders";
 import Settings from "./components/custom/Settings";
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { store } from "./redux/store";
 import MyOrders from "./pages/MyOrders";
 import { Toaster } from "./components/ui/toaster";
@@ -33,8 +33,11 @@ import AccountLayout from "./layouts/AccountLayout";
 import MyProfile from "./components/custom/MyProfile";
 import CategoryPage from "./pages/CategoryPage";
 import AdminProductDetails from "./components/Admin/AdminProductDetails";
+import WishlistPage from "./pages/Wishlist";
 
 export default function App() {
+   
+  
   const router = createBrowserRouter([
     {
       element: <RootLayout />,
@@ -54,10 +57,12 @@ export default function App() {
           children: [
             { path: "checkout", element: <Checkout /> },
             { path: "orders", element: <MyOrders /> },
+             { path: "account/wishlist", element: <WishlistPage /> },
             {
               path: "account",
               element: <AccountLayout />,
               children: [{ index: true, element: <MyProfile /> }],
+       
             },
           ],
         },

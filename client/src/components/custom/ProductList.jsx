@@ -4,12 +4,19 @@ import ProductCard from "./ProductCard";
 import Pagination from "../Pagination";
 import { useDispatch } from "react-redux";
 import { setProducts as setReduxProducts } from "@/redux/slices/productSlice";
+import { fetchWishlist } from "@/redux/slices/wishlistSlice";
 
 const ProductList = ({ category = "All", price = "", search = "" }) => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      dispatch(fetchWishlist());
+    }
+  }, []);
 
   const dispatch = useDispatch();
   const limit = 12;
@@ -74,7 +81,8 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
           {/* Search info (optional) */}
           {search && (
             <div className="w-[93vw] mx-auto mb-6 text-gray-600">
-              Showing results for: <span className="font-semibold">"{search}"</span>
+              Showing results for:{" "}
+              <span className="font-semibold">"{search}"</span>
               <span className="ml-2 text-sm text-gray-500">
                 ({products.length} products found)
               </span>
@@ -92,14 +100,14 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
 
           {/* PAGINATION */}
           {!loading && totalPages > 0 && (
-  <div className="flex justify-center py-4 sm:py-6">
-    <Pagination
-      currentPage={page} // ✅ यह variable check करें
-      totalPages={totalPages}
-      onPageChange={setPage}
-    />
-  </div>
-)}
+            <div className="flex justify-center py-4 sm:py-6">
+              <Pagination
+                currentPage={page} // ✅ यह variable check करें
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center py-10">

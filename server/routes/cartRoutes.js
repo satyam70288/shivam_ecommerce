@@ -2,8 +2,10 @@ var express = require("express");
 var router = express.Router();
 
 var cartController = require("../controllers/cartController");
+const verifyToken = require("../middlewares/verifyToken");
 
 // Add product to cart
+// router.use(verifyToken);
 router.post("/add", cartController.addToCart);
 
 // Get user's cart

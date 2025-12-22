@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Share2, Heart, Maximize2, Minimize2 } from "lucide-react";
 import ProductGallery from "@/components/Product/ProductGallery";
+import { useSelector } from "react-redux";
 
-const ProductImages = ({ images, selectedImage, onSelect, productName,onZoomChange }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+const ProductImages = ({ images, selectedImage, onSelect, productName,onZoomChange,id }) => {
+
   const [isZoomed, setIsZoomed] = useState(false);
 
+const isWishlisted = useSelector(
+    (state) => state.wishlist.wishlistStatus[id]
+  );
+ 
   const handleShare = async () => {
     try {
       if (navigator.share) {

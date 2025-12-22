@@ -5,8 +5,6 @@ var Product = require("../models/Product");
 exports.addToCart = async (req, res) => {
   try {
         const { userId, productId, quantity, color, size } = req.body;
-
-    console.log(userId,req.body)
     // 1️⃣ Validate product
     const product = await Product.findById(productId);
     if (!product || product.blacklisted) {

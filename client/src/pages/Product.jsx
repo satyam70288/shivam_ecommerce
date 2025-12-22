@@ -84,6 +84,7 @@ const Product = () => {
               selectedImage={selectedImage}
               onSelect={setSelectedImage}
               productName={product.name}
+              id={id}
             />
 
             {/* Right Column - Product Info */}
