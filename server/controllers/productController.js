@@ -513,87 +513,43 @@ const deleteProduct = async (req, res) => {
 
 const getProducts = async (req, res) => {
   try {
-    let { page, limit, category, price, search, sort } = req.query;
+    let { page, limit } = req.query;
 
     page = parseInt(page) || 1;
-    limit = parseInt(limit) || 9;
+    limit = parseInt(limit) || 12;
 
-    // Base query
     const query = { blacklisted: false };
+    const totalProducts = await Product.countDocuments(query);
+    const skip = (page - 1) * limit;
 
-    // Filters
-    if (category && category.toLowerCase() !== "all")
-      query.category = category.trim();
-    if (search && search.trim() !== "")
-      query.name = { $regex: search.trim(), $options: "i" };
-    if (price && !isNaN(price)) query.price = { $lte: Number(price) };
+    // Get products
+    const products = await Product.find(query)
+      .select("_id name price rating discount offerValidTill variants images colors brand stock reviewCount description")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    // Sorting
-    let sortBy = { createdAt: -1 }; // default
-    if (sort === "priceLowToHigh") sortBy = { price: 1 };
-    if (sort === "priceHighToLow") sortBy = { price: -1 };
+    // Use the method to get product card data
+    const processedProducts = products.map((product) => {
+      const productData = product.getProductCardData();
+      
+      // Add extra calculations
+      const savings = productData.price - productData.discountedPrice;
+      const discountPercentage = productData.discount || Math.round((savings / productData.price) * 100);
+      
+      return {
+        ...productData,
+        savings: savings > 0 ? savings : 0,
+        discountPercentage: discountPercentage
+      };
+    });
 
-    const now = new Date();
-
-    // Aggregation pipeline
-    const pipeline = [
-      { $match: query },
-      {
-        $facet: {
-          products: [
-            { $sort: sortBy },
-            { $skip: (page - 1) * limit },
-            { $limit: limit },
-            {
-              $project: {
-                name: 1,
-                price: 1,
-                rating: 1,
-                description: 1,
-                sizes: 1,
-                discount: 1,
-                offerValidTill: 1,
-                variants: 1,
-                discountedPrice: {
-                  $round: [
-                    {
-                      $cond: [
-                        {
-                          $and: [
-                            { $gt: ["$discount", 0] },
-                            { $gt: ["$offerValidTill", now] },
-                          ],
-                        },
-                        {
-                          $multiply: [
-                            "$price",
-                            { $subtract: [1, { $divide: ["$discount", 100] }] },
-                          ],
-                        },
-                        "$price",
-                      ],
-                    },
-                    1,
-                  ],
-                },
-                image: { $arrayElemAt: ["$images", 0] },
-              },
-            },
-          ],
-          totalCount: [{ $count: "count" }],
-        },
-      },
-    ];
-
-    const result = await Product.aggregate(pipeline);
-    const products = result[0].products;
-    const totalProducts = result[0].totalCount[0]?.count || 0;
     const totalPages = Math.ceil(totalProducts / limit);
 
     return res.status(200).json({
       success: true,
       message: "Products fetched",
-      data: products,
+      data: processedProducts,
       pagination: {
         totalProducts,
         totalPages,
@@ -603,7 +559,11 @@ const getProducts = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Products Error:", error);
-    return res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching products",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -680,7 +640,7 @@ const getProductById = async (req, res) => {
       success: true,
       message: "Product found",
       data: productObj,
-      promises
+      promises,
     });
   } catch (error) {
     // Invalid ObjectId handling

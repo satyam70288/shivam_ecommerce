@@ -140,24 +140,80 @@ productSchema.methods.calculateRating = async function () {
   }
   await this.save();
 };
+productSchema.methods.getTotalStock = function () {
+  // Variant-based product
+  if (Array.isArray(this.variants) && this.variants.length > 0) {
+    return this.variants.reduce(
+      (sum, variant) => sum + (Number(variant.stock) || 0),
+      0
+    );
+  }
 
+  // Simple product
+  return Number(this.stock) || 0;
+};
 // ⭐ Returns if offer is active
+// ⭐ Returns if offer is active - FIXED VERSION
 productSchema.methods.isOfferActive = function () {
-  if (!this.offerValidFrom || !this.offerValidTill) return false;
-
+  if (!this.discount || this.discount <= 0) return false;
+  
   const now = new Date();
-  return now >= this.offerValidFrom && now <= this.offerValidTill;
+  
+  // If offerValidTill exists, check if offer is still valid
+  if (this.offerValidTill) {
+    return now <= new Date(this.offerValidTill);
+  }
+  
+  // If no expiry date but discount exists, offer is active
+  return true;
 };
 
-// ⭐ Discounted Price
+// ⭐ Discounted Price - FIXED VERSION
 productSchema.methods.getDiscountedPrice = function () {
-  if (typeof this.price !== "number" || this.price <= 0) return 0;
+  if (typeof this.price !== "number" || this.price <= 0) return this.price || 0;
 
   if (this.discount > 0 && this.isOfferActive()) {
-    return Math.round(this.price - (this.price * this.discount) / 100);
+    const discounted = this.price - (this.price * this.discount / 100);
+    return Math.round(discounted * 100) / 100; // Round to 2 decimal places
   }
 
   return this.price;
 };
-
+productSchema.methods.getMainImage = function () {
+  if (this.images && this.images.length > 0) {
+    return this.images[0];
+  }
+  
+  if (this.variants && this.variants.length > 0) {
+    const firstVariant = this.variants[0];
+    if (firstVariant.images && firstVariant.images.length > 0) {
+      return firstVariant.images[0];
+    }
+  }
+  
+  return null;
+};
+// ⭐ Get product card data - FIXED VERSION
+productSchema.methods.getProductCardData = function () {
+  const isOfferActive = this.isOfferActive();
+  const discountedPrice = this.getDiscountedPrice();
+  
+  return {
+    _id: this._id,
+    name: this.name,
+    price: this.price,
+    rating: this.rating || 0,
+    reviewCount: this.reviewCount || 0,
+    image: this.getMainImage(),
+    discountedPrice: discountedPrice,
+    discount: this.discount || 0,
+    offerValidTill: this.offerValidTill,
+    isOfferActive: isOfferActive, // Add this field
+    variants: this.variants || [],
+    stock: this.getTotalStock(),
+    colors: this.colors || [],
+    brand: this.brand || "",
+    description: this.description || ""
+  };
+};
 module.exports = mongoose.model("Product", productSchema);
