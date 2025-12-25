@@ -1,6 +1,6 @@
 const PriceSection = ({ price, displayPrice, discount, isOfferActive }) => {
-  const savings = price - displayPrice;
-
+  const savings = (price - displayPrice).toFixed(1);
+ 
   return (
     <>
       {/* PRICE ROW */}

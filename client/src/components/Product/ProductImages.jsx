@@ -48,7 +48,8 @@ const isWishlisted = useSelector(
           images={images}
           selectedImage={selectedImage}
           onSelect={onSelect}
-          isZoomed={isZoomed} // Pass zoom state
+          isZoomed={isZoomed} 
+          setIsZoomed={setIsZoomed}// Pass zoom state
         />
         
         {/* Quick Actions */}

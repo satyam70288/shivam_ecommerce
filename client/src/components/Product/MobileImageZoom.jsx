@@ -1,12 +1,12 @@
 import { X } from "lucide-react";
 
-const MobileImageZoom = ({ images, activeIndex, onClose }) => {
+const MobileImageZoom = ({ images, activeIndex, onClose,setIsZoomed }) => {
   if (!images?.length) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black lg:hidden">
       {/* Header */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-10 right-4 z-10">
         <button
           onClick={onClose}
           className="p-2 rounded-full bg-black/60 text-white"
