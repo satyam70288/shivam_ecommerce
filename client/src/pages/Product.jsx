@@ -101,7 +101,18 @@ const Product = () => {
                 discount={product.discount}
                 isOfferActive={isOfferActive}
               />
-
+<ProductVariants
+                colors={product.colors}
+                selectedColor={color}
+                onColorChange={setColor}
+                sizes={product.sizes}
+                selectedSize={size}
+                onSizeChange={setSize}
+                sizeGuide={product.sizeGuide}
+                stock={product.stock}
+                quantity={quantity}
+                onQuantityChange={setQuantity}
+              />
               {/* Services */}
               <ProductServices
                 freeDelivery={product.freeDelivery}
@@ -115,18 +126,7 @@ const Product = () => {
               />
 
               {/* Variants */}
-              <ProductVariants
-                colors={product.colors}
-                selectedColor={color}
-                onColorChange={setColor}
-                sizes={product.sizes}
-                selectedSize={size}
-                onSizeChange={setSize}
-                sizeGuide={product.sizeGuide}
-                stock={product.stock}
-                quantity={quantity}
-                onQuantityChange={setQuantity}
-              />
+              
 
               {/* CTA Buttons */}
               <div className="hidden lg:block">

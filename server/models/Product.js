@@ -69,12 +69,12 @@ const productSchema = new mongoose.Schema(
       default: [],
     },
 
-   dimensions: {
-  length: { type: Number, required: true }, // cm
-  width:  { type: Number, required: true }, // cm
-  height: { type: Number, required: true }, // cm
-  weight: { type: Number, required: true }, // kg
-},
+    dimensions: {
+      length: { type: Number, required: true }, // cm
+      width: { type: Number, required: true }, // cm
+      height: { type: Number, required: true }, // cm
+      weight: { type: Number, required: true }, // kg
+    },
 
     ageGroup: {
       type: [String],
@@ -86,7 +86,11 @@ const productSchema = new mongoose.Schema(
 
     // RATINGS
     rating: { type: Number, default: 5 },
-
+    reviewCount: {
+      type: Number,
+      default: 0,
+      required: false, // Add this
+    },
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
 
     blacklisted: { type: Boolean, default: false },
@@ -156,14 +160,14 @@ productSchema.methods.getTotalStock = function () {
 // ⭐ Returns if offer is active - FIXED VERSION
 productSchema.methods.isOfferActive = function () {
   if (!this.discount || this.discount <= 0) return false;
-  
+
   const now = new Date();
-  
+
   // If offerValidTill exists, check if offer is still valid
   if (this.offerValidTill) {
     return now <= new Date(this.offerValidTill);
   }
-  
+
   // If no expiry date but discount exists, offer is active
   return true;
 };
@@ -173,7 +177,7 @@ productSchema.methods.getDiscountedPrice = function () {
   if (typeof this.price !== "number" || this.price <= 0) return this.price || 0;
 
   if (this.discount > 0 && this.isOfferActive()) {
-    const discounted = this.price - (this.price * this.discount / 100);
+    const discounted = this.price - (this.price * this.discount) / 100;
     return Math.round(discounted * 100) / 100; // Round to 2 decimal places
   }
 
@@ -183,21 +187,21 @@ productSchema.methods.getMainImage = function () {
   if (this.images && this.images.length > 0) {
     return this.images[0];
   }
-  
+
   if (this.variants && this.variants.length > 0) {
     const firstVariant = this.variants[0];
     if (firstVariant.images && firstVariant.images.length > 0) {
       return firstVariant.images[0];
     }
   }
-  
+
   return null;
 };
 // ⭐ Get product card data - FIXED VERSION
 productSchema.methods.getProductCardData = function () {
   const isOfferActive = this.isOfferActive();
   const discountedPrice = this.getDiscountedPrice();
-  
+
   return {
     _id: this._id,
     name: this.name,
@@ -213,7 +217,7 @@ productSchema.methods.getProductCardData = function () {
     stock: this.getTotalStock(),
     colors: this.colors || [],
     brand: this.brand || "",
-    description: this.description || ""
+    description: this.description || "",
   };
 };
 module.exports = mongoose.model("Product", productSchema);

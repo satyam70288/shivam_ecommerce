@@ -5,6 +5,7 @@ const Category = require("../models/Category");
 const { default: mongoose } = require("mongoose");
 const ProductCapabilities = require("../models/ProductCapabilities");
 const PromiseMaster = require("../models/PromiseMaster");
+const { getProductByIdService } = require("../service/productDService");
 
 const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -598,52 +599,25 @@ const getProductByName = async (req, res) => {
   }
 };
 const getProductById = async (req, res) => {
-  const { id } = req.params;
-
   try {
-    const product = await Product.findById(id).populate("reviews");
+    const { id } = req.params;
 
-    if (!product) {
+    const result = await getProductByIdService(id);
+
+    if (!result) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
 
-    let discountedPrice = null;
-    if (product.productType === "simple") {
-      discountedPrice = product.getDiscountedPrice();
-    }
-
-    const productObj = product.toObject();
-
-    productObj.specifications = product.specifications
-      ? Object.fromEntries(product.specifications)
-      : {};
-
-    productObj.discountedPrice = discountedPrice;
-    const cap = await ProductCapabilities.findOne({
-      productId: product._id,
-    });
-
-    const codes = [];
-    if (cap?.canDispatchFast) codes.push("READY_TO_SHIP");
-    if (cap?.returnEligible) codes.push("EASY_RETURNS");
-    if (cap?.codAvailable) codes.push("SECURE_PAYMENTS");
-    if (cap?.qualityVerified) codes.push("QUALITY_CHECKED");
-
-    const promises = await PromiseMaster.find({
-      code: { $in: codes },
-      isActive: true,
-    }).select("code title description iconId");
     return res.status(200).json({
       success: true,
       message: "Product found",
-      data: productObj,
-      promises,
+      data: result.product,
+      promises: result.promises,
     });
   } catch (error) {
-    // Invalid ObjectId handling
     if (error.name === "CastError") {
       return res.status(400).json({
         success: false,
@@ -651,9 +625,11 @@ const getProductById = async (req, res) => {
       });
     }
 
+    console.error(error);
+
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Something went wrong",
     });
   }
 };

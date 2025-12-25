@@ -8,7 +8,7 @@ const ProductGallery = ({
   isZoomed,
   setIsZoomed,
 }) => {
-  const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(isZoomed);
+  const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(null);
   const [showZoom, setShowZoom] = useState(false);
   const [bgPos, setBgPos] = useState("50% 50%");
   console.log("isZoomed", isZoomed);
