@@ -17,7 +17,7 @@ const ProductCard = ({
   price = 0,
   rating = 0,
   reviewCount = 0,
-  image = null,
+  image = null, isOfferActive,   // 👈 ADD THIS
   discountedPrice = 0,
   discount = 0,
   variants = [],
@@ -36,9 +36,14 @@ const ProductCard = ({
   const [isToggling, setIsToggling] = useState(false);
 
   const isWishlisted = wishlistStatus[_id] || false;
-  const finalPrice = discountedPrice > 0 ? discountedPrice : price;
+ const finalPrice = isOfferActive && discountedPrice > 0
+  ? discountedPrice
+  : price;
+
   const savings = price - finalPrice;
-  const discountPercentage = discount > 0 ? discount : 0;
+ const discountPercentage =
+  isOfferActive && discount > 0 ? discount : 0;
+
   const displayImage = getImageUrl({ image, variants });
 
   const handleAddToCart = async (e) => {

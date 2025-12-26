@@ -8,7 +8,7 @@ import CartDrawer from "./CartDrawer";
 import LogoutToggle from "./LogoutToggle";
 import { ModeToggle } from "./ModeToggle";
 
-import logo from "../../assets/shivam_logo.png";
+import logo from "../../assets/shivam_new_logo.png";
 import Navigation from "./Navigation";
 
 const Header = () => {

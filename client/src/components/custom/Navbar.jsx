@@ -5,7 +5,7 @@ import CartDrawer from "./CartDrawer";
 import { User, Menu, ChevronLeft, X } from "lucide-react";
 import LogoutToggle from "./LogoutToggle";
 import { useDispatch, useSelector } from "react-redux";
-import swagiconDark from "../../assets/shivam_logo.png";
+import swagiconDark from "../../assets/shivam_new_logo.png";
 import { setCart } from "@/redux/slices/cartSlice";
 import axios from "axios";
 import Navigation from "./Navigation";

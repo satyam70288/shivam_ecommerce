@@ -11,6 +11,7 @@ const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(401).json({ success: false, message: "Access denied" });
   }
+
   const toBool = (v) => v === "true" || v === true;
 
   try {
@@ -18,66 +19,39 @@ const createProduct = async (req, res) => {
       name,
       description,
       category,
-      productType, // "simple" or "variant"
-
-      // SIMPLE PRODUCT FIELDS
       price,
       stock,
       sku,
 
-      // VARIANT PRODUCT FIELDS
-      variants, // JSON string: [{ color, size, stock, price, sku, discount }]
-
-      // COMMON FIELDS
       discount,
       offerTitle,
       offerDescription,
       offerValidFrom,
       offerValidTill,
+
       materials,
       features,
       specifications,
       dimensions,
-      freeShipping,
-      handlingTime,
       brand,
+      handlingTime,
+      freeShipping,
+
       ageGroup,
       tags,
       keywords,
+
       isFeatured,
       isNewArrival,
       isBestSeller,
+
       canDispatchFast,
       returnEligible,
       codAvailable,
       qualityVerified,
     } = req.body;
-    const parsedAgeGroup = ageGroup ? JSON.parse(ageGroup) : [];
-    const parsedTags = tags ? JSON.parse(tags) : [];
-    const parsedKeywords = keywords ? JSON.parse(keywords) : [];
-    const parsedMaterials = materials ? JSON.parse(materials) : [];
-    const parsedFeatures = features ? JSON.parse(features) : [];
-    let parsedSpecifications = {};
-    try {
-      console.log(specifications);
-      parsedSpecifications = specifications ? JSON.parse(specifications) : {};
-      console.log(parsedSpecifications);
-    } catch {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid specifications format",
-      });
-    }
 
-    const parsedDimensions = dimensions ? JSON.parse(dimensions) : null;
-
-    const parsedFreeShipping = freeShipping === "true";
-    const parsedHandlingTime =
-      handlingTime !== undefined ? Number(handlingTime) : 1;
-
-    // ============================================
-    // BASIC VALIDATION
-    // ============================================
+    /* ================= BASIC VALIDATION ================= */
     if (!name || !description || !category) {
       return res.status(400).json({
         success: false,
@@ -85,37 +59,30 @@ const createProduct = async (req, res) => {
       });
     }
 
-    if (!productType || !["simple", "variant"].includes(productType)) {
+    if (!price || !stock || !sku) {
       return res.status(400).json({
         success: false,
-        message: "Product type must be 'simple' or 'variant'",
+        message: "Price, stock, and SKU are required",
       });
     }
 
-    // ============================================
-    // SIMPLE PRODUCT VALIDATION
-    // ============================================
-    if (productType === "simple") {
-      if (!price || !stock) {
-        return res.status(400).json({
-          success: false,
-          message: "Price, stock, and SKU are required for simple products",
-        });
-      }
-
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "At least one image is required for simple products",
-        });
-      }
-    }
-    if (parsedHandlingTime < 0) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Handling time cannot be negative",
+        message: "At least one image is required",
       });
     }
+
+    /* ================= SAFE PARSING ================= */
+    const parseJSON = (v, fallback) => {
+      try {
+        return v ? JSON.parse(v) : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    const parsedFeatures = parseJSON(features, []);
     if (parsedFeatures.length === 0) {
       return res.status(400).json({
         success: false,
@@ -123,214 +90,92 @@ const createProduct = async (req, res) => {
       });
     }
 
-    // ============================================
-    // VARIANT PRODUCT VALIDATION
-    // ============================================
-    if (productType === "variant") {
-      if (!variants) {
-        return res.status(400).json({
-          success: false,
-          message: "Variants are required for variant products",
-        });
-      }
-
-      let parsedVariants;
-      try {
-        parsedVariants = JSON.parse(variants);
-      } catch (err) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid variants format",
-        });
-      }
-
-      if (!Array.isArray(parsedVariants) || parsedVariants.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "At least one variant is required",
-        });
-      }
-
-      // Validate each variant
-      for (const variant of parsedVariants) {
-        if (!variant.color || !variant.price || !variant.sku) {
-          return res.status(400).json({
-            success: false,
-            message: "Each variant must have color, price, and SKU",
-          });
-        }
-      }
-    }
-
-    // ============================================
-    // GENERATE SLUG
-    // ============================================
+    /* ================= SLUG ================= */
     const slug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
-    // ============================================
-    // HANDLE SIMPLE PRODUCT
-    // ============================================
-    if (productType === "simple") {
-      const uploadedImages = [];
-
-      for (const file of req.files) {
-        const uploadRes = await cloudinaryUploadBuffer(file.buffer);
-        uploadedImages.push({
-          url: uploadRes.secure_url,
-          id: uploadRes.public_id,
-        });
-      }
-
-      const product = new Product({
-        productType: "simple",
-        name,
-        description,
-        category,
-        slug,
-
-        // Simple product fields
-        price: Number(price),
-        stock: Number(stock),
-        sku,
-        images: uploadedImages,
-
-        // Common fields
-        materials: parsedMaterials,
-        features: parsedFeatures,
-        specifications: parsedSpecifications,
-        dimensions: parsedDimensions,
-        freeShipping: parsedFreeShipping,
-        handlingTime: parsedHandlingTime,
-        brand: brand || "Generic",
-        ageGroup: parsedAgeGroup,
-        tags: parsedTags,
-        keywords: parsedKeywords,
-
-        // Flags
-        isFeatured: isFeatured === "true",
-        isNewArrival: isNewArrival === "true",
-        isBestSeller: isBestSeller === "true",
-
-        // Offer fields
-        discount: Number(discount) || 0,
-        offerTitle: offerTitle || null,
-        offerDescription: offerDescription || null,
-        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
-        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
-      });
-
-      await product.save();
-      await ProductCapabilities.create({
-        productId: product._id,
-        // sellerId: req.user._id,
-        canDispatchFast: toBool(canDispatchFast),
-        returnEligible: toBool(returnEligible),
-        codAvailable: toBool(codAvailable),
-        qualityVerified: toBool(qualityVerified),
-      });
-      return res.status(201).json({
-        success: true,
-        message: "Simple product created successfully",
-        data: product,
+    /* ================= IMAGE UPLOAD ================= */
+    const images = [];
+    for (const file of req.files) {
+      const uploadRes = await cloudinaryUploadBuffer(file.buffer);
+      images.push({
+        url: uploadRes.secure_url,
+        id: uploadRes.public_id,
       });
     }
 
-    // ============================================
-    // HANDLE VARIANT PRODUCT
-    // ============================================
-    if (productType === "variant") {
-      const parsedVariants = JSON.parse(variants);
-      const processedVariants = [];
+    /* ================= CREATE PRODUCT ================= */
+    const product = new Product({
+      productType: "simple",
+      name,
+      description,
+      category,
+      slug,
 
-      // Process each variant
-      for (let i = 0; i < parsedVariants.length; i++) {
-        const variant = parsedVariants[i];
+      price: Number(price),
+      stock: Number(stock),
+      sku,
+      images,
 
-        // Check if images are provided for this variant
-        const variantImages = [];
-        const variantFiles = req.files.filter(
-          (file) => file.fieldname === `variant_${i}_images`
-        );
+      materials: parseJSON(materials, []),
+      features: parsedFeatures,
+      specifications: parseJSON(specifications, {}),
+      dimensions: parseJSON(dimensions, null),
 
-        if (variantFiles.length > 0) {
-          for (const file of variantFiles) {
-            const uploadRes = await cloudinaryUploadBuffer(file.buffer);
-            variantImages.push({
-              url: uploadRes.secure_url,
-              id: uploadRes.public_id,
-            });
-          }
-        }
+      brand: brand || "Generic",
+      handlingTime: handlingTime ? Number(handlingTime) : 1,
+      freeShipping: toBool(freeShipping),
 
-        processedVariants.push({
-          color: variant.color,
-          size: variant.size || null,
-          stock: Number(variant.stock) || 0,
-          price: Number(variant.price),
-          sku: variant.sku,
-          discount: Number(variant.discount) || 0,
-          images: variantImages,
-        });
-      }
+      ageGroup: parseJSON(ageGroup, []),
+      tags: parseJSON(tags, []),
+      keywords: parseJSON(keywords, []),
 
-      const product = new Product({
-        productType: "variant",
-        name,
-        description,
-        category,
-        slug,
+      isFeatured: toBool(isFeatured),
+      isNewArrival: toBool(isNewArrival),
+      isBestSeller: toBool(isBestSeller),
 
-        // Variants
-        variants: processedVariants,
+      discount: Number(discount) || 0,
+      offerTitle: offerTitle || null,
+      offerDescription: offerDescription || null,
+      offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
+      offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+    });
 
-        // Common fields
-        material: material || "Other",
-        brand: brand || "Generic",
-        ageGroup: parsedAgeGroup,
-        tags: parsedTags,
-        keywords: parsedKeywords,
+    await product.save();
 
-        // Flags
-        isFeatured: isFeatured === "true",
-        isNewArrival: isNewArrival === "true",
-        isBestSeller: isBestSeller === "true",
+    await ProductCapabilities.create({
+      productId: product._id,
+      canDispatchFast: toBool(canDispatchFast),
+      returnEligible: toBool(returnEligible),
+      codAvailable: toBool(codAvailable),
+      qualityVerified: toBool(qualityVerified),
+    });
 
-        // Offer fields (applies to all variants if they don't have individual discounts)
-        offerTitle: offerTitle || null,
-        offerDescription: offerDescription || null,
-        offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
-        offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
-      });
-
-      await product.save();
-
-      return res.status(201).json({
-        success: true,
-        message: "Variant product created successfully",
-        data: product,
-      });
-    }
+    return res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      data: product,
+    });
   } catch (error) {
     console.error("PRODUCT CREATE ERROR:", error);
 
-    // Handle duplicate SKU error
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        message: "SKU already exists. Please use a unique SKU.",
+        message: "SKU already exists",
       });
     }
 
     return res.status(500).json({
       success: false,
       message: "Server error while creating product",
-      error: error.message,
     });
   }
 };
+
+
 
 const getProductsforadmin = async (req, res) => {
   console.log("inside");
@@ -451,7 +296,7 @@ const updateProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(401).json({ success: false, message: "Access denied" });
   }
-
+ console.log(req.body)
   try {
     const { id } = req.params;
     const data = { ...req.body };
@@ -525,11 +370,11 @@ const getProducts = async (req, res) => {
 
     // Get products
     const products = await Product.find(query)
-      .select("_id name price rating discount offerValidTill variants images colors brand stock reviewCount description")
+      .select("_id name price rating discount offerValidFrom offerValidTill variants images colors brand stock reviewCount description")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-
+ console.log("products",products)
     // Use the method to get product card data
     const processedProducts = products.map((product) => {
       const productData = product.getProductCardData();

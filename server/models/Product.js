@@ -136,12 +136,16 @@ const productSchema = new mongoose.Schema(
 // ⭐ Auto Rating Calculation
 productSchema.methods.calculateRating = async function () {
   const reviews = await Review.find({ productId: this._id });
-  if (reviews.length > 0) {
-    const totalRating = reviews.reduce((acc, review) => acc + review.rating, 0);
-    this.rating = totalRating / reviews.length;
+
+  if (reviews.length === 0) {
+    this.rating = 0;
+    this.reviewCount = 0;
   } else {
-    this.rating = 5;
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
+    this.rating = Number((total / reviews.length).toFixed(1));
+    this.reviewCount = reviews.length;
   }
+
   await this.save();
 };
 productSchema.methods.getTotalStock = function () {
@@ -159,18 +163,20 @@ productSchema.methods.getTotalStock = function () {
 // ⭐ Returns if offer is active
 // ⭐ Returns if offer is active - FIXED VERSION
 productSchema.methods.isOfferActive = function () {
-  if (!this.discount || this.discount <= 0) return false;
-
+  // अगर offer dates ही नहीं हैं
+   console.log(this.offerValidFrom,"kkkkkkkkkkkkkkk" )
+  if (!this.offerValidFrom || !this.offerValidTill) return false;
+ 
   const now = new Date();
-
-  // If offerValidTill exists, check if offer is still valid
-  if (this.offerValidTill) {
-    return now <= new Date(this.offerValidTill);
-  }
-
-  // If no expiry date but discount exists, offer is active
-  return true;
+  const validFrom = new Date(this.offerValidFrom);
+  const validTill = new Date(this.offerValidTill);
+  
+  // Timezone issues से बचने के लिए setHours(23,59,59,999)
+  validTill.setHours(23, 59, 59, 999);
+  
+  return now >= validFrom && now <= validTill;
 };
+
 
 // ⭐ Discounted Price - FIXED VERSION
 productSchema.methods.getDiscountedPrice = function () {
@@ -200,7 +206,11 @@ productSchema.methods.getMainImage = function () {
 // ⭐ Get product card data - FIXED VERSION
 productSchema.methods.getProductCardData = function () {
   const isOfferActive = this.isOfferActive();
-  const discountedPrice = this.getDiscountedPrice();
+
+const discountedPrice = isOfferActive
+  ? this.getDiscountedPrice()
+  : this.price;
+
 
   return {
     _id: this._id,
