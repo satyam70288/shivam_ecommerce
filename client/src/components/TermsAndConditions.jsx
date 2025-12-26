@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import swagiconDark from "@/assets/iconwhite.png";
+import swagiconDark from "@/assets/shivam_new_logo.png";
 const TermsAndConditions = () => {
   return (
     <div className="max-w-4xl mx-auto  bg-white dark:bg-black text-gray-900 dark:text-neutral-50 rounded-lg shadow-md my-10 ">
