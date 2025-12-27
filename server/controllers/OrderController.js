@@ -521,28 +521,106 @@ const getMetrics = async (req, res) => {
 
 // Cancel COD orders within 24 hours
 const cancelOrder = async (req, res) => {
-  const { orderId, reason } = req.body;
-  const order = await Order.findById(orderId);
+  try {
+    const { orderId, reason } = req.body;
+    const userId = req.id; // assuming auth middleware sets this
 
-  if (!order) return res.status(404).json({ message: "Order not found" });
-  if (order.paymentMode !== "COD")
-    return res.status(400).json({ message: "Only COD can cancel" });
-  if (!["pending", "packed"].includes(order.status))
-    return res.status(400).json({ message: "Cannot cancel now" });
+    /* ================= VALIDATION ================= */
+    // if (!orderId || !reason) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Order ID and cancellation reason are required",
+    //   });
+    // }
 
-  const hoursDiff = (new Date() - order.createdAt) / 36e5;
-  if (hoursDiff > 24)
-    return res.status(400).json({ message: "Cancel allowed within 24h only" });
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Order ID",
+      });
+    }
 
-  order.isCancelled = true;
-  order.cancelReason = reason;
-  order.cancelledAt = new Date();
-  order.status = "cancelled";
-  await order.save();
+    /* ================= FETCH ORDER ================= */
+    const order = await Order.findById(orderId);
+    console.log(order)
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-  res.json({ success: true, message: "Order cancelled", order });
+    /* ================= OWNERSHIP CHECK ================= */
+    if (order.userId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to cancel this order",
+      });
+    }
+
+    /* ================= BUSINESS RULES ================= */
+
+    // Only COD orders
+    // if (order.paymentMethod !== "COD") {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Only COD orders can be cancelled by user",
+    //   });
+    // }
+
+    // Status validation
+    const cancellableStatuses = ["PLACED", "CONFIRMED", "PACKED"];
+    if (!cancellableStatuses.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be cancelled in '${order.status}' state`,
+      });
+    }
+
+    // 24 hour window
+    const hoursPassed =
+      (Date.now() - new Date(order.createdAt).getTime()) /
+      (1000 * 60 * 60);
+
+    // if (hoursPassed > 24) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Order can only be cancelled within 24 hours",
+    //   });
+    // }
+
+    /* ================= UPDATE ORDER ================= */
+
+    order.status = "CANCELLED";
+    order.cancelReason = reason;
+
+    order.statusHistory.push({
+      status: "CANCELLED",
+      note: reason,
+      updatedBy: "USER",
+      updatedAt: new Date(),
+    });
+
+    await order.save();
+
+    /* ================= RESPONSE ================= */
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: {
+        orderId: order._id,
+        status: order.status,
+        cancelReason: order.cancelReason,
+      },
+    });
+  } catch (error) {
+    console.error("Cancel order error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while cancelling order",
+    });
+  }
 };
-
 // Exchange Paid Delivered Orders
 const exchangeOrder = async (req, res) => {
   const { orderId, reason } = req.body;
@@ -593,6 +671,7 @@ const createOrder = async (req, res) => {
 
   try {
     const userId = req.id;
+    console.log()
     const { addressId, productId, quantity } = req.body;
 
     if (!addressId) {

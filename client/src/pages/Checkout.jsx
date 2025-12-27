@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { initCheckout } from "@/redux/slices/checkoutSlice";
+import { initCheckout, setProductId } from "@/redux/slices/checkoutSlice";
 import AddressSection from "@/components/checkout/AddressSection";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import PaymentMethod from "@/components/checkout/PaymentMethod";
@@ -43,6 +43,7 @@ const CheckoutPage = () => {
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("productId");
     const qty = params.get("qty");
+    dispatch(setProductId(productId))
     dispatch(initCheckout({ productId, qty }));
   }, [dispatch]);
 

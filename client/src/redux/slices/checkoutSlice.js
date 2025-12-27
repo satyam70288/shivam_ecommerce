@@ -136,7 +136,7 @@ export const placeCodOrder = createAsyncThunk(
     try {
       const state = getState();
       const { addressId, productId, qty } = state.checkout;
-
+      console.log(productId,"productId")
       if (!addressId) {
         return rejectWithValue("Address is required");
       }

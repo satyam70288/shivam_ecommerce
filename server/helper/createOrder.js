@@ -3,6 +3,7 @@ const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 
 exports.calculateOrder = async (userId, { productId, quantity }) => {
+  console.log(productId,"productId")
   let items = [];
   let subtotal = 0;
   let discount = 0;
