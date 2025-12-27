@@ -1,8 +1,18 @@
+// src/components/custom/OrderData.jsx
 import React, { useState } from "react";
-import { Card } from "../ui/card";
-import { IndianRupee } from "lucide-react";
-import axios from "axios";
-import { CancelOrderDialog } from "../CancelOrderDialog";
+import { IndianRupee, Calendar } from "lucide-react";
+
+// Import APIs and helpers
+import orderApi from "@/api/orderApi";
+import { 
+  getStatusIcon, 
+  getStatusColor, 
+  formatDate, 
+  formatPrice,
+  calculateProductDetails,
+  getActionButtons,
+  buttonVariantClasses
+} from "@/utils/orderHelpers.jsx";
 
 const OrderData = ({
   products = [],
@@ -10,132 +20,241 @@ const OrderData = ({
   status = "PLACED",
   createdAt,
   _id,
+  onCancel
 }) => {
   const orderId = _id;
   const [trackingData, setTrackingData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
 
   const handleTrackOrder = async () => {
+    if (showTracking) {
+      setShowTracking(false);
+      return;
+    }
+    
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_API_URL}/orders/track/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setTrackingData(res.data.tracking || []);
-    } catch {
-      alert("Failed to fetch tracking data");
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const data = await orderApi.trackOrder(orderId, token);
+      setTrackingData(data);
+      setShowTracking(true);
+    } catch (error) {
+      alert(error.message || "Failed to fetch tracking data");
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <Card className="grid gap-3 p-3">
-      {/* PRODUCTS */}
-      {products.map((product, idx) => {
-        const itemTotal =
-          (product.price || 0) * (product.quantity || 0);
+  const handleCancelClick = () => {
+    if (window.confirm("Are you sure you want to cancel this order?")) {
+      onCancel();
+    }
+  };
 
-        const saved =
-          ((product.originalPrice || product.price) - product.price) *
-          product.quantity;
+  const actionButtons = getActionButtons({
+    status,
+    loading,
+    handleTrackOrder,
+    handleCancelClick
+  });
 
-        return (
-          <div
-            key={product.productId || idx}
-            className="flex flex-col sm:flex-row justify-between items-end sm:items-center border p-3 rounded-lg bg-gray-100 dark:bg-zinc-900"
-          >
-            <div className="flex items-center gap-2">
-              <img
-                src={product.image || "/placeholder.png"}
-                alt={product.name}
-                className="w-20 h-20 rounded-lg object-cover"
-              />
+  const ProductItem = ({ product, idx }) => {
+    const { itemTotal, saved, originalTotal } = calculateProductDetails(product);
 
-              <div className="grid gap-1">
-                <h1 className="font-semibold text-sm sm:text-lg">
-                  {product.name}
-                </h1>
+    return (
+      <div
+        key={product.productId || idx}
+        className="flex items-start gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 transition-colors"
+      >
+        {/* Product Image */}
+        <div className="relative">
+          <img
+            src={product.image || "/placeholder.png"}
+            alt={product.name}
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover shadow-sm"
+          />
+          {saved > 0 && (
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+              Save {formatPrice(saved)}
+            </span>
+          )}
+        </div>
 
-                <p className="flex text-xs sm:text-sm gap-2 text-gray-500">
-                  {product.color && (
-                    <span>
-                      Color:{" "}
-                      <span
-                        className="inline-block w-4 h-2 rounded-full border"
-                        style={{ backgroundColor: product.color }}
-                      />
-                    </span>
-                  )}
-                  <span className="hidden sm:block">|</span>
-                  <span>Status: {status}</span>
-                </p>
-              </div>
+        {/* Product Details */}
+        <div className="flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base line-clamp-2">
+                {product.name}
+              </h3>
+              
+              {product.color && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Color:</span>
+                  <div 
+                    className="w-4 h-4 rounded-full border border-gray-300"
+                    style={{ backgroundColor: product.color }}
+                  />
+                </div>
+              )}
+              
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Quantity: {product.quantity}
+              </p>
             </div>
 
-            <div className="flex sm:flex-col gap-3 sm:gap-0 mt-2 sm:mt-0 sm:items-center">
-              <h2 className="text-md sm:text-xl font-bold flex items-center dark:text-customYellow">
-                <IndianRupee size={18} />
-                {itemTotal.toFixed(2)}
-              </h2>
-
-              <p className="text-sm text-gray-500">
-                Qty: {product.quantity}
+            <div className="text-right">
+              <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {formatPrice(itemTotal)}
               </p>
-
-              {saved > 0 && (
-                <p className="text-xs text-green-600">
-                  Saved ₹{saved.toFixed(2)}
+              {product.originalPrice && product.originalPrice > product.price && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                  {formatPrice(originalTotal)}
                 </p>
               )}
             </div>
           </div>
-        );
-      })}
-
-      {/* ORDER SUMMARY */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center mt-2 font-semibold">
-        <span>
-          Ordered On:{" "}
-          {createdAt ? new Date(createdAt).toLocaleString() : "N/A"}
-        </span>
-        <span className="flex items-center gap-1 dark:text-customYellow">
-          Total: <IndianRupee size={14} /> {amount.toFixed(2)}
-        </span>
-      </div>
-
-      <hr className="my-2" />
-
-      {/* ACTIONS */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-        {["PLACED", "CONFIRMED"].includes(status) && (
-          <CancelOrderDialog orderId={orderId} />
-        )}
-
-        <button
-          onClick={handleTrackOrder}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2 rounded-lg shadow-sm transition-all"
-        >
-          Track Order
-        </button>
-      </div>
-
-      {/* TRACKING */}
-      {trackingData.length > 0 && (
-        <div className="mt-2 p-2 bg-gray-100 dark:bg-zinc-700 rounded">
-          <h2 className="font-semibold">Tracking Status:</h2>
-          <ul className="list-disc ml-5">
-            {trackingData.map((step, idx) => (
-              <li key={idx}>
-                <strong>{step.status}</strong> at{" "}
-                {new Date(step.updated_at).toLocaleString()}
-              </li>
-            ))}
-          </ul>
         </div>
-      )}
-    </Card>
+      </div>
+    );
+  };
+
+  const OrderSummaryCard = ({ title, value, icon: Icon, bgColor = "blue", textColor = "blue" }) => (
+    <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 bg-${bgColor}-100 dark:bg-${bgColor}-900/30 rounded-lg flex items-center justify-center`}>
+          <Icon className={`w-5 h-5 text-${textColor}-600 dark:text-${textColor}-400`} />
+        </div>
+        <div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+          <div className="font-semibold text-gray-900 dark:text-white">{value}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ActionButton = ({ button, index }) => (
+    <button
+      key={index}
+      onClick={button.onClick}
+      disabled={button.disabled}
+      className={`px-6 py-3 font-semibold rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${buttonVariantClasses[button.variant]}`}
+    >
+      {button.icon}
+      {button.label}
+    </button>
+  );
+
+  const TrackingHistory = () => (
+    <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800 animate-fadeIn">
+      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        {getStatusIcon("SHIPPED")}
+        Tracking History
+      </h3>
+      
+      <div className="space-y-4">
+        {trackingData.map((step, idx) => (
+          <div
+            key={idx}
+            className={`flex items-start gap-3 p-3 ${
+              idx === trackingData.length - 1 
+                ? "bg-white dark:bg-gray-800 rounded-lg shadow-sm" 
+                : "bg-white/50 dark:bg-gray-800/50 rounded-lg"
+            }`}
+          >
+            <div className={`w-3 h-3 rounded-full mt-1.5 ${
+              idx === trackingData.length - 1 ? "bg-green-500 animate-pulse" : "bg-blue-500"
+            }`}></div>
+            <div className="flex-1">
+              <p className="font-medium text-gray-900 dark:text-white">{step.status}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {step.updated_at ? formatDate(step.updated_at) : "Date not available"}
+              </p>
+              {step.location && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  📍 {step.location}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const NoTrackingMessage = () => (
+    <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-center">
+      {getStatusIcon("SHIPPED")}
+      <p className="text-gray-600 dark:text-gray-400 mt-3">
+        No tracking information available yet. Check back later.
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Products List */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-gray-900 dark:text-white text-lg">Order Items</h3>
+        {products.map((product, idx) => (
+          <ProductItem key={product.productId || idx} product={product} idx={idx} />
+        ))}
+      </div>
+
+      {/* Order Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <OrderSummaryCard
+          title="Order Date"
+          value={formatDate(createdAt)}
+          icon={Calendar}
+          bgColor="blue"
+          textColor="blue"
+        />
+        
+        <OrderSummaryCard
+          title="Status"
+          value={
+            <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(status)}`}>
+              {getStatusIcon(status)}
+              {status.charAt(0) + status.slice(1).toLowerCase()}
+            </div>
+          }
+          icon={getStatusIcon}
+          bgColor="green"
+          textColor="green"
+        />
+        
+        <OrderSummaryCard
+          title="Total Amount"
+          value={formatPrice(amount)}
+          icon={IndianRupee}
+          bgColor="purple"
+          textColor="purple"
+        />
+      </div>
+
+      {/* Dynamic Action Buttons */}
+      <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        {actionButtons.map((button, index) => (
+          <ActionButton key={index} button={button} index={index} />
+        ))}
+      </div>
+
+      {/* Tracking Data */}
+      {showTracking && trackingData.length > 0 && <TrackingHistory />}
+      {showTracking && trackingData.length === 0 && <NoTrackingMessage />}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   );
 };
 

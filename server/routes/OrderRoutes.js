@@ -18,7 +18,7 @@ router.get("/get-all-orders", verifyToken, getAllOrders);
 
 router.get("/get-metrics", verifyToken, getMetrics);
 
-router.put("/update-order-status/:paymentId", verifyToken, updateOrderStatus);
+router.put("/update-order-status/:orderId", verifyToken, updateOrderStatus);
 
 router.post("/orders/create", verifyToken, createOrder);
 

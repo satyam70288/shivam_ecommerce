@@ -5,7 +5,11 @@ const mongoose = require("mongoose");
 ========================= */
 const orderItemSchema = new mongoose.Schema(
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
 
     name: { type: String, required: true },
     image: String,
@@ -21,7 +25,7 @@ const orderItemSchema = new mongoose.Schema(
     // 🔥 DIMENSIONS SNAPSHOT (REQUIRED)
     weight: { type: Number, required: true }, // kg
     length: { type: Number, required: true }, // cm
-    width:  { type: Number, required: true },
+    width: { type: Number, required: true },
     height: { type: Number, required: true },
 
     color: String,
@@ -29,8 +33,6 @@ const orderItemSchema = new mongoose.Schema(
   },
   { _id: false }
 );
-
-
 
 /* =========================
    ORDER SCHEMA
@@ -102,9 +104,16 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "PLACED",
     },
-
+    statusHistory: [
+      {
+        status: String,
+        changedAt: { type: Date, default: Date.now },
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        reason: String,
+      },
+    ],
     /* 🚛 SHIPPING / COURIER (OPTIONAL INTEGRATION) */
-    shippingProvider: String,          // Shiprocket, Delhivery, etc
+    shippingProvider: String, // Shiprocket, Delhivery, etc
     shippingOrderId: String,
     awbCode: String,
     courierName: String,

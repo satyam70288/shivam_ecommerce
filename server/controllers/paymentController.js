@@ -8,6 +8,24 @@ const Address = require("../models/address");
 const { calculateOrder } = require("../helper/createOrder");
 const { default: mongoose } = require("mongoose");
 
+const updateOrderStatusWithHistory = async (
+  orderId,
+  newStatus,
+  changedBy,
+  reason
+) => {
+  await Order.findByIdAndUpdate(orderId, {
+    $push: {
+      statusHistory: {
+        status: newStatus,
+        changedAt: new Date(),
+        changedBy: changedBy,
+        reason: reason,
+      },
+    },
+    status: newStatus,
+  });
+};
 exports.createRazorpayOrder = async (req, res) => {
   try {
     const userId = req.id;
@@ -77,7 +95,6 @@ exports.createRazorpayOrder = async (req, res) => {
       key: process.env.RAZORPAY_KEY_ID,
       orderSummary: orderData.summary, // frontend ke liye
     });
-
   } catch (error) {
     console.error("❌ Create Razorpay Order Error:", error);
 
@@ -137,9 +154,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
     /* ================= AMOUNT VERIFY ================= */
     const rpOrder = await razorpay.orders.fetch(razorpay_order_id);
 
-    const expectedAmount = Math.round(
-      orderData.summary.total * 100
-    );
+    const expectedAmount = Math.round(orderData.summary.total * 100);
 
     if (rpOrder.amount !== expectedAmount) {
       throw new Error("Payment amount mismatch");
@@ -182,11 +197,27 @@ exports.verifyRazorpayPayment = async (req, res) => {
             signature: razorpay_signature,
           },
           status: "PLACED",
+          statusHistory: [
+            {
+              status: "PLACED",
+              changedAt: new Date(),
+              changedBy: userId,
+              reason: "Order placed by customer",
+            },
+          ],
         },
       ],
       { session }
     );
+    const orderId = order[0]._id;
 
+    // 🔴 After successful payment, update to CONFIRMED
+    await updateOrderStatusWithHistory(
+      orderId,
+      "CONFIRMED",
+      "system",
+      `Payment confirmed via Razorpay (ID: ${razorpay_payment_id})`
+    );
     /* ================= STOCK REDUCTION ================= */
     for (const item of orderData.items) {
       const updated = await Product.findOneAndUpdate(
@@ -213,7 +244,6 @@ exports.verifyRazorpayPayment = async (req, res) => {
       message: "Payment verified, order placed",
       orderId: order[0]._id,
     });
-
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -222,4 +252,3 @@ exports.verifyRazorpayPayment = async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 };
-

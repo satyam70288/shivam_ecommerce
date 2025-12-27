@@ -13,6 +13,7 @@ const address = require("../models/address");
 const { calculateOrder } = require("../helper/createOrder");
 const { createShiprocketOrder } = require("../service/shiprocketService");
 const { default: mongoose } = require("mongoose");
+const { validateStatusTransition } = require("../utils/orderStatusValidator");
 var razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_RW5A57UKh8Dv3F",
   key_secret:
@@ -72,6 +73,7 @@ const getOrdersByUserId = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
+  // Admin check
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
@@ -79,22 +81,60 @@ const getAllOrders = async (req, res) => {
     });
   }
 
-  let { page = 1, limit = 10 } = req.query;
+  let { 
+    page = 1, 
+    limit = 10, 
+    status, 
+    search, 
+    startDate, 
+    endDate,
+    paymentMethod 
+  } = req.query;
+  
   page = Number(page);
   limit = Number(limit);
 
-  const filter = {}; // future-proof
+  // Build filter
+  const filter = {};
+  
+  // Add status filter
+  if (status && ["PLACED", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"].includes(status)) {
+    filter.status = status;
+  }
+  
+  // Add payment method filter
+  if (paymentMethod && ["COD", "RAZORPAY", "CARD", "UPI", "NETBANKING"].includes(paymentMethod)) {
+    filter.paymentMethod = paymentMethod;
+  }
+  
+  // Add date range filter
+  if (startDate || endDate) {
+    filter.createdAt = {};
+    if (startDate) filter.createdAt.$gte = new Date(startDate);
+    if (endDate) filter.createdAt.$lte = new Date(endDate);
+  }
+  
+  // Add search filter
+  if (search) {
+    filter.$or = [
+      { _id: search },
+      { 'shippingAddress.name': { $regex: search, $options: 'i' } },
+      { 'shippingAddress.phone': search },
+      { 'shippingAddress.email': { $regex: search, $options: 'i' } }
+    ];
+  }
 
   try {
+    // Execute both queries in parallel
     const [orders, count] = await Promise.all([
       Order.find(filter)
         .populate({
           path: "userId",
-          select: "name email",
+          select: "name email phone",
         })
         .populate({
-          path: "items.productId",
-          select: "_id",
+          path: "statusHistory.changedBy",
+          select: "name",
         })
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
@@ -104,37 +144,43 @@ const getAllOrders = async (req, res) => {
       Order.countDocuments(filter),
     ]);
 
+    // Transform data for frontend
     const data = orders.map((order) => ({
       _id: order._id,
-
       user: {
-        name: order.userId?.name || "",
+        name: order.userId?.name || "Guest",
         email: order.userId?.email || "",
+        phone: order.userId?.phone || "",
       },
-
       items: (order.items || []).map((item) => ({
-        productId: item.productId?._id,
+        productId: item.productId,
         name: item.name,
         image: item.image || null,
         price: item.finalPrice ?? item.price,
         quantity: item.quantity,
-        color: item.color,
-        size: item.size,
+        color: item.color || "Default",
+        size: item.size || "",
+        lineTotal: (item.finalPrice ?? item.price) * item.quantity,
       })),
-
-      address: order.shippingAddress,
-
-      totalAmount: order.totalAmount,
-
+      address: order.shippingAddress || {},
+      totalAmount: order.totalAmount || 0,
+      subtotal: order.subtotal || 0,
+      shippingCharge: order.shippingCharge || 0,
+      taxAmount: order.taxAmount || 0,
       payment: {
         method: order.paymentMethod,
-        status: order.paymentStatus ?? (order.isPaid ? "PAID" : "PENDING"),
-        paymentId:
-          order.paymentGateway?.paymentId || order.razorpayPaymentId || null,
+        status: order.paymentStatus || "PENDING",
+        paymentId: order.paymentGateway?.paymentId || null,
       },
-
-      status: order.status,
+      status: order.status || "PLACED",
+      statusHistory: order.statusHistory || [],
+      cancelReason: order.cancelReason,
+      deliveredAt: order.deliveredAt,
+      shippingProvider: order.shippingProvider,
+      awbCode: order.awbCode,
+      estimatedDelivery: order.estimatedDelivery,
       createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     }));
 
     return res.status(200).json({
@@ -145,36 +191,44 @@ const getAllOrders = async (req, res) => {
         totalPages: Math.ceil(count / limit),
         currentPage: page,
         pageSize: limit,
+        hasNextPage: page < Math.ceil(count / limit),
+        hasPrevPage: page > 1,
       },
     });
   } catch (error) {
     console.error("getAllOrders error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Internal server error",
     });
   }
 };
 
+// controllers/admin/orderController.js
 const updateOrderStatus = async (req, res) => {
+  // Admin check
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
-      message: "You are not authorized to access this resource",
+      message: "Only admin can update order status",
     });
   }
 
-  const { paymentId } = req.params;
-  const { status } = req.body;
+  const { orderId } = req.params;
+  const { status, reason } = req.body;
+
+  // Validate status
+  const validStatuses = ["PLACED", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status value",
+    });
+  }
 
   try {
-    // Try to find by razorpayPaymentId (prepaid)
-    let order = await Order.findOne({ razorpayPaymentId: paymentId });
-
-    // If not found, try by _id (for COD)
-    if (!order) {
-      order = await Order.findById(paymentId);
-    }
+    // Find order
+    const order = await Order.findById(orderId);
 
     if (!order) {
       return res.status(404).json({
@@ -183,14 +237,55 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // Store old status
+    const oldStatus = order.status;
+
+    // Simple validation
+    if (oldStatus === status) {
+      return res.status(400).json({
+        success: false,
+        message: "Order is already in this status",
+      });
+    }
+
+    // ✅ Update status
     order.status = status;
+
+    // ✅ Add to statusHistory array (embedded - aapka existing structure)
+    order.statusHistory.push({
+      status: status,
+      changedAt: new Date(),
+      changedBy: req.userId,
+      reason: reason || `Status changed from ${oldStatus} to ${status} by admin`,
+    });
+
+    // Handle delivery
+    if (status === "DELIVERED") {
+      order.deliveredAt = new Date();
+      if (order.paymentMethod === 'COD') {
+        order.paymentStatus = 'PAID';
+      }
+    }
+
+    // Handle cancellation
+    if (status === "CANCELLED") {
+      order.cancelReason = reason;
+    }
+
+    // Save the order (statusHistory automatically saved with it)
     await order.save();
 
     return res.status(200).json({
       success: true,
-      data: order,
-      message: "Order status updated",
+      data: {
+        orderId: order._id,
+        oldStatus: oldStatus,
+        newStatus: status,
+        statusHistory: order.statusHistory // ✅ Embedded history automatically included
+      },
+      message: `Order status updated from ${oldStatus} to ${status}`,
     });
+
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -541,6 +636,14 @@ const createOrder = async (req, res) => {
           paymentMethod: "COD",
           paymentStatus: "PENDING",
           status: "PLACED",
+          statusHistory: [
+            {
+              status: "PLACED",
+              changedAt: new Date(),
+              changedBy: userId,
+              reason: "Order placed by customer",
+            },
+          ],
         },
       ],
       { session }
@@ -568,7 +671,7 @@ const createOrder = async (req, res) => {
     session.endSession();
     setImmediate(async () => {
       try {
-        console.log("inside")
+        console.log("inside");
         const freshOrder = await Order.findById(orderId);
         if (!freshOrder) return;
 
