@@ -1,32 +1,20 @@
+// Home.jsx - CORRECT VERSION
 import FilterMenu from "@/components/custom/FilterMenu";
-import Header from "@/components/custom/Header";
-import HeaderDisplay from "@/components/custom/HeaderDisplay";
 import ProductList from "@/components/custom/ProductList";
 import React, { useState } from "react";
 
 const Home = () => {
-  const [category, setCategory] = useState("All");
-  const [price, setPrice] = useState("");
   const [search, setSearch] = useState("");
+
+  console.log("Home Component - Search State:", search); // Debug ke liye
 
   return (
     <div>
-      <HeaderDisplay />
-      {/* <Header/> */}
+      {/* FilterMenu ko onSearch prop pass karo */}
+      <FilterMenu onSearch={setSearch} />
       
-      {/* FilterMenu को onSearch prop pass करें */}
-      <FilterMenu 
-        onSearch={setSearch}
-        onCategoryChange={setCategory}
-        onPriceChange={setPrice}
-      />
-      
-      {/* ProductList को search और अन्य filters pass करें */}
-      <ProductList 
-        search={search}
-        category={category}
-        price={price}
-      />
+      {/* ProductList ko search prop pass karo */}
+      <ProductList search={search} />
     </div>
   );
 };

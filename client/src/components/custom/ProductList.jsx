@@ -7,6 +7,7 @@ import { setProducts as setReduxProducts } from "@/redux/slices/productSlice";
 import { fetchWishlist } from "@/redux/slices/wishlistSlice";
 
 const ProductList = ({ category = "All", price = "", search = "" }) => {
+  console.log(search,"search")
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

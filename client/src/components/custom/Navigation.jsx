@@ -30,7 +30,7 @@ export default function Navigation() {
 
   return (
     <nav className="w-full border-b bg-white dark:bg-zinc-900 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-center py-3 px-4">
 
         {/* LEFT: Mobile menu button */}
         <button
@@ -39,20 +39,20 @@ export default function Navigation() {
                      md:hidden"
           onClick={() => setOpen(true)}
         >
-          <LayoutGrid size={20} className="text-gray-700 dark:text-gray-300" />
+          <LayoutGrid size={20} className="text-gray-700 dark:text-gray-300" /> SHOP BY CATEGORIES
         </button>
 
         {/* LEFT: Desktop "Shop by Categories" */}
-        <div
+        {/* <div
           className="hidden md:flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md 
                      hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
         >
-          <AlignJustify size={18} className="text-gray-700 dark:text-gray-300" />
+          {/* <AlignJustify size={18} className="text-gray-700 dark:text-gray-300" />
           <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
             SHOP BY CATEGORIES
-          </span>
-          <ChevronDown size={14} className="text-gray-600 dark:text-gray-300" />
-        </div>
+          </span> */}
+          {/* <ChevronDown size={14} className="text-gray-600 dark:text-gray-300" /> */}
+        {/* </div>  */}
 
         {/* CATEGORY LINKS (Horizontal Scroll on Mobile) */}
         <ul className="

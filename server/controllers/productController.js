@@ -359,12 +359,21 @@ const deleteProduct = async (req, res) => {
 
 const getProducts = async (req, res) => {
   try {
-    let { page, limit } = req.query;
+    let { page, limit, search } = req.query;
 
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 12;
 
+    // Build query
     const query = { blacklisted: false };
+
+    // Simple search only on name field
+    if (search && search.trim()) {
+      query.name = { $regex: search, $options: 'i' };
+      console.log("🔍 Searching for:", search);
+    }
+
+    // Get total count
     const totalProducts = await Product.countDocuments(query);
     const skip = (page - 1) * limit;
 
@@ -374,12 +383,13 @@ const getProducts = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
- console.log("products",products)
-    // Use the method to get product card data
+
+    console.log("✅ Found", products.length, "products");
+
+    // Process products
     const processedProducts = products.map((product) => {
       const productData = product.getProductCardData();
       
-      // Add extra calculations
       const savings = productData.price - productData.discountedPrice;
       const discountPercentage = productData.discount || Math.round((savings / productData.price) * 100);
       
@@ -394,7 +404,7 @@ const getProducts = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Products fetched",
+      message: search ? `Found ${totalProducts} results for "${search}"` : "Products fetched",
       data: processedProducts,
       pagination: {
         totalProducts,
