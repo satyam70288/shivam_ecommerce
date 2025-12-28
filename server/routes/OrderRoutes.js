@@ -8,6 +8,7 @@ const {
   trackShipment,
   cancelOrder,
   createOrder,
+  getOrdersByOrderId,
 } = require("../controllers/OrderController");
 const verifyToken = require("../middlewares/verifyToken");
 
@@ -25,4 +26,5 @@ router.get("/track/:id", trackShipment);
 
 router.post("/cancel-order", verifyToken, cancelOrder);
 
+router.get("/orders/:orderId", verifyToken, getOrdersByOrderId);
 module.exports = router;

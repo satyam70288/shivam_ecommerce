@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ModeToggle } from "./ModeToggle";
 import CartDrawer from "./CartDrawer";
 import { User, Menu, ChevronLeft, X } from "lucide-react";
@@ -16,7 +16,13 @@ const Navbar = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [open, setOpen] = useState(false);
-
+ const location = useLocation();
+ // If you want exact matches only (not startsWith)
+const hideNavigation = [
+  "/orders", 
+  "/about", 
+  "/faq"
+].includes(location.pathname);
   const handleNavigate = () => {
     navigate("/");
   };
@@ -217,7 +223,7 @@ const Navbar = () => {
           </div>
         )}
       </nav>
-      <Navigation />
+       {!hideNavigation && <Navigation />}
     </>
   );
 };

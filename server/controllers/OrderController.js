@@ -71,7 +71,87 @@ const getOrdersByUserId = async (req, res) => {
     });
   }
 };
+const getOrdersByOrderId = async (req, res) => {
+  const { orderId } = req.params;
+  const userId = req.id;
 
+  try {
+    // Find single order
+    const order = await Order.findOne({
+      _id: orderId,
+      userId,
+    }).lean();
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or you don't have access",
+      });
+    }
+
+    const items = order.items || [];
+
+    // Format single order response
+    const simplifiedOrder = {
+      _id: order._id,
+      orderId: order._id,
+      orderNumber: order.orderNumber || `#${order._id.toString().slice(-12).toUpperCase()}`,
+      date: order.createdAt,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      status: order.status,
+      
+      // Pricing
+      amount: order.totalAmount,
+      subtotal: order.subtotal || order.totalAmount,
+      shippingCharge: order.shippingCharge || 0,
+      tax: order.tax || 0,
+      discount: order.discount || 0,
+      
+      // Payment
+      paymentMethod: order.paymentMethod || "Cash on Delivery",
+      paymentStatus: order.paymentStatus || "pending",
+      transactionId: order.transactionId || null,
+      
+      // Shipping
+      shippingAddress: order.shippingAddress || {
+        name: "",
+        street: "",
+        city: "",
+        state: "",
+        pincode: "",
+        phone: "",
+      },
+      
+      // Products
+      products: items.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId || null,
+        name: item.name,
+        sku: item.sku,
+        image: item.image || "/placeholder.png",
+        price: item.finalPrice,
+        originalPrice: item.price,
+        discount: item.discount || 0,
+        quantity: item.quantity,
+        color: item.color || "Default",
+        size: item.size || "",
+        weight: item.weight || 0,
+      })),
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: simplifiedOrder, // Single object, not array
+    });
+  } catch (error) {
+    console.error("getOrderById error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 const getAllOrders = async (req, res) => {
   // Admin check
   if (req.role !== ROLES.admin) {
@@ -81,46 +161,59 @@ const getAllOrders = async (req, res) => {
     });
   }
 
-  let { 
-    page = 1, 
-    limit = 10, 
-    status, 
-    search, 
-    startDate, 
+  let {
+    page = 1,
+    limit = 10,
+    status,
+    search,
+    startDate,
     endDate,
-    paymentMethod 
+    paymentMethod,
   } = req.query;
-  
+
   page = Number(page);
   limit = Number(limit);
 
   // Build filter
   const filter = {};
-  
+
   // Add status filter
-  if (status && ["PLACED", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"].includes(status)) {
+  if (
+    status &&
+    [
+      "PLACED",
+      "CONFIRMED",
+      "PACKED",
+      "SHIPPED",
+      "DELIVERED",
+      "CANCELLED",
+    ].includes(status)
+  ) {
     filter.status = status;
   }
-  
+
   // Add payment method filter
-  if (paymentMethod && ["COD", "RAZORPAY", "CARD", "UPI", "NETBANKING"].includes(paymentMethod)) {
+  if (
+    paymentMethod &&
+    ["COD", "RAZORPAY", "CARD", "UPI", "NETBANKING"].includes(paymentMethod)
+  ) {
     filter.paymentMethod = paymentMethod;
   }
-  
+
   // Add date range filter
   if (startDate || endDate) {
     filter.createdAt = {};
     if (startDate) filter.createdAt.$gte = new Date(startDate);
     if (endDate) filter.createdAt.$lte = new Date(endDate);
   }
-  
+
   // Add search filter
   if (search) {
     filter.$or = [
       { _id: search },
-      { 'shippingAddress.name': { $regex: search, $options: 'i' } },
-      { 'shippingAddress.phone': search },
-      { 'shippingAddress.email': { $regex: search, $options: 'i' } }
+      { "shippingAddress.name": { $regex: search, $options: "i" } },
+      { "shippingAddress.phone": search },
+      { "shippingAddress.email": { $regex: search, $options: "i" } },
     ];
   }
 
@@ -218,7 +311,14 @@ const updateOrderStatus = async (req, res) => {
   const { status, reason } = req.body;
 
   // Validate status
-  const validStatuses = ["PLACED", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  const validStatuses = [
+    "PLACED",
+    "CONFIRMED",
+    "PACKED",
+    "SHIPPED",
+    "DELIVERED",
+    "CANCELLED",
+  ];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({
       success: false,
@@ -256,14 +356,15 @@ const updateOrderStatus = async (req, res) => {
       status: status,
       changedAt: new Date(),
       changedBy: req.userId,
-      reason: reason || `Status changed from ${oldStatus} to ${status} by admin`,
+      reason:
+        reason || `Status changed from ${oldStatus} to ${status} by admin`,
     });
 
     // Handle delivery
     if (status === "DELIVERED") {
       order.deliveredAt = new Date();
-      if (order.paymentMethod === 'COD') {
-        order.paymentStatus = 'PAID';
+      if (order.paymentMethod === "COD") {
+        order.paymentStatus = "PAID";
       }
     }
 
@@ -281,11 +382,10 @@ const updateOrderStatus = async (req, res) => {
         orderId: order._id,
         oldStatus: oldStatus,
         newStatus: status,
-        statusHistory: order.statusHistory // ✅ Embedded history automatically included
+        statusHistory: order.statusHistory, // ✅ Embedded history automatically included
       },
       message: `Order status updated from ${oldStatus} to ${status}`,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -542,7 +642,7 @@ const cancelOrder = async (req, res) => {
 
     /* ================= FETCH ORDER ================= */
     const order = await Order.findById(orderId);
-    console.log(order)
+    console.log(order);
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -579,8 +679,7 @@ const cancelOrder = async (req, res) => {
 
     // 24 hour window
     const hoursPassed =
-      (Date.now() - new Date(order.createdAt).getTime()) /
-      (1000 * 60 * 60);
+      (Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60);
 
     // if (hoursPassed > 24) {
     //   return res.status(400).json({
@@ -671,7 +770,7 @@ const createOrder = async (req, res) => {
 
   try {
     const userId = req.id;
-    console.log()
+    console.log();
     const { addressId, productId, quantity } = req.body;
 
     if (!addressId) {
@@ -775,6 +874,7 @@ const createOrder = async (req, res) => {
 
 module.exports = {
   getOrdersByUserId,
+  getOrdersByOrderId,
   getAllOrders,
   updateOrderStatus,
   getMetrics,

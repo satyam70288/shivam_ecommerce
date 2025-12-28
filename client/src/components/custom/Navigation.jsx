@@ -11,6 +11,7 @@ import {
   AlignJustify,
   ChevronDown,
   X,
+  LayoutGrid,
 } from "lucide-react";
 
 const navLinks = [
@@ -38,7 +39,7 @@ export default function Navigation() {
                      md:hidden"
           onClick={() => setOpen(true)}
         >
-          <AlignJustify size={20} className="text-gray-700 dark:text-gray-300" />
+          <LayoutGrid size={20} className="text-gray-700 dark:text-gray-300" />
         </button>
 
         {/* LEFT: Desktop "Shop by Categories" */}

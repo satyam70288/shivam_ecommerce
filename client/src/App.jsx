@@ -34,10 +34,9 @@ import MyProfile from "./components/custom/MyProfile";
 import CategoryPage from "./pages/CategoryPage";
 import AdminProductDetails from "./components/Admin/AdminProductDetails";
 import WishlistPage from "./pages/Wishlist";
+import OrderDetails from "./components/order/OrderDetails";
 
 export default function App() {
-   
-  
   const router = createBrowserRouter([
     {
       element: <RootLayout />,
@@ -57,12 +56,12 @@ export default function App() {
           children: [
             { path: "checkout", element: <Checkout /> },
             { path: "orders", element: <MyOrders /> },
-             { path: "account/wishlist", element: <WishlistPage /> },
+            { path: "orders/:orderId", element: <OrderDetails /> },
+            { path: "account/wishlist", element: <WishlistPage /> },
             {
               path: "account",
               element: <AccountLayout />,
               children: [{ index: true, element: <MyProfile /> }],
-       
             },
           ],
         },

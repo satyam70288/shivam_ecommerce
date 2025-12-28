@@ -2,14 +2,21 @@ import OrderData from "@/components/custom/OrderData";
 import useErrorLogout from "@/hooks/use-error-logout";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
+  const [expandedOrderId, setExpandedOrderId] = useState(null); // Track expanded order
   const { handleErrorLogout } = useErrorLogout();
+ const navigate = useNavigate();
 
+  const viewOrderDetails = (orderId) => {
+    navigate(`/orders/${orderId}`);
+  };
   // Filter logic
   useEffect(() => {
     const filterOrders = () => {
@@ -26,7 +33,7 @@ const MyOrders = () => {
     filterOrders();
   }, [activeFilter, orders]);
 
-  // Database ke hisaab se status filters (UPPERCASE)
+  // Database ke hisaab se status filters
   const statusFilters = [
     { id: "ALL", label: "All Orders", dbStatus: null },
     { id: "PLACED", label: "Placed", dbStatus: "PLACED" },
@@ -54,7 +61,6 @@ const MyOrders = () => {
         const normalizedOrders = (res.data.data || []).map((order) => ({
           _id: order.orderId,
           createdAt: order.date,
-          // Database se jo status aaye, use as it is (UPPERCASE)
           status: order.status || "PLACED",
           amount: order.amount || 0,
           products: order.products || [],
@@ -113,7 +119,7 @@ const MyOrders = () => {
     }).format(amount);
   };
 
-  // Status badge with professional styling - UPPERCASE ke liye
+  // Status badge with professional styling
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       PLACED: {
@@ -174,6 +180,7 @@ const MyOrders = () => {
   // Tab change handler
   const handleTabChange = (filterId) => {
     setActiveFilter(filterId);
+    setExpandedOrderId(null); // Close any expanded order when changing filter
   };
 
   // Count orders for each filter
@@ -183,28 +190,22 @@ const MyOrders = () => {
     return orders.filter((order) => order.status === filterId).length;
   };
 
+  // Toggle order details
+  const toggleOrderDetails = (orderId) => {
+    if (expandedOrderId === orderId) {
+      setExpandedOrderId(null); // Close if already open
+    } else {
+      setExpandedOrderId(orderId); // Open this order
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5F5F5] dark:bg-[#0F172A]">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
-            <div className="h-8 w-64 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700 rounded-lg mb-8 animate-pulse"></div>
-
-            <div className="flex gap-3 mb-8 overflow-x-auto">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div
-                  key={i}
-                  className="h-12 w-28 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700 rounded-lg animate-pulse flex-shrink-0"
-                ></div>
-              ))}
-            </div>
-
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-40 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-xl mb-4 animate-pulse"
-              ></div>
-            ))}
+            {/* Loading skeleton */}
+            {/* ... existing loading skeleton ... */}
           </div>
         </div>
       </div>
@@ -216,12 +217,16 @@ const MyOrders = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Header Section */}
-          
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              My Orders
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Track and manage all your orders in one place
+            </p>
+          </div>
 
-          {/* Stats Bar */}
-          
-
-          {/* Filter Tabs - Premium Design */}
+          {/* Filter Tabs */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -247,9 +252,6 @@ const MyOrders = () => {
                         : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                     }`}
                   >
-                    {isActive && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full animate-pulse"></span>
-                    )}
                     <span className="relative z-10 text-sm sm:text-base whitespace-nowrap">
                       {filter.label}
                     </span>
@@ -270,8 +272,8 @@ const MyOrders = () => {
             </div>
           </div>
 
-          {/* Orders List */}
-          <div className="space-y-6">
+          {/* Orders List - FLIPKART STYLE */}
+          <div className="space-y-4">
             {filteredOrders.length === 0 ? (
               <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
                 <div className="max-w-md mx-auto">
@@ -316,31 +318,105 @@ const MyOrders = () => {
               filteredOrders.map((order) => (
                 <div
                   key={order._id}
-                  className="group bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
                 >
-                  {/* Order Header with Gradient */}
-                  <div className="relative p-6 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex-1">
-          
+                  {/* Order Header - Summary View */}
+                  <div className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Left Side: Order Info */}
+                      <div className="space-y-3">
                         <div className="flex items-center gap-3">
                           <StatusBadge status={order.status} />
                           <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(order.createdAt)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                            Order {order.orderNumber}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {order.products.length} item
+                            {order.products.length !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+
+                        {/* Product Images - Flipkart Style */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-3">
+                            {order.products.slice(0, 3).map((product, idx) => (
+                              <img
+                                key={idx}
+                                src={product.image || "/placeholder.png"}
+                                alt={product.name}
+                                className="w-10 h-10 rounded-lg border-2 border-white dark:border-gray-800 object-cover bg-gray-100 dark:bg-gray-700"
+                              />
+                            ))}
+                            {order.products.length > 3 && (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400">
+                                +{order.products.length - 3}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
                             • {order.paymentMethod}
                           </span>
                         </div>
                       </div>
-                      
+
+                      {/* Right Side: Amount & Actions */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">
+                            {formatPrice(order.amount)}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            Total Amount
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          {/* Track Order Button */}
+                          {order.status === "SHIPPED" && (
+                            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                              Track Order
+                            </button>
+                          )}
+
+                          {/* View Details Button */}
+                          <button
+                            onClick={() => viewOrderDetails(order._id)}
+                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-900/20 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            {expandedOrderId === order._id ? (
+                              <>
+                                <ChevronUp className="w-4 h-4" />
+                                Hide Details
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-4 h-4" />
+                                View Details
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Order Content */}
-                  <div className="p-6">
-                    <OrderData
-                      {...order}
-                      onCancel={() => handleCancelOrder(order._id)}
-                    />
-                  </div>
+                  {/* Expanded Order Details - Shows only when clicked */}
+                  {expandedOrderId === order._id && (
+                    <div className="border-t border-gray-100 dark:border-gray-700">
+                      <div className="p-4 md:p-6">
+                        <OrderData
+                          {...order}
+                          onCancel={() => handleCancelOrder(order._id)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -348,12 +424,12 @@ const MyOrders = () => {
 
           {/* Footer Help Section */}
           {orders.length > 0 && (
-            <div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-8 border border-blue-100 dark:border-blue-800">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-100 dark:border-blue-800">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                     <svg
-                      className="w-7 h-7 text-white"
+                      className="w-6 h-6 text-white"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -367,15 +443,15 @@ const MyOrders = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
                       Need Help with Your Orders?
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       Our support team is available 24/7 to assist you
                     </p>
                   </div>
                 </div>
-                <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95 whitespace-nowrap">
+                <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg transition-all duration-300 hover:shadow-lg whitespace-nowrap">
                   Contact Support
                 </button>
               </div>
@@ -383,48 +459,6 @@ const MyOrders = () => {
           )}
         </div>
       </div>
-
-      {/* Add custom font via Google Fonts (Poppins) */}
-      <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
-
-        body {
-          font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI",
-            Roboto, sans-serif;
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
-          border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #2563eb, #1e40af);
-        }
-
-        .dark ::-webkit-scrollbar-track {
-          background: #1f2937;
-        }
-
-        .dark ::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #60a5fa, #3b82f6);
-        }
-
-        .dark ::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #93c5fd, #60a5fa);
-        }
-      `}</style>
     </div>
   );
 };
