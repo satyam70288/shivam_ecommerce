@@ -34,11 +34,18 @@ const getOrdersByUserId = async (req, res) => {
       return {
         orderId: order._id,
         date: order.createdAt,
+        orderNumber:order.orderNumber,
         status: order.status,
 
         // ✅ NEW SCHEMA SOURCE OF TRUTH
-        amount: order.totalAmount,
+        subtotal: order.subtotal,
+        shippingCharge: order.shippingCharge,
+        taxAmount: order.taxAmount,
+        totalAmount: order.totalAmount,
 
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        paymentGateway: order.paymentGateway || {},
         products: items.map((item) => ({
           productId: item.productId,
           variantId: item.variantId || null,
@@ -95,24 +102,26 @@ const getOrdersByOrderId = async (req, res) => {
     const simplifiedOrder = {
       _id: order._id,
       orderId: order._id,
-      orderNumber: order.orderNumber || `#${order._id.toString().slice(-12).toUpperCase()}`,
+      orderNumber:
+        order.orderNumber ||
+        `#${order._id.toString().slice(-12).toUpperCase()}`,
       date: order.createdAt,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
       status: order.status,
-      
+
       // Pricing
       amount: order.totalAmount,
       subtotal: order.subtotal || order.totalAmount,
       shippingCharge: order.shippingCharge || 0,
       tax: order.tax || 0,
       discount: order.discount || 0,
-      
+
       // Payment
       paymentMethod: order.paymentMethod || "Cash on Delivery",
       paymentStatus: order.paymentStatus || "pending",
       transactionId: order.transactionId || null,
-      
+
       // Shipping
       shippingAddress: order.shippingAddress || {
         name: "",
@@ -122,7 +131,7 @@ const getOrdersByOrderId = async (req, res) => {
         pincode: "",
         phone: "",
       },
-      
+
       // Products
       products: items.map((item) => ({
         productId: item.productId,

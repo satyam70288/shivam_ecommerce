@@ -61,8 +61,9 @@ const MyOrders = () => {
         const normalizedOrders = (res.data.data || []).map((order) => ({
           _id: order.orderId,
           createdAt: order.date,
+          orderNumber:order.orderNumber,
           status: order.status || "PLACED",
-          amount: order.amount || 0,
+          amount: order.totalAmount || 0,
           products: order.products || [],
           orderNumber:
             order.orderNumber || `#${order.orderId?.slice(-12)?.toUpperCase()}`,

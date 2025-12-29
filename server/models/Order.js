@@ -39,6 +39,12 @@ const orderItemSchema = new mongoose.Schema(
 ========================= */
 const orderSchema = new mongoose.Schema(
   {
+
+    orderNumber: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow null for old orders
+    },
     /* 👤 USER */
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -125,5 +131,32 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+// Schema ke baad, model banane se pehle
+orderSchema.pre('save', async function(next) {
+  if (this.isNew && !this.orderNumber) {
+    try {
+      // Format: SIS-YYYYMMDD-XXXXX
+      const date = new Date();
+      const dateStr = date.getFullYear().toString() + 
+                     (date.getMonth() + 1).toString().padStart(2, '0') + 
+                     date.getDate().toString().padStart(2, '0');
+      
+      // Get today's order count
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+      
+      const todaysOrders = await mongoose.model('Order').countDocuments({
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      const sequence = (todaysOrders + 1).toString().padStart(4, '0');
+      this.orderNumber = `SIS-${dateStr}-${sequence}`;
+      
+    } catch (error) {
+      // Fallback
+      this.orderNumber = `SIS-${Date.now().toString().slice(-9)}`;
+    }
+  }
+  next();
+});
 module.exports = mongoose.model("Order", orderSchema);
