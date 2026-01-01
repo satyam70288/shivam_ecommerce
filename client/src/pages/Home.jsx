@@ -1,5 +1,6 @@
 // Home.jsx - CORRECT VERSION
 import FilterMenu from "@/components/custom/FilterMenu";
+import HeaderDisplay from "@/components/custom/HeaderDisplay";
 import ProductList from "@/components/custom/ProductList";
 import React, { useState } from "react";
 
@@ -10,6 +11,7 @@ const Home = () => {
 
   return (
     <div>
+       <HeaderDisplay />
       {/* FilterMenu ko onSearch prop pass karo */}
       <FilterMenu onSearch={setSearch} />
       

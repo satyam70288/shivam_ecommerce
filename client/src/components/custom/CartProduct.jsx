@@ -1,9 +1,8 @@
 import { Colors } from "@/constants/colors";
 import { useToast } from "@/hooks/use-toast";
-import { addToCart, removeFromCart } from "@/redux/slices/cartSlice";
 import { Minus, Plus, Trash } from "lucide-react";
 import React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -14,8 +13,8 @@ import useCartActions from "@/hooks/useCartActions";
 const CartProduct = ({
   name,
   price,
-  cartItemId, // ✅ cart item ID for removal
-  productId, // ✅ actual product ID for buy now
+  cartItemId,
+  productId,
   image,
   quantity,
   stock,
@@ -23,24 +22,25 @@ const CartProduct = ({
   color,
   size,
 }) => {
-  const dispatch = useDispatch();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { generatePayment, verifyPayment } = useRazorpay();
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { fetchCart } = useCart();
-  const { decreaseQuantity,increaseQuantity } = useCartActions();
+  const { decreaseQuantity, increaseQuantity, removeItem } = useCartActions();
   const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user?.id; // <-- now you can use this safely
+  const userId = user?.id;
 
-  console.log(cartItemId, "Cart item id in cart product");
+  // Calculate discount
+  const originalPrice = Math.round(price * 1.33);
+  const discount = originalPrice - price;
+  const discountPercentage = Math.round((discount / originalPrice) * 100);
+
   const handleBuyNow = async () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
-
-    
 
     const order = await generatePayment(price * quantity);
     await verifyPayment(
@@ -48,17 +48,16 @@ const CartProduct = ({
       [{ id: productId, quantity, color, size }],
       "123 Main street"
     );
-    fetchCart(); // refresh cart after buy
+    fetchCart();
   };
 
   const handleRemove = async () => {
     try {
       const user = JSON.parse(localStorage.getItem("user"));
-      console.log(cartItemId);
       if (!user && !cartItemId) return;
 
       await axios.delete(`${import.meta.env.VITE_API_URL}/cart/remove`, {
-        data: { userId: user.id, cartItemId }, // use correct cart item ID
+        data: { userId: user.id, cartItemId },
       });
 
       toast({ title: "Product removed from cart" });
@@ -69,62 +68,75 @@ const CartProduct = ({
     }
   };
 
+  const handleQuantityDecrease = () => {
+    if (quantity > 1) {
+      decreaseQuantity({
+        userId,
+        cartItemId,
+        toast,
+      });
+    } else {
+      removeItem({ userId, cartItemId, toast });
+    }
+  };
+
+  const handleQuantityIncrease = () => {
+    if (stock === quantity) {
+      toast({ title: "Maximum stock reached" });
+    } else {
+      increaseQuantity({ userId, cartItemId, toast });
+    }
+  };
+
   return (
-    <div className="border w-fit rounded-2xl overflow-clip grid relative hover:shadow-md">
-      <img
-        src={image}
-        alt={name}
-        className="w-[30rem] sm:w-[20rem] h-[20rem] object-cover rounded-t-2xl"
-      />
-      <div className="px-3 grid gap-1 py-2 absolute bg-white dark:bg-zinc-900 w-full bottom-0 rounded-xl">
-        <h2 className="text-md">{name}</h2>
-        <span className="font-semibold text-md">₹{price}</span>
+    <div className="flex gap-3 p-3 border-b border-gray-200 dark:border-gray-700">
+      {/* Product Image - Same height as details */}
+      <div className="flex-shrink-0 w-20 h-20">
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-full object-cover rounded"
+        />
+      </div>
 
-        <div className="flex justify-between items-center my-2">
-          <div className="flex gap-3 items-center">
-            <div className="flex items-center gap-5 bg-gray-100 rounded-lg px-3 py-2 w-fit">
-              <Minus
-                size={15}
-                stroke={Colors.customGray}
-                onClick={() => {
-                  if (quantity > 1) {
-                    console.log("decreasing one");
-                    decreaseQuantity({
-                      userId,
-                      cartItemId,
-                      toast,
-                    });
-                  } else {
-                    handleRemove(); // pura item hata do
-                  }
-                }}
-              />
+      {/* Product Details - Same height as image */}
+      <div className="flex-1 min-w-0 h-20 flex flex-col justify-between">
+        {/* Only product name - single line */}
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1 text-left">
+          {name}
+        </h3>
 
-              <span className="text-slate-950 text-sm sm:text-md">
-                {quantity}
-              </span>
-              <Plus
-                size={15}
-                stroke={Colors.customGray}
-                onClick={() => {
-                  stock === quantity
-                    ? toast({ title: "Maximum stock reached" })
-                    : increaseQuantity({ userId, cartItemId, toast });
-                }}
-              />
-            </div>
+        {/* Price only - simple */}
+        <div className="flex items-baseline gap-2">
+          <span className="text-base font-bold text-gray-900 dark:text-white">
+            ₹{price?.toLocaleString()}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 line-through">
+            ₹{originalPrice?.toLocaleString()}
+          </span>
+        </div>
+
+        {/* Only quantity controls - very simple */}
+        <div className="flex items-center">
+          <button
+            onClick={handleQuantityDecrease}
+            className="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-l"
+            disabled={quantity <= 1}
+          >
+            <Minus size={12} />
+          </button>
+          
+          <div className="w-8 h-6 flex items-center justify-center border-y border-gray-300 dark:border-gray-600">
+            <span className="text-xs font-medium">{quantity}</span>
           </div>
-
-          {/* Remove Button */}
-          <Trash
-            size={20}
-            className="text-red-500 cursor-pointer hover:scale-110 transition"
-            onClick={handleRemove} // ✅ uses cartItemId
-          />
-
-          <Button onClick={handleBuyNow} size="sm">
-            Buy Now
-          </Button>
+          
+          <button
+            onClick={handleQuantityIncrease}
+            className="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-r"
+            disabled={quantity >= stock}
+          >
+            <Plus size={12} />
+          </button>
         </div>
       </div>
     </div>
