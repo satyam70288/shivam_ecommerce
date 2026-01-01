@@ -82,7 +82,7 @@ const wishlistCount = Object.values(wishlistStatus).filter(Boolean).length;
             </div>
             <div className="ml-1.5 hidden sm:block">
               <span className="text-sm font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ShivamStore
+                ShreeLaxmiShop
               </span>
               <div className="flex items-center gap-0.5 mt-0.5">
                 <Sparkles size={8} className="text-yellow-500" />

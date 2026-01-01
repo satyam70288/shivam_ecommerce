@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Package,
@@ -8,10 +8,8 @@ import {
   Gem,
   Flower2,
   Backpack,
-  AlignJustify,
-  ChevronDown,
-  X,
-  LayoutGrid,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 const navLinks = [
@@ -19,118 +17,152 @@ const navLinks = [
   { label: "Gift", slug: "gifts", icon: <Gift size={16} /> },
   { label: "Stationery", slug: "stationery", icon: <PencilRuler size={16} /> },
   { label: "Cosmetic", slug: "cosmetics", icon: <Sparkles size={16} /> },
-  { label: "Imitation Jewellery", slug: "imitation-jewellery", icon: <Gem size={16} /> },
-  { label: "Pooja Samagri", slug: "pooja-essentials", icon: <Flower2 size={16} /> },
+  {
+    label: "Imitation Jewellery",
+    slug: "imitation-jewellery",
+    icon: <Gem size={16} />,
+  },
+  {
+    label: "Pooja Samagri",
+    slug: "pooja-essentials",
+    icon: <Flower2 size={16} />,
+  },
   { label: "Bags", slug: "bags", icon: <Backpack size={16} /> },
+  // Add more if needed but mobile will scroll
 ];
 
 export default function Navigation() {
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScroll = () => {
+    if (!scrollContainerRef.current) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+  };
+
+  const scroll = (direction) => {
+    if (!scrollContainerRef.current) return;
+
+    const scrollAmount = 200;
+    scrollContainerRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener("scroll", checkScroll);
+      window.addEventListener("resize", checkScroll);
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener("scroll", checkScroll);
+      }
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, []);
 
   return (
     <nav className="w-full border-b bg-white dark:bg-zinc-900 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center justify-center py-3 px-4">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3">
+        {/* Desktop: Horizontal Scroll with Arrows */}
 
-        {/* LEFT: Mobile menu button */}
-        <button
-          className="flex items-center gap-2 px-3 py-2 rounded-md 
-                     hover:bg-gray-100 dark:hover:bg-zinc-800 transition
-                     md:hidden"
-          onClick={() => setOpen(true)}
-        >
-          <LayoutGrid size={20} className="text-gray-700 dark:text-gray-300" /> SHOP BY CATEGORIES
-        </button>
-
-        {/* LEFT: Desktop "Shop by Categories" */}
-        {/* <div
-          className="hidden md:flex items-center gap-2 cursor-pointer px-3 py-2 rounded-md 
-                     hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
-        >
-          {/* <AlignJustify size={18} className="text-gray-700 dark:text-gray-300" />
-          <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-            SHOP BY CATEGORIES
-          </span> */}
-          {/* <ChevronDown size={14} className="text-gray-600 dark:text-gray-300" /> */}
-        {/* </div>  */}
-
-        {/* CATEGORY LINKS (Horizontal Scroll on Mobile) */}
-        <ul className="
-          hidden md:flex  items-center gap-6 overflow-x-auto whitespace-nowrap
-          scrollbar-hide 
-          w-full md:w-auto
-          sm:hidden
-        ">
-          {navLinks.map((link, index) => (
-            <li key={index} className="list-none">
-              <NavLink
-                to={`/category/${link.slug}`}
-                className={({ isActive }) =>
-                  `
-                    group relative flex items-center gap-2 px-2 py-2 text-sm font-medium
-                    transition-all duration-300
-                    ${isActive ? "text-pink-600" : "text-gray-700 dark:text-gray-300 hover:text-pink-600"}
-                  `
-                }
-              >
-                <span className="transition-transform duration-300 group-hover:-translate-y-[2px]">
-                  {link.icon}
-                </span>
-
-                {link.label}
-
-                {/* underline animation */}
-                <span
-                  className={`
-                    absolute bottom-0 left-1/2 h-[2px] bg-pink-500 rounded-full
-                    transition-all duration-300 
-                    group-hover:w-3/4 group-hover:-translate-x-1/2
-                    ${pathname === "/category/" + link.slug ? "w-3/4 -translate-x-1/2" : "w-0"}
-                  `}
-                ></span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* MOBILE MENU DRAWER */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 flex"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-64 bg-white dark:bg-zinc-900 p-6 shadow-md h-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button className="mb-6" onClick={() => setOpen(false)}>
-              <X size={20} className="text-gray-700 dark:text-gray-300" />
+        <div className="hidden md:flex items-center justify-center">
+          {/* Left Arrow */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scroll("left")}
+              className="p-2 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 mr-2 transition absolute left-0"
+            >
+              <ChevronLeft
+                size={20}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
+          )}
 
-            {/* Mobile Nav Links */}
-            <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
+          {/* Category Links Container - CENTERED */}
+          <div
+            ref={scrollContainerRef}
+            className="flex overflow-x-auto scrollbar-hide justify-center"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            <div className="flex items-center gap-2 md:gap-4 px-4">
+              {navLinks.map((link, index) => (
                 <NavLink
-                  key={link.slug}
+                  key={index}
                   to={`/category/${link.slug}`}
-                  onClick={() => setOpen(false)}
-                  className={`
-                    flex items-center gap-3 px-3 py-2 rounded-lg
-                    ${pathname === "/category/" + link.slug 
-                      ? "bg-pink-50 text-pink-600 dark:bg-zinc-800"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"}
-                  `}
+                  className={({ isActive }) =>
+                    `
+              flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg
+              transition-all duration-200 whitespace-nowrap
+              ${
+                isActive
+                  ? "bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
+              }
+            `
+                  }
                 >
-                  {link.icon}
-                  {link.label}
+                  <span className="transition-transform duration-300 group-hover:scale-110">
+                    {link.icon}
+                  </span>
+                  <span className="font-medium text-sm">{link.label}</span>
                 </NavLink>
               ))}
             </div>
           </div>
+
+          {/* Right Arrow */}
+          {canScrollRight && (
+            <button
+              onClick={() => scroll("right")}
+              className="p-2 rounded-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 ml-2 transition absolute right-0"
+            >
+              <ChevronRight
+                size={20}
+                className="text-gray-600 dark:text-gray-300"
+              />
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Mobile: Simple Horizontal Scroll (No Drawer) */}
+        <div className="flex md:hidden overflow-x-auto scrollbar-hide -mx-2 px-2 pb-2">
+          <div className="flex items-center gap-2 min-w-max py-1">
+            {navLinks.map((link, index) => (
+              <NavLink
+                key={index}
+                to={`/category/${link.slug}`}
+                className={({ isActive }) =>
+                  `
+                    flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full
+                    border transition-all duration-200 whitespace-nowrap
+                    ${
+                      isActive
+                        ? "bg-pink-50 border-pink-200 text-pink-600 dark:bg-pink-900/30 dark:border-pink-800 dark:text-pink-400"
+                        : "border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                    }
+                  `
+                }
+              >
+                <span className="transition-transform duration-300">
+                  {link.icon}
+                </span>
+                <span className="font-medium text-sm">{link.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }

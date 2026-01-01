@@ -91,7 +91,7 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
           )}
 
           {/* Products Grid */}
-          <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center my-10">
+          <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center mb-10">
             {products.map((p) => (
               <div key={p._id} className="w-full">
                 <ProductCard {...p} />

@@ -11,20 +11,12 @@ import {
   Backpack,
 } from "lucide-react";
 
-const categories = [
-  { label: "Toys", icon: <Package size={16} /> },
-  { label: "Gift Items", icon: <Gift size={16} /> },
-  { label: "Stationery", icon: <PencilRuler size={16} /> },
-  { label: "Cosmetic", icon: <Sparkles size={16} /> },
-  { label: "Imitation Jewellery", icon: <Gem size={16} /> },
-  { label: "Pooja Samagri", icon: <Flower2 size={16} /> },
-  { label: "Bags", icon: <Backpack size={16} /> },
-];
+
 
 export default function FiltersSidebar({ selectedFilters = {}, updateFilter }) {
   // Ensure selectedFilters has all keys with default empty arrays
   const safeSelectedFilters = {
-    categories: selectedFilters.categories || [],
+    // categories: selectedFilters.categories || [],
     priceRange: selectedFilters.priceRange || [],
     discount: selectedFilters.discount || [],
     ratings: selectedFilters.ratings || [],
@@ -36,19 +28,7 @@ export default function FiltersSidebar({ selectedFilters = {}, updateFilter }) {
 
   return (
     <div className="space-y-6">
-      {/* CATEGORIES */}
-      <FilterSection title="Categories">
-        <CheckboxList
-          filterKey="categories"
-          selectedFilters={safeSelectedFilters}
-          updateFilter={updateFilter}
-          options={categories.map(cat => ({
-            label: cat.label,
-            value: cat.label.toLowerCase().replace(/\s+/g, '_'),
-            icon: cat.icon
-          }))}
-        />
-      </FilterSection>
+      
 
       {/* PRICE RANGE */}
       <FilterSection title="Price Range">

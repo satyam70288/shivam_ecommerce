@@ -25,7 +25,7 @@ const FilterMenu = ({ onSearch }) => {
   };
 
   return (
-    <div className="w-full px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+    <div className="w-full px-3 sm:px-4 lg:px-6 pt-4 sm:py-6">
       {/* Modern Search Container - Mobile Optimized */}
       <div className="relative max-w-4xl mx-auto">
         {/* Subtle Glow Effect - Mobile Friendly */}
@@ -53,7 +53,7 @@ const FilterMenu = ({ onSearch }) => {
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               className={`
-                w-full h-12 sm:h-14 md:h-16
+                w-full h-10 sm:h-10 md:h-10
                 pl-10 sm:pl-12 pr-10 sm:pr-12
                 text-base sm:text-lg font-normal sm:font-medium
                 bg-transparent border-0
@@ -114,7 +114,7 @@ const FilterMenu = ({ onSearch }) => {
               z-50
               animate-in fade-in slide-in-from-top-1 duration-200
             ">
-              <div className="p-3 sm:p-4">
+              {/* <div className="p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-zinc-400 mb-2">
                   Popular searches
                 </p>
@@ -137,7 +137,7 @@ const FilterMenu = ({ onSearch }) => {
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> */}
             </div>
           )}
         </div>

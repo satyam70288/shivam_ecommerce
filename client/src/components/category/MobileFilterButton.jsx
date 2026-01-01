@@ -20,7 +20,7 @@ export default function MobileFilterButton({
         onClick={() => setOpen(true)}
         className="
           w-full max-w-md mx-auto
-          px-5 py-4
+          px-5 py-3
           flex items-center justify-between
           bg-gradient-to-r from-blue-500 to-indigo-600
           dark:from-blue-600 dark:to-indigo-700
@@ -81,7 +81,7 @@ export default function MobileFilterButton({
             onClick={(e) => e.stopPropagation()}
             className="
               absolute inset-y-0 right-0
-              w-full max-w-sm
+                w-full max-w-xs sm:max-w-sm  // ✅ YAHAN CHANGE KARO
               bg-gradient-to-b from-white to-gray-50
               dark:from-zinc-900 dark:to-zinc-950
               shadow-2xl shadow-black/30
@@ -175,40 +175,7 @@ export default function MobileFilterButton({
               bg-white dark:bg-zinc-900
               shadow-lg
             ">
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setOpen(false)}
-                  className="
-                    flex-1 py-4 px-6
-                    rounded-xl
-                    border-2 border-gray-300 dark:border-zinc-700
-                    text-gray-700 dark:text-gray-300
-                    font-semibold
-                    hover:bg-gray-50 dark:hover:bg-zinc-800
-                    transition-all duration-300
-                    active:scale-[0.98]
-                  "
-                >
-                  Cancel
-                </button>
-                
-                <button
-                  onClick={() => setOpen(false)}
-                  className="
-                    flex-1 py-4 px-6
-                    rounded-xl
-                    bg-gradient-to-r from-blue-500 to-indigo-600
-                    dark:from-blue-600 dark:to-indigo-700
-                    text-white font-semibold
-                    shadow-lg shadow-blue-500/25 dark:shadow-blue-600/25
-                    hover:shadow-xl hover:shadow-blue-500/35 dark:hover:shadow-blue-600/35
-                    transition-all duration-300
-                    active:scale-[0.98]
-                  "
-                >
-                  Apply Filters
-                </button>
-              </div>
+              
             </div>
           </div>
         </div>
