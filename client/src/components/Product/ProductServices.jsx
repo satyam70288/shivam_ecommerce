@@ -58,61 +58,70 @@ const ProductServices = ({ promises = [] }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {/* 🔥 Dynamic promises from DB */}
-      {promises.map((p) => {
-        const Icon = ICON_MAP[p.iconId];
-        const color = PROMISE_COLOR[p.code] || "gray";
+  <div className="relative">
+    {/* Horizontal Scroll Container - YAHI LINE CHANGE HAI */}
+   <div className="flex overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-thin scrollbar-track-gray-100 scrollbar-thumb-gray-300 dark:scrollbar-track-gray-800 dark:scrollbar-thumb-gray-600">
+      <div className="flex gap-3 min-w-max">
+        {/* 🔥 Dynamic promises from DB */}
+        {promises.map((p) => {
+          const Icon = ICON_MAP[p.iconId];
+          const color = PROMISE_COLOR[p.code] || "gray";
 
-        if (!Icon) return null;
+          if (!Icon) return null;
 
-        return (
+          return (
+            <div
+              key={p._id}
+              // YAHI 2 CLASSES ADD KARO
+              className="snap-start flex-shrink-0 w-40 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4
+                         hover:shadow-md transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-500/30"
+            >
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className={`p-2.5 rounded-lg ${COLOR_CLASSES[color]}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+
+                <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                  {p.title}
+                </p>
+
+                <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
+                  {p.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* 🧱 Static platform services */}
+        {STATIC_SERVICES.map((s) => (
           <div
-            key={p._id}
-            className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4
-                       hover:shadow-md transition"
+            key={s.title}
+            // YAHI 2 CLASSES ADD KARO
+            className="snap-start flex-shrink-0 w-40 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4
+                       hover:shadow-md transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-500/30"
           >
             <div className="flex flex-col items-center text-center gap-2">
-              <div className={`p-2.5 rounded-lg ${COLOR_CLASSES[color]}`}>
-                <Icon className="w-5 h-5" />
+              <div className={`p-2.5 rounded-lg ${COLOR_CLASSES[s.color]}`}>
+                <s.icon className="w-5 h-5" />
               </div>
 
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {p.title}
+              <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1">
+                {s.title}
               </p>
 
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {p.description}
+              <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2">
+                {s.desc}
               </p>
             </div>
           </div>
-        );
-      })}
-
-      {/* 🧱 Static platform services */}
-      {STATIC_SERVICES.map((s) => (
-        <div
-          key={s.title}
-          className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4
-                     hover:shadow-md transition"
-        >
-          <div className="flex flex-col items-center text-center gap-2">
-            <div className={`p-2.5 rounded-lg ${COLOR_CLASSES[s.color]}`}>
-              <s.icon className="w-5 h-5" />
-            </div>
-
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {s.title}
-            </p>
-
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              {s.desc}
-            </p>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
-  );
+
+    
+  </div>
+);
 };
 
 export default ProductServices;

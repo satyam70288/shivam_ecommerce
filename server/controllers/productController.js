@@ -59,12 +59,7 @@ const createProduct = async (req, res) => {
       });
     }
 
-    if (!price || !stock || !sku) {
-      return res.status(400).json({
-        success: false,
-        message: "Price, stock, and SKU are required",
-      });
-    }
+    
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
