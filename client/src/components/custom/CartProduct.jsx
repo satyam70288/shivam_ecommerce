@@ -1,142 +1,206 @@
-import { Colors } from "@/constants/colors";
-import { useToast } from "@/hooks/use-toast";
-import { Minus, Plus, Trash } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import React from "react";
-import { useSelector } from "react-redux";
-import { Button } from "../ui/button";
+import { useSelector, useDispatch } from "react-redux";
+import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import useRazorpay from "@/hooks/use-razorpay";
-import useCart from "@/hooks/useCart";
-import useCartActions from "@/hooks/useCartActions";
+import {
+  increaseQtyThunk,
+  decreaseQtyThunk,
+  removeItemThunk,
+} from "@/redux/thunks/cartThunk";
 
 const CartProduct = ({
   name,
   price,
-  cartItemId,
+  finalPrice,
   productId,
   image,
   quantity,
   stock,
-  blacklisted,
   color,
   size,
+  cartItemId,
 }) => {
   const { toast } = useToast();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { generatePayment, verifyPayment } = useRazorpay();
-  const { isAuthenticated } = useSelector((state) => state.auth);
-  const { fetchCart } = useCart();
-  const { decreaseQuantity, increaseQuantity, removeItem } = useCartActions();
-  const user = JSON.parse(localStorage.getItem("user"));
+
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
   const userId = user?.id;
 
-  // Calculate discount
-  const originalPrice = Math.round(price * 1.33);
-  const discount = originalPrice - price;
-  const discountPercentage = Math.round((discount / originalPrice) * 100);
+  const displayPrice = finalPrice ?? price;
+  const totalPrice = displayPrice * quantity;
+  const hasDiscount = price > finalPrice;
+  const discountPercent = hasDiscount ? Math.round((1 - finalPrice / price) * 100) : 0;
 
-  const handleBuyNow = async () => {
+  const handleRemove = () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
 
-    const order = await generatePayment(price * quantity);
-    await verifyPayment(
-      order,
-      [{ id: productId, quantity, color, size }],
-      "123 Main street"
+    dispatch(
+      removeItemThunk({
+        userId,
+        cartItemId,
+        color,
+        size,
+        toast,
+      })
     );
-    fetchCart();
-  };
-
-  const handleRemove = async () => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (!user && !cartItemId) return;
-
-      await axios.delete(`${import.meta.env.VITE_API_URL}/cart/remove`, {
-        data: { userId: user.id, cartItemId },
-      });
-
-      toast({ title: "Product removed from cart" });
-      fetchCart(user.id);
-    } catch (err) {
-      console.error(err);
-      toast({ title: "Failed to remove product" });
-    }
   };
 
   const handleQuantityDecrease = () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     if (quantity > 1) {
-      decreaseQuantity({
-        userId,
-        cartItemId,
-        toast,
-      });
+      dispatch(
+        decreaseQtyThunk({
+          userId,
+          cartItemId,
+          color,
+          size,
+          toast,
+        })
+      );
     } else {
-      removeItem({ userId, cartItemId, toast });
+      handleRemove();
     }
   };
 
   const handleQuantityIncrease = () => {
-    if (stock === quantity) {
-      toast({ title: "Maximum stock reached" });
-    } else {
-      increaseQuantity({ userId, cartItemId, toast });
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
     }
+
+    if (quantity >= stock) {
+      toast({
+        title: "Maximum stock reached",
+        description: `Only ${stock} items available`,
+      });
+      return;
+    }
+
+    dispatch(
+      increaseQtyThunk({
+        userId,
+        cartItemId,
+        color,
+        size,
+        toast,
+      })
+    );
   };
 
   return (
-    <div className="flex gap-3 p-3 border-b border-gray-200 dark:border-gray-700">
-      {/* Product Image - Same height as details */}
-      <div className="flex-shrink-0 w-20 h-20">
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-full object-cover rounded"
-        />
-      </div>
+    <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4">
+        {/* Product Header */}
+        <div className="flex gap-3 mb-3">
+          {/* Product Image */}
+          <div className="relative">
+            <img
+              src={image}
+              alt={name}
+              className="w-16 h-16 object-cover rounded"
+            />
+            {hasDiscount && (
+              <div className="absolute -top-1 -left-1 bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded">
+                {discountPercent}% OFF
+              </div>
+            )}
+          </div>
 
-      {/* Product Details - Same height as image */}
-      <div className="flex-1 min-w-0 h-20 flex flex-col justify-between">
-        {/* Only product name - single line */}
-        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-1 text-left">
-          {name}
-        </h3>
+          {/* Product Info */}
+          <div className="flex-1">
+            <h3 className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">
+              {name}
+            </h3>
+            
+            {(color || size) && (
+              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {color && color !== "Default" ? `${color}` : ""}
+                {color && size && " • "}
+                {size ? `Size: ${size}` : ""}
+              </div>
+            )}
 
-        {/* Price only - simple */}
-        <div className="flex items-baseline gap-2">
-          <span className="text-base font-bold text-gray-900 dark:text-white">
-            ₹{price?.toLocaleString()}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 line-through">
-            ₹{originalPrice?.toLocaleString()}
-          </span>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-base font-bold text-gray-900 dark:text-white">
+                ₹{totalPrice.toFixed(2)}
+              </span>
+              {hasDiscount && (
+                <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                  ₹{(price * quantity).toFixed(2)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Remove Button */}
+          <button
+            onClick={handleRemove}
+            className="text-gray-400 hover:text-red-500"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Only quantity controls - very simple */}
-        <div className="flex items-center">
-          <button
-            onClick={handleQuantityDecrease}
-            className="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-l"
-            disabled={quantity <= 1}
-          >
-            <Minus size={12} />
-          </button>
-          
-          <div className="w-8 h-6 flex items-center justify-center border-y border-gray-300 dark:border-gray-600">
-            <span className="text-xs font-medium">{quantity}</span>
+        {/* Price Details */}
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+          <div className="flex justify-between mb-1">
+            <span>₹{displayPrice.toFixed(2)} × {quantity} items</span>
+            <span>₹{totalPrice.toFixed(2)}</span>
           </div>
-          
-          <button
-            onClick={handleQuantityIncrease}
-            className="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-r"
-            disabled={quantity >= stock}
-          >
-            <Plus size={12} />
-          </button>
+          {hasDiscount && (
+            <div className="flex justify-between text-green-600 dark:text-green-400">
+              <span>You save</span>
+              <span>₹{((price - finalPrice) * quantity).toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Quantity Controls - Flipkart Style */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">Quantity:</span>
+            <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded">
+              <button
+                onClick={handleQuantityDecrease}
+                disabled={quantity <= 1}
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
+              >
+                <Minus size={14} />
+              </button>
+              <div className="w-10 h-8 flex items-center justify-center border-x border-gray-300 dark:border-gray-600">
+                <span className="text-sm font-medium">{quantity}</span>
+              </div>
+              <button
+                onClick={handleQuantityIncrease}
+                disabled={quantity >= stock}
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Stock Status */}
+          <div className="text-right">
+            {stock < 10 ? (
+              <div className="text-xs text-amber-600 dark:text-amber-400">
+                Only {stock} left!
+              </div>
+            ) : (
+              <div className="text-xs text-green-600 dark:text-green-400">
+                In stock
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

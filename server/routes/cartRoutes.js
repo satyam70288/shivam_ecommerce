@@ -11,7 +11,7 @@ router.post("/add", cartController.addToCart);
 // Get user's cart
 router.get("/cart/:userId", cartController.getCart);
 
-router.delete("/cart/remove", cartController.removeFromCart);
+router.post("/cart/remove", cartController.removeFromCart);
 
 router.post("/cart/decrease", cartController.decreaseQuantity);
 

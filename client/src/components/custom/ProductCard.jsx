@@ -10,6 +10,7 @@ import {
   revertOptimisticToggle,
   toggleWishlist,
 } from "@/redux/slices/wishlistSlice";
+import { addToCartThunk } from "@/redux/thunks/cartThunk";
 
 const ProductCard = ({
   _id,
@@ -63,19 +64,19 @@ const ProductCard = ({
       return;
     }
 
-    try {
-      await addToCart({
-        userId: user.id,
-        productId: _id,
-        quantity: 1,
-        price: finalPrice,
-        color: variants?.[0]?.color || "Default",
-        size: "",
-        toast,
-      });
-    } finally {
-      setIsAdding(false);
-    }
+    dispatch(
+    addToCartThunk({
+      userId: user.id,
+      productId: _id,
+      quantity: 1,
+      price: finalPrice,
+      color: variants?.[0]?.color || "Default",
+      size: "",
+      toast,
+    })
+  ).finally(() => {
+    setIsAdding(false);
+  });
   };
 
   const handleWishlistToggle = async (e) => {

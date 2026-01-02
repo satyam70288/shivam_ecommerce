@@ -1,108 +1,72 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  cartItems: [],
-  totalQuantity: 0,
-  totalPrice: 0,
-};
-
-const recalcTotals = (state) => {
-  state.totalQuantity = state.cartItems.reduce(
-    (sum, item) => sum + item.quantity,
-    0
-  );
-  state.totalPrice = state.cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  items: [],
+  summary: {
+    subtotal: 0,
+    discount: 0,
+    total: 0,
+    grandTotal: 0,
+    itemCount: 0,
+  },
+  loading: false,
+  error: null,
 };
 
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    /* =====================
-       SET CART (FROM API)
-    ===================== */
-    setCart: (state, action) => {
-      const products = action.payload.products || [];
+    cartRequest(state) {
+      state.loading = true;
+      state.error = null;
+    },
 
-      state.cartItems = products.map((item) => ({
-        cartItemId: item._id,                // ✅ ONLY ID we use
-        productId: item.product._id,
-        name: item.product.name,
-        image: item.product.images?.[0]?.url || "/fallback.png",
-        price: item.product.price,
+    setCart(state, action) {
+      const { items = [], summary = {} } = action.payload.cart || {};
+
+      state.items = items.map((item) => ({
+        cartItemId:item.cartItemId,
+        productId: item.productId,
+        name: item.name,
+        image: item.image,
+
+        price: Number(item.price),
+        finalPrice: Number(item.finalPrice),
+        discountPercent: item.discountPercent || 0,
+
         quantity: item.quantity,
-        color: item.color,
-        size: item.size,
-        stock: item.product.stock,
-        blacklisted: item.product.blacklisted,
+        lineTotal: Number(item.lineTotal),
+        stock: item.stock,
       }));
 
-      recalcTotals(state);
+      state.summary = {
+        subtotal: Number(summary.subtotal || 0),
+        discount: Number(summary.discount || 0),
+        total: Number(summary.total || 0),
+        grandTotal: Number(summary.grandTotal || 0),
+        itemCount: Number(summary.itemCount || 0),
+      };
+
+      state.loading = false;
     },
 
-    /* =====================
-       ADD TO CART
-    ===================== */
-    addToCart: (state, action) => {
-      const incoming = action.payload;
-
-      const existing = state.cartItems.find(
-        (item) =>
-          item.productId === incoming.productId &&
-          item.color === incoming.color &&
-          item.size === incoming.size
-      );
-
-      if (existing) {
-        existing.quantity += incoming.quantity;
-      } else {
-        state.cartItems.push(incoming);
-      }
-
-      recalcTotals(state);
+    cartFailure(state, action) {
+      state.loading = false;
+      state.error = action.payload || "Cart error";
     },
 
-    /* =====================
-       REMOVE / DECREASE
-    ===================== */
-    removeFromCart: (state, action) => {
-      const { cartItemId } = action.payload;
-
-      const item = state.cartItems.find(
-        (i) => i.cartItemId === cartItemId
-      );
-
-      if (!item) return;
-
-      if (item.quantity > 1) {
-        item.quantity -= 1;
-      } else {
-        state.cartItems = state.cartItems.filter(
-          (i) => i.cartItemId !== cartItemId
-        );
-      }
-
-      recalcTotals(state);
-    },
-
-    /* =====================
-       EMPTY CART
-    ===================== */
-    emptyCart: (state) => {
-      state.cartItems = [];
-      state.totalQuantity = 0;
-      state.totalPrice = 0;
+    emptyCart(state) {
+      state.items = [];
+      state.summary = initialState.summary;
     },
   },
 });
 
 export const {
+  cartRequest,
   setCart,
-  addToCart,
-  removeFromCart,
+  cartFailure,
   emptyCart,
 } = cartSlice.actions;
 

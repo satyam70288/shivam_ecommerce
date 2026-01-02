@@ -11,7 +11,7 @@ const verifyToken = require('../middlewares/verifyToken');
 
 
 // All routes require authentication
-router.use(verifyToken);
+// router.use(verifyToken);
 
 router.post('/toggle', toggleWishlist);
 router.get('/wishlist', getWishlist);

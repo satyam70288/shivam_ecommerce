@@ -12,6 +12,7 @@ import axios from "axios";
 import Navigation from "./Navigation";
 import SimpleCartDrawer from "../Product/SimpleCartDrawer";
 import { fetchWishlist } from "@/redux/slices/wishlistSlice";
+import { fetchCartThunk } from "@/redux/thunks/cartThunk";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -20,50 +21,24 @@ const Navbar = () => {
 
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const { wishlistStatus } = useSelector((state) => state.wishlist);
-const wishlistCount = Object.values(wishlistStatus).filter(Boolean).length;
+  const wishlistCount = Object.values(wishlistStatus).filter(Boolean).length;
 
+  const { items, summary, loading } = useSelector((state) => state.cart);
 
-  // Debug: Check the full cart state
-  const cartState = useSelector((state) => state.cart);
- 
+  const cartCount = summary?.itemCount || 0;
 
-  // Different ways to get cart count
-  const cartItems = cartState?.cartItems || cartState?.cart || [];
-  const cartCount = cartItems.length || 0;
-
-  // Alternative: Check totalQuantity if available
-  const totalQuantity = cartState?.totalQuantity || 0;
-
-  
-
-  const hideNavigation = ["/orders","/checkout"].includes(location.pathname);
+  const hideNavigation = ["/orders", "/checkout"].includes(location.pathname);
 
   useEffect(() => {
-  if (isAuthenticated) {
-    dispatch(fetchWishlist());
-  }
-}, [isAuthenticated, dispatch]);
+    if (isAuthenticated) {
+      dispatch(fetchWishlist());
+    }
+  }, [isAuthenticated, dispatch]);
 
   useEffect(() => {
-    const fetchCart = async () => {
-      if (!user?.id) return;
-
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_URL}/cart/${user.id}`
-        );
-
-        console.log("Cart API response:", res.data);
-
-        if (res.data?.success) {
-          dispatch(setCart(res.data.cart));
-        }
-      } catch (error) {
-        console.error("Failed to fetch cart:", error);
-      }
-    };
-
-    if (isAuthenticated) fetchCart();
+    if (isAuthenticated && user?.id) {
+      dispatch(fetchCartThunk(user.id));
+    }
   }, [isAuthenticated, user?.id, dispatch]);
 
   return (
@@ -142,9 +117,9 @@ const wishlistCount = Object.values(wishlistStatus).filter(Boolean).length;
               </button>
 
               {/* Cart Badge - Debug version */}
-              {(cartCount > 0 || totalQuantity > 0) && (
-                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-gradient-to-br from-emerald-500 to-green-600 text-white text-[10px] font-bold rounded-full shadow-md shadow-emerald-500/40 ring-1 ring-white dark:ring-gray-900 z-10">
-                  {totalQuantity > 0 ? totalQuantity : cartCount}
+              {cartCount > 0 && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-gradient-to-br from-emerald-500 to-green-600 text-white text-[10px] font-bold rounded-full shadow-md ring-1 ring-white dark:ring-gray-900 z-10">
+                  {cartCount}
                 </div>
               )}
             </div>
