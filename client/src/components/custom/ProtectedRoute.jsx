@@ -1,3 +1,4 @@
+// ProtectedRoute.jsx
 import React from "react";
 import { useSelector } from "react-redux";
 import { Navigate, useLocation, Outlet } from "react-router-dom";
@@ -7,7 +8,9 @@ const ProtectedRoute = ({ children }) => {
   const { pathname, search } = location;
 
   const { isAuthenticated, role } = useSelector((state) => state.auth);
-  const { cartItems } = useSelector((state) => state.cart);
+  
+  // ✅ CORRECT: 'items' access करें, 'cartItems' नहीं
+  const { items = [] } = useSelector((state) => state.cart); // 'items' है slice में
 
   const params = new URLSearchParams(search);
   const isBuyNow = Boolean(params.get("productId"));
@@ -29,10 +32,10 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // 🟢 FIX: allow buy-now checkout
+  // 🟢 FIXED: 'items' use करें
   if (
     pathname === "/checkout" &&
-    cartItems.length === 0 &&
+    items.length === 0 &&  // ✅ अब 'items' है
     !isBuyNow
   ) {
     return <Navigate to="/" replace />;
