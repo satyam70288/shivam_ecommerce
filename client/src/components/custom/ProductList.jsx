@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import ProductCard from "./ProductCard";
-import Pagination from "../Pagination";
 import { useDispatch } from "react-redux";
 import { setProducts as setReduxProducts } from "@/redux/slices/productSlice";
 import { fetchWishlist } from "@/redux/slices/wishlistSlice";
 
 const ProductList = ({ category = "All", price = "", search = "" }) => {
-  console.log(search,"search")
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const observer = useRef();
+  
+  const dispatch = useDispatch();
+  const limit = 12;
+
+  // Fetch wishlist on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -19,18 +23,16 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
     }
   }, []);
 
-  const dispatch = useDispatch();
-  const limit = 12;
-
-  const fetchProducts = async () => {
+  // Fetch products function
+  const fetchProducts = useCallback(async (pageNum = 1, shouldAppend = false) => {
     try {
       setLoading(true);
-
+      
       const res = await axios.get(
         `${import.meta.env.VITE_API_URL}/get-products`,
         {
           params: {
-            page,
+            page: pageNum,
             limit,
             category: category !== "All" ? category : "",
             price: price || "",
@@ -40,28 +42,62 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
       );
 
       const { data, pagination } = res.data;
-
-      // Set frontend products
-      setProducts(Array.isArray(data) ? data : []);
-
+      const newProducts = Array.isArray(data) ? data : [];
+      
+      if (shouldAppend) {
+        // Append new products to existing ones
+        setProducts(prev => [...prev, ...newProducts]);
+      } else {
+        // Reset products for new search/filter
+        setProducts(newProducts);
+      }
+      
       // Update Redux
       dispatch(setReduxProducts(data));
-
-      // Calculate total pages
+      
+      // Check if there are more pages
       const total = pagination?.totalProducts || 0;
-      setTotalPages(Math.ceil(total / limit));
+      const totalPages = Math.ceil(total / limit);
+      setHasMore(pageNum < totalPages);
+      
     } catch (err) {
       console.error("Error fetching products:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [category, price, search, limit, dispatch]);
 
+  // Initial fetch or when filters change
   useEffect(() => {
-    fetchProducts();
-  }, [page, category, price, search]);
+    setPage(1);
+    setHasMore(true);
+    fetchProducts(1, false);
+  }, [category, price, search, fetchProducts]);
 
-  if (loading) {
+  // Load more when page changes
+  useEffect(() => {
+    if (page > 1) {
+      fetchProducts(page, true);
+    }
+  }, [page, fetchProducts]);
+
+  // Infinite Scroll Observer
+  const lastProductRef = useCallback(node => {
+    if (loading) return;
+    
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setPage(prevPage => prevPage + 1);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
+
+  // Loading skeleton
+  if (loading && products.length === 0) {
     return (
       <div className="max-w-7xl mx-auto grid gap-5 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] px-4 py-10">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -79,34 +115,47 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
     <>
       {products.length > 0 ? (
         <>
-          {/* Search info (optional) */}
+          {/* Search info */}
           {search && (
             <div className="w-[93vw] mx-auto mb-6 text-gray-600">
               Showing results for:{" "}
               <span className="font-semibold">"{search}"</span>
               <span className="ml-2 text-sm text-gray-500">
-                ({products.length} products found)
+                ({products.length} products loaded)
               </span>
             </div>
           )}
 
           {/* Products Grid */}
           <div className="w-[93vw] grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 mx-auto gap-4 place-content-center mb-10">
-            {products.map((p) => (
-              <div key={p._id} className="w-full">
-                <ProductCard {...p} />
-              </div>
-            ))}
+            {products.map((p, index) => {
+              // Last product gets the observer
+              if (index === products.length - 1) {
+                return (
+                  <div key={p._id} className="w-full" ref={lastProductRef}>
+                    <ProductCard {...p} />
+                  </div>
+                );
+              }
+              return (
+                <div key={p._id} className="w-full">
+                  <ProductCard {...p} />
+                </div>
+              );
+            })}
           </div>
 
-          {/* PAGINATION */}
-          {!loading && totalPages > 0 && (
-            <div className="flex justify-center py-4 sm:py-6">
-              <Pagination
-                currentPage={page} // ✅ यह variable check करें
-                totalPages={totalPages}
-                onPageChange={setPage}
-              />
+          {/* Loading spinner for infinite scroll */}
+          {loading && products.length > 0 && (
+            <div className="flex justify-center my-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+
+          {/* No more products message */}
+          {!hasMore && products.length > 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No more products to load
             </div>
           )}
         </>
@@ -125,3 +174,24 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
 };
 
 export default ProductList;
+
+
+// Option 1: Remove Pagination import and usage completely
+
+// Option 2: Toggle between pagination and infinite scroll
+// const [viewMode, setViewMode] = useState("infinite"); // "infinite" or "pagination"
+
+// // In return:
+// {viewMode === "pagination" && totalPages > 1 && (
+//   <Pagination
+//     currentPage={page}
+//     totalPages={totalPages}
+//     onPageChange={setPage}
+//   />
+// )}
+
+// {viewMode === "infinite" && loading && products.length > 0 && (
+//   <div className="flex justify-center my-8">
+//     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+//   </div>
+// )}
