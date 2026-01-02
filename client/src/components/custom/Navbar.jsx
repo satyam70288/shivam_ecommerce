@@ -36,7 +36,7 @@ const wishlistCount = Object.values(wishlistStatus).filter(Boolean).length;
 
   
 
-  const hideNavigation = ["/orders"].includes(location.pathname);
+  const hideNavigation = ["/orders","/checkout"].includes(location.pathname);
 
   useEffect(() => {
   if (isAuthenticated) {

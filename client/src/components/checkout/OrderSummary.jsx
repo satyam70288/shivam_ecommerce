@@ -12,7 +12,7 @@ const OrderSummary = () => {
       <h2 className="text-lg font-semibold">Order Summary</h2>
 
       <Items />
-      <CouponInput />
+      {/* <CouponInput /> */}
       <PriceBreakup />
     </Card>
   );
