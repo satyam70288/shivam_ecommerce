@@ -13,22 +13,48 @@ import {
 } from "lucide-react";
 
 const navLinks = [
-  { label: "Toys", slug: "toys", icon: <Package size={16} /> },
-  { label: "Gift", slug: "gifts", icon: <Gift size={16} /> },
-  { label: "Stationery", slug: "stationery", icon: <PencilRuler size={16} /> },
-  { label: "Cosmetic", slug: "cosmetics", icon: <Sparkles size={16} /> },
+  { 
+    label: "Toys", 
+    slug: "toys", 
+    icon: <Package size={16} />,
+    iconColor: "text-blue-500"
+  },
+  { 
+    label: "Gifts", 
+    slug: "gifts", 
+    icon: <Gift size={16} />,
+    iconColor: "text-pink-500"
+  },
+  { 
+    label: "Stationery", 
+    slug: "stationery", 
+    icon: <PencilRuler size={16} />,
+    iconColor: "text-green-500"
+  },
+  { 
+    label: "Cosmetic", 
+    slug: "cosmetics", 
+    icon: <Sparkles size={16} />,
+    iconColor: "text-purple-500"
+  },
   {
     label: "Imitation Jewellery",
     slug: "imitation-jewellery",
     icon: <Gem size={16} />,
+    iconColor: "text-yellow-500"
   },
   {
     label: "Pooja Samagri",
     slug: "pooja-essentials",
     icon: <Flower2 size={16} />,
+    iconColor: "text-orange-500"
   },
-  { label: "Bags", slug: "bags", icon: <Backpack size={16} /> },
-  // Add more if needed but mobile will scroll
+  { 
+    label: "Bags", 
+    slug: "bags", 
+    icon: <Backpack size={16} />,
+    iconColor: "text-indigo-500"
+  },
 ];
 
 export default function Navigation() {
@@ -74,7 +100,6 @@ export default function Navigation() {
     <nav className="w-full border-b bg-white dark:bg-zinc-900 shadow-sm">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3">
         {/* Desktop: Horizontal Scroll with Arrows */}
-
         <div className="hidden md:flex items-center justify-center">
           {/* Left Arrow */}
           {canScrollLeft && (
@@ -100,22 +125,30 @@ export default function Navigation() {
                 <NavLink
                   key={index}
                   to={`/category/${link.slug}`}
-                  className={({ isActive }) =>
-                    `
-              flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg
-              transition-all duration-200 whitespace-nowrap
-              ${
-                isActive
-                  ? "bg-pink-50 text-pink-600 dark:bg-pink-900/20 dark:text-pink-400"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800"
-              }
-            `
-                  }
+                   className={({ isActive }) =>
+                  `
+                    flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full
+                    border transition-all duration-200 whitespace-nowrap font-thin 
+                    ${
+                      isActive
+                        ? "bg-pink-50 border-pink-200 text-pink-600 dark:bg-pink-900/30 dark:border-pink-800 dark:text-pink-400"
+                        : "border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-800"
+                    }
+                  `
+                }
                 >
-                  <span className="transition-transform duration-300 group-hover:scale-110">
+                  <span className={`transition-transform duration-300 group-hover:scale-110 ${link.iconColor}`}>
                     {link.icon}
                   </span>
-                  <span className="font-medium text-sm">{link.label}</span>
+                  <span className="
+  font-medium text-sm 
+  tracking-wide leading-tight
+  group-hover:font-semibold
+  transition-all duration-300
+  drop-shadow-sm
+">
+  {link.label}
+</span>
                 </NavLink>
               ))}
             </div>
@@ -154,7 +187,7 @@ export default function Navigation() {
                   `
                 }
               >
-                <span className="transition-transform duration-300">
+                <span className={`transition-transform duration-300 ${link.iconColor}`}>
                   {link.icon}
                 </span>
                 <span className="font-medium text-sm">{link.label}</span>

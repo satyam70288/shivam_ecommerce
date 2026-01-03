@@ -46,7 +46,7 @@ const Navbar = () => {
       <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700 shadow-sm">
         <div className="flex items-center justify-between px-3 sm:px-5 py-2">
           {/* LOGO */}
-          <Link to="/" className="flex items-center group">
+  <Link to="/" className="flex items-center group">
   <div className="relative group">
     <img
       src={swagiconDark}
@@ -59,17 +59,51 @@ const Navbar = () => {
   </div>
 
   <div className="ml-2 hidden sm:block">
-    <span className="text-base font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent
-      dark:from-gray-100 dark:via-gray-200 dark:to-gray-100"> 
+  {/* Logo Text with Glow Effect */}
+  <div className="relative inline-block">
+    <span className="
+      text-lg font-extrabold 
+      bg-gradient-to-r 
+      from-purple-600 via-pink-500 to-rose-500
+      dark:from-purple-400 dark:via-pink-400 dark:to-rose-400
+      bg-clip-text text-transparent
+      tracking-tight
+      relative z-10
+    ">
       ShreeLaxmiShop
     </span>
-    <div className="flex items-center gap-0.5 mt-1">
-      <Sparkles size={10} className="text-gray-700 dark:text-yellow-400" />
-      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-        Premium Fashion
-      </span>
-    </div>
+    
+    {/* Glow effect */}
+    <div className="
+      absolute -inset-1 -z-10
+      bg-gradient-to-r 
+      from-purple-500/30 via-pink-500/20 to-rose-500/30
+      blur-lg opacity-70
+      dark:from-purple-400/40 dark:via-pink-400/30 dark:to-rose-400/40
+    "></div>
   </div>
+
+  {/* Tagline */}
+  <div className="flex items-center gap-1.5 mt-1.5">
+    <div className="
+      w-3 h-3 rounded-full
+      bg-gradient-to-br from-amber-400 to-yellow-500
+      dark:from-yellow-300 dark:to-amber-400
+      flex items-center justify-center
+    ">
+      <Sparkles size={8} className="text-white dark:text-amber-800" />
+    </div>
+    
+    <span className="
+      text-xs font-medium tracking-wider
+      text-gray-700 dark:text-gray-200
+      uppercase
+      opacity-90
+    ">
+      Premium Fashion
+    </span>
+  </div>
+</div>
 </Link>
 
           {/* RIGHT ICONS */}

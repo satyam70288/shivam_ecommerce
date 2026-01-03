@@ -35,6 +35,8 @@ import CategoryPage from "./pages/CategoryPage";
 import AdminProductDetails from "./components/Admin/AdminProductDetails";
 import WishlistPage from "./pages/Wishlist";
 import OrderDetails from "./components/order/OrderDetails";
+import AdminBannerManager from "./components/Admin/AdminBannerManager";
+import BannerManager from "./components/Admin/banner/BannerManager";
 
 export default function App() {
   const router = createBrowserRouter([
@@ -83,6 +85,10 @@ export default function App() {
         {
           index: true,
           element: <Analytics />, // 👉 /admin  (Dashboard home)
+        },
+        {
+          path: "banner",
+          element: <BannerManager />, // 👉 /admin/products
         },
         {
           path: "products",

@@ -31,6 +31,7 @@ import { setUserLogout } from "@/redux/slices/authSlice";
 
 // Menu items.
 const items = [
+   { title: "Banner", url: "/admin/banner", icon: Home },
   { title: "Dashboard", url: "/admin", icon: Home },
   { title: "Products", url: "/admin/products", icon: GalleryVerticalEnd },
   { title: "Create Product", url: "/admin/products/create", icon: FilePlus2Icon },
