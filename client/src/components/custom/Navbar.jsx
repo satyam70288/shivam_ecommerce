@@ -6,7 +6,7 @@ import { ModeToggle } from "./ModeToggle";
 import CartDrawer from "./CartDrawer";
 import LogoutToggle from "./LogoutToggle";
 import { useDispatch, useSelector } from "react-redux";
-import swagiconDark from "../../assets/shivam_new_logo.png";
+import swagiconDark from "../../assets/shivam_latest_logo.png";
 import { setCart } from "@/redux/slices/cartSlice";
 import axios from "axios";
 import Navigation from "./Navigation";
@@ -47,21 +47,24 @@ const Navbar = () => {
         <div className="flex items-center justify-between px-3 sm:px-5 py-2">
           {/* LOGO */}
           <Link to="/" className="flex items-center group">
-            <div className="relative">
+            <div className="relative group">
               <img
                 src={swagiconDark}
                 alt="Logo"
-                className="w-20 h-9 sm:w-28 sm:h-12 object-contain transition-transform group-hover:scale-105"
+                className="w-30 h-14 sm:w-28 sm:h-12 object-contain 
+               transition-all duration-300 
+               group-hover:scale-105 group-hover:brightness-110
+               dark:invert dark:group-hover:brightness-125"
               />
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-400/0 to-purple-400/0 group-hover:from-blue-400/10 group-hover:to-purple-400/10 rounded-lg blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"></div>
             </div>
-            <div className="ml-1.5 hidden sm:block">
-              <span className="text-sm font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+
+            <div className="ml-2 hidden sm:block">
+              <span className="text-base font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 ShreeLaxmiShop
               </span>
-              <div className="flex items-center gap-0.5 mt-0.5">
-                <Sparkles size={8} className="text-yellow-500" />
-                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-0.5 mt-1">
+                <Sparkles size={10} className="text-yellow-500" />
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   Premium Fashion
                 </span>
               </div>
