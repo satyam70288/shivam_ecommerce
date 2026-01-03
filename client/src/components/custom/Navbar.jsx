@@ -47,29 +47,30 @@ const Navbar = () => {
         <div className="flex items-center justify-between px-3 sm:px-5 py-2">
           {/* LOGO */}
           <Link to="/" className="flex items-center group">
-            <div className="relative group">
-              <img
-                src={swagiconDark}
-                alt="Logo"
-                className="w-30 h-14 sm:w-28 sm:h-12 object-contain 
-               transition-all duration-300 
-               group-hover:scale-105 group-hover:brightness-110
-               dark:invert dark:group-hover:brightness-125"
-              />
-            </div>
+  <div className="relative group">
+    <img
+      src={swagiconDark}
+      alt="Logo"
+      className="w-30 h-14 sm:w-28 sm:h-12 object-contain 
+        transition-all duration-300 
+        group-hover:scale-105
+        filter contrast-150 brightness-75" // Bas yeh line add karein
+    />
+  </div>
 
-            <div className="ml-2 hidden sm:block">
-              <span className="text-base font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ShreeLaxmiShop
-              </span>
-              <div className="flex items-center gap-0.5 mt-1">
-                <Sparkles size={10} className="text-yellow-500" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Premium Fashion
-                </span>
-              </div>
-            </div>
-          </Link>
+  <div className="ml-2 hidden sm:block">
+    <span className="text-base font-extrabold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 bg-clip-text text-transparent
+      dark:from-gray-100 dark:via-gray-200 dark:to-gray-100"> 
+      ShreeLaxmiShop
+    </span>
+    <div className="flex items-center gap-0.5 mt-1">
+      <Sparkles size={10} className="text-gray-700 dark:text-yellow-400" />
+      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+        Premium Fashion
+      </span>
+    </div>
+  </div>
+</Link>
 
           {/* RIGHT ICONS */}
           <div className="flex items-center gap-1.5 sm:gap-3">
