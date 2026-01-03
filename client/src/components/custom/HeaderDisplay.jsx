@@ -1,20 +1,66 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Tag } from "lucide-react";
 
 const sliderData = [
   {
-    img: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
-    title: "Trending Toys Collection",
-    subtitle: "Kids • Fun • Learning",
-    categories: ["Toys", "Soft Toys", "Action Figures", "Educational"],
-    overlay: "from-blue-900/70 via-blue-700/40 to-transparent",
+    id: 1,
+    title: "Toys Collection",
+    subtitle: "Fun & Educational",
+    items: "500+ Products",
+    discount: "40% Off",
+    image:
+      "https://images.unsplash.com/photo-1599623560574-39d485900c95?w=1200&auto=format&fit=crop",
+    categories: ["Toys", "Games", "Educational"],
+    rating: 4.8,
+    tag: "BEST SELLER",
   },
   {
-    img: "https://images.unsplash.com/photo-1542992015-4a0b729b1385",
-    title: "Special Gift Hampers",
-    subtitle: "Perfect • Beautiful • Affordable",
-    categories: ["Gift", "Birthday", "Anniversary", "Decor"],
-    overlay: "from-pink-900/70 via-pink-700/50 to-transparent",
+    id: 2,
+    title: "Gift Hampers",
+    subtitle: "Perfect Presents",
+    items: "300+ Options",
+    discount: "Free Wrapping",
+    image:
+      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=1200&auto=format&fit=crop",
+    categories: ["Gifts", "Occasion", "Anniversary"],
+    rating: 4.7,
+    tag: "POPULAR",
+  },
+  {
+    id: 3,
+    title: "Premium Stationery",
+    subtitle: "Office & School",
+    items: "200+ Items",
+    discount: "School Sale",
+    image:
+      "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1200&auto=format&fit=crop",
+    categories: ["Office", "School", "Books"],
+    rating: 4.9,
+    tag: "SALE",
+  },
+  {
+    id: 4,
+    title: "Beauty & Cosmetic",
+    subtitle: "Makeup & Skincare",
+    items: "400+ Brands",
+    discount: "Buy 1 Get 1",
+    image:
+      "https://images.unsplash.com/photo-1591085686350-798c0f9faa7f?w=1200&auto=format&fit=crop",
+    categories: ["Beauty", "Skincare", "Makeup"],
+    rating: 4.6,
+    tag: "NEW",
+  },
+  {
+    id: 5,
+    title: "Fashion Jewellery",
+    subtitle: "Latest Designs",
+    items: "1000+ Designs",
+    discount: "From ₹99",
+    image:
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200&auto=format&fit=crop",
+    categories: ["Jewellery", "Fashion", "Designs"],
+    rating: 4.8,
+    tag: "TRENDING",
   },
 ];
 
@@ -26,120 +72,104 @@ const HeaderDisplay = () => {
   const prev = () => setIndex((i) => (i === 0 ? sliderData.length - 1 : i - 1));
 
   useEffect(() => {
-    timeoutRef.current = setInterval(next, 6000);
+    timeoutRef.current = setInterval(next, 5000);
     return () => clearInterval(timeoutRef.current);
   }, []);
 
+  const currentSlide = sliderData[index];
+
   return (
-    <div className="w-full relative overflow-hidden">
-      <div className="
-        relative w-full 
-        h-[240px] sm:h-[340px] md:h-[420px] lg:h-[450px]
-        overflow-hidden rounded-xl
-      ">
+    <div className="w-full">
+      <div className="relative h-[400px] md:h-[500px] overflow-hidden rounded-xl md:rounded-2xl">
+        {/* Background Image */}
+        <img
+          src={currentSlide.image}
+          alt={currentSlide.title}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
-        {/* SLIDER WRAPPER */}
-        <div
-          className="flex transition-transform duration-[1500ms] ease-in-out h-full"
-          style={{ transform: `translateX(-${index * 100}%)` }}
-        >
-          {sliderData.map((slide, i) => (
-            <div key={i} className="relative w-full h-full flex-shrink-0 group">
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
 
-              {/* Smooth Zoom Image */}
-              <img
-                src={slide.img}
-                className="
-                  w-full h-full object-cover
-                  scale-[1.05] group-hover:scale-[1.10]
-                  transition-transform duration-[3000ms]
-                "
-              />
-
-              {/* Gradient Overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-r ${slide.overlay}`} />
-
-              {/* TEXT + ANIMATION */}
-              <div className="
-                absolute left-6 sm:left-16 top-1/2 -translate-y-1/2 
-                max-w-[70%] text-white space-y-4 z-20
-              ">
-                <h1 className="
-                  text-xl sm:text-4xl lg:text-5xl font-extrabold drop-shadow-xl
-                  animate-fadeLeft
-                ">
-                  {slide.title}
-                </h1>
-
-                <p className="text-sm sm:text-lg opacity-90 animate-fadeUp">
-                  {slide.subtitle}
-                </p>
-
-                {/* Category Chips */}
-                <div className="flex flex-wrap gap-2 sm:gap-3 animate-fadeUp">
-                  {slide.categories.map((cat, idx) => (
-                    <span
-                      key={idx}
-                      className="
-                        px-3 py-1 sm:px-4 bg-white/20 backdrop-blur-md 
-                        border border-white/30 text-[10px] sm:text-sm rounded-full 
-                        shadow hover:bg-white/30 hover:scale-105 transition
-                        animate-fadeScale
-                      "
-                    >
-                      {cat}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Button with Shine Animation */}
-                <button className="
-                  mt-3 px-5 py-2 bg-white/20 backdrop-blur-lg 
-                  border border-white/40 rounded-full shadow-lg 
-                  hover:scale-105 transition relative overflow-hidden
-                ">
-                  <span className="relative z-10">Explore Now →</span>
-
-                  {/* Shine */}
-                  <span className="
-                    absolute inset-0 bg-gradient-to-r from-transparent 
-                    via-white/70 to-transparent opacity-0 animate-shine
-                  "></span>
-                </button>
-              </div>
-
+        {/* Content */}
+        <div className="relative h-full flex items-center px-6 md:px-12 lg:px-20">
+          <div className="max-w-xl">
+            {/* Tag */}
+            <div className="mb-4">
+              <span className="inline-block px-4 py-2 bg-white text-gray-900 text-sm font-semibold rounded-full">
+                {currentSlide.tag}
+              </span>
             </div>
-          ))}
+
+            {/* Title */}
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3">
+              {currentSlide.title}
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-lg md:text-xl text-gray-200 mb-6">
+              {currentSlide.subtitle}
+            </p>
+
+            {/* Stats */}
+            <div className="flex items-center gap-6 mb-6">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-white" />
+                <span className="text-white font-medium">
+                  {currentSlide.items}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                <span className="text-white font-medium">
+                  {currentSlide.rating}
+                </span>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div className="flex flex-wrap gap-2 mb-8">
+              {currentSlide.categories.map((cat, idx) => (
+                <span
+                  key={idx}
+                  className="px-4 py-2 bg-white/10 backdrop-blur-sm text-white text-sm rounded-full border border-white/20"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA Button */}
+            <button className="px-8 py-3 bg-white text-gray-900 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300">
+              Shop Now →
+            </button>
+          </div>
         </div>
 
-        {/* LEFT ARROW */}
+       
+        {/* Navigation Arrows - Hidden on mobile */}
         <button
           onClick={prev}
-          className="hidden sm:flex absolute top-1/2 left-5 -translate-y-1/2 
-            bg-black/40 p-3 rounded-full text-white hover:bg-black/70 
-            hover:scale-110 transition"
+          className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"
         >
-          <ChevronLeft size={26} />
+          <ChevronLeft size={24} />
         </button>
 
-        {/* RIGHT ARROW */}
         <button
           onClick={next}
-          className="hidden sm:flex absolute top-1/2 right-5 -translate-y-1/2 
-            bg-black/40 p-3 rounded-full text-white hover:bg-black/70 
-            hover:scale-110 transition"
+          className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 items-center justify-center bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-white/20 transition-colors"
         >
-          <ChevronRight size={26} />
+          <ChevronRight size={24} />
         </button>
 
-        {/* DOTS */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
+        {/* Dots */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
           {sliderData.map((_, i) => (
             <button
               key={i}
               onClick={() => setIndex(i)}
-              className={`rounded-full transition-all ${
-                i === index ? "w-8 h-2 bg-white shadow" : "w-3 h-3 bg-white/40"
+              className={`w-2 h-2 rounded-full transition-all ${
+                i === index ? "bg-white w-6" : "bg-white/40"
               }`}
             />
           ))}
