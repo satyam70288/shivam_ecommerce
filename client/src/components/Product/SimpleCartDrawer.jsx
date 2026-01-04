@@ -13,7 +13,6 @@ const SimpleCartDrawer = ({ iconSize = 20, className = "" }) => {
 
   // ✅ NEW REDUX STRUCTURE
   const { items, summary, loading } = useSelector((state) => state.cart);
-  console.log(items,"ttttttttttttttttttttt")
   const cartItems = items || [];
   const totalQuantity = summary?.itemCount || 0;
   const totalPrice = summary?.total || 0;

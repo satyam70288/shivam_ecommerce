@@ -30,9 +30,27 @@ export function Sidebar() {
     reader.onloadend = () => setPreview(reader.result);
     reader.readAsDataURL(file);
   };
-  const handleLogout = () => {
-    // logout logic
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      // 1. Dispatch logout action
+      await dispatch(logoutUser()).unwrap();
+
+      // 2. Clear Redux Persist storage
+      await persistor.purge();
+      await persistor.flush();
+
+      // 3. Reset Redux store completely
+      // This ensures all slices are reset
+
+      // 4. Navigate to login
+      navigate("/login", { replace: true });
+
+      // 5. Force reload to ensure clean state (optional)
+      // window.location.reload();
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Logout failed. Please try again.");
+    }
   };
 
   return (

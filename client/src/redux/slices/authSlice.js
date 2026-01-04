@@ -51,6 +51,22 @@ export const loginUser = createAsyncThunk(
   }
 );
 
+export const logoutUser = createAsyncThunk(
+  "auth/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      // Clear localStorage
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("persist:root"); // Redux persist storage
+      
+      return { success: true };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
 const authSlice = createSlice({
   name: "auth",
 
@@ -185,7 +201,21 @@ const authSlice = createSlice({
         state.loginError = action.payload;
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+      state.role = "";
+      state.user = null;
+      state.token = "";
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.error = null;
+      state.signupSuccess = false;
+      state.loginError = null;
+      state.signupError = null;
+    })
+    .addCase(logoutUser.rejected, (state, action) => {
+      state.error = action.payload;
+    });
   },
 });
 
@@ -198,3 +228,10 @@ export const {
 } = authSlice.actions;
 
 export default authSlice.reducer;
+
+
+// slices/authSlice.js - Add these actions if not exist
+
+
+
+    
