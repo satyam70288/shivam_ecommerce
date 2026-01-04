@@ -5,7 +5,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        'sans': ['Inter', 'Poppins', 'Manrope', 'system-ui', 'sans-serif'],
+        'display': ['Poppins', 'Inter', 'Manrope', 'sans-serif'],
+        'body': ['Inter', 'Manrope', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         fadeIn: {

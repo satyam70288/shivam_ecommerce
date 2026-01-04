@@ -112,7 +112,7 @@ const AddressSection = () => {
 
   return (
     <>
-      <Card className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-lg rounded-2xl">
+      <Card className="p-4 md:p-6 space-y-4 md:space-y-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-lg rounded-2xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4">
           <div className="flex items-center gap-3">
