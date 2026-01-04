@@ -14,6 +14,8 @@ import {
   Plus,
   X,
   ChevronRight,
+  Globe,
+  Mail,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -170,7 +172,7 @@ const AddressSection = () => {
                     ${
                       selected
                         ? "border-blue-500 dark:border-blue-400 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 shadow-lg"
-                        : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-md"
+                        : "border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-md "
                     }
                   `}
                   onClick={() => dispatch(setAddress(addr._id))}
@@ -186,7 +188,7 @@ const AddressSection = () => {
                           ${
                             selected
                               ? "border-blue-600 dark:border-blue-400 bg-blue-600 dark:bg-blue-400"
-                              : "border-gray-300 dark:border-zinc-600"
+                              : "border-gray-300 dark:border-zinc-600 "
                           }
                         `}
                         >
@@ -197,88 +199,108 @@ const AddressSection = () => {
                       </div>
 
                       {/* Address Details */}
-                      <div className="space-y-1.5 md:space-y-3 flex-1 min-w-0">
-                        {/* Name & Badge - Top Row */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 md:gap-3 min-w-0">
-                            <div className="flex-shrink-0">
-                              {getAddressIcon(addr.address_type)}
-                            </div>
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate text-sm md:text-base">
-                              {addr.name}
-                            </h3>
-                            <span className="px-1.5 md:px-2 py-0.5 md:py-1 text-xs font-medium bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-full whitespace-nowrap flex-shrink-0">
-                              {addr.address_type || "Other"}
-                            </span>
-                          </div>
+                     <div className="space-y-2 md:space-y-4 flex-1 min-w-0">
+  {/* Name & Badge - Top Row */}
+  <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center gap-2 md:gap-4 min-w-0">
+      <div className="flex-shrink-0 p-2 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl">
+        <div className="text-blue-600 dark:text-blue-400">
+          {getAddressIcon(addr.address_type)}
+        </div>
+      </div>
+      <div className="min-w-0">
+        <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate text-base md:text-lg font-sans tracking-tight">
+          {addr.name}
+        </h3>
+        <span className="inline-flex items-center px-2.5 py-0.5 mt-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/30">
+          {addr.address_type || "Other"}
+        </span>
+      </div>
+    </div>
 
-                          {/* Mobile Expand Button */}
-                          <button
-                            onClick={(e) => toggleAddressExpand(addr._id, e)}
-                            className="md:hidden p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                          >
-                            <ChevronRight
-                              className={`w-4 h-4 transition-transform ${
-                                isExpanded ? "rotate-90" : ""
-                              }`}
-                            />
-                          </button>
+    {/* Mobile Expand Button */}
+    <button
+      onClick={(e) => toggleAddressExpand(addr._id, e)}
+      className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+    >
+      <ChevronRight
+        className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-300 ${
+          isExpanded ? "rotate-90" : ""
+        }`}
+      />
+    </button>
 
-                          {selected && (
-                            <span className="hidden md:flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400 whitespace-nowrap">
-                              <CheckCircle size={16} />
-                              Selected
-                            </span>
-                          )}
-                        </div>
+    {selected && (
+      <span className="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-full">
+        <CheckCircle size={18} className="flex-shrink-0" />
+        Selected
+      </span>
+    )}
+  </div>
 
-                        {/* Selected badge for mobile */}
-                        {selected && (
-                          <div className="md:hidden flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
-                            <CheckCircle size={12} />
-                            Selected
-                          </div>
-                        )}
+  {/* Selected badge for mobile */}
+  {selected && (
+    <div className="md:hidden inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-full w-fit">
+      <CheckCircle size={14} className="flex-shrink-0" />
+      Selected
+    </div>
+  )}
 
-                        {/* Main Address (Always visible) */}
-                        <div className="space-y-1 md:space-y-1.5">
-                          <p className="text-gray-800 dark:text-gray-200 font-medium text-sm md:text-base line-clamp-1">
-                            {addr.address_line1}
-                          </p>
-                          <p className="text-gray-700 dark:text-gray-300 text-xs md:text-sm line-clamp-1">
-                            {addr.city}, {addr.state} - {addr.pincode}
-                          </p>
-                        </div>
+  {/* Main Address (Always visible) */}
+  <div className="space-y-1.5 md:space-y-2">
+    <p className="text-gray-800 dark:text-gray-100 font-semibold text-sm md:text-base font-sans line-clamp-1 tracking-wide">
+      {addr.address_line1}
+    </p>
+    <p className="text-gray-700 dark:text-gray-300 text-xs md:text-sm font-medium tracking-wide">
+      {addr.city}, {addr.state} - {addr.pincode}
+    </p>
+  </div>
 
-                        {/* Expanded Details (Mobile) or Always Visible (Desktop) */}
-                        {(isExpanded || window.innerWidth >= 768) && (
-                          <div className="space-y-1.5 md:space-y-2 pt-1.5 md:pt-2 border-t border-gray-100 dark:border-zinc-800">
-                            {/* Full Address Lines */}
-                            {addr.address_line2 && (
-                              <p className="text-gray-700 dark:text-gray-300 text-xs md:text-sm">
-                                {addr.address_line2}
-                              </p>
-                            )}
-                            <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm">
-                              {addr.country}
-                            </p>
+  {/* Expanded Details (Mobile) or Always Visible (Desktop) */}
+  {(isExpanded || window.innerWidth >= 768) && (
+    <div className="space-y-2.5 md:space-y-3 pt-3 md:pt-4 border-t border-gray-100 dark:border-zinc-800/50">
+      {/* Full Address Lines */}
+      {addr.address_line2 && (
+        <div className="flex items-start gap-2">
+          <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-gray-700 dark:text-gray-300 text-sm md:text-base font-medium tracking-wide">
+            {addr.address_line2}
+          </p>
+        </div>
+      )}
+      
+      <div className="flex items-start gap-2">
+        <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base font-medium">
+          {addr.country}
+        </p>
+      </div>
 
-                            {/* Contact Info */}
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 md:gap-4 pt-1 md:pt-2">
-                              <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                                <Phone size={12} className="flex-shrink-0" />
-                                <span className="truncate">{addr.phone}</span>
-                              </div>
-                              {addr.email && (
-                                <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                                  <span className="flex-shrink-0">✉️</span>
-                                  <span className="truncate">{addr.email}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+      {/* Contact Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-5 pt-3 md:pt-4">
+        <div className="inline-flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-full">
+            <Phone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 tracking-tight">
+            {addr.phone}
+          </span>
+        </div>
+        
+        {addr.email && (
+          <div className="inline-flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-lg">
+            <div className="p-1.5 bg-rose-100 dark:bg-rose-900/40 rounded-full">
+              <Mail className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 tracking-tight truncate">
+              {addr.email}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+</div>
                     </div>
 
                     {/* Edit Button - Desktop */}
