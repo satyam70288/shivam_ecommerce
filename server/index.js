@@ -22,7 +22,7 @@ const port = process.env.PORT || 5000;
 // if (process.env.TRUST_PROXY === "true") {
 //   app.set("trust proxy", 1);
 // }
-
+app.set("trust proxy", 1); // Ya 'true' bhi chalega
 /* ========== BASIC MIDDLEWARES ========== */
 // Body limits (prevent big payload DoS)
 app.use(express.json({ limit: "10mb" }));
