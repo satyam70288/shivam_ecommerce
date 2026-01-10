@@ -10,7 +10,7 @@ const Home = () => {
   console.log("Home Component - Search State:", search); // Debug ke liye
 
   return (
-    <div>
+    <div className="">
        <HeaderDisplay />
       {/* FilterMenu ko onSearch prop pass karo */}
       <FilterMenu onSearch={setSearch} />

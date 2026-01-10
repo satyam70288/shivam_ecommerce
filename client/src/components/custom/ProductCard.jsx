@@ -122,9 +122,9 @@ const ProductCard = ({
   const stockStatus = getStockStatus(stock);
 
   return (
-    <div className="group relative">
+    <div className="group relative font-sans">
       {/* SUBTLE HOVER EFFECT */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-100/0 group-hover:from-gray-50/50 group-hover:to-gray-100/50 dark:group-hover:from-gray-800/30 dark:group-hover:to-gray-900/30 rounded-xl transition-all duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-100/0 group-hover:from-gray-50/50 group-hover:to-gray-100/50 dark:group-hover:from-gray-800/30 dark:group-hover:to-gray-900/30 rounded-xl transition-all duration-300 font-sans" />
 
       <div className="relative bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden h-full flex flex-col">
         {/* ========== ABSOLUTE POSITIONED BADGES ========== */}
@@ -233,21 +233,7 @@ const ProductCard = ({
               </div>
             </div>
 
-            {/* STOCK STATUS */}
-            {/* <div
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg inline-flex items-center gap-2 ${stockStatus.bg} ${stockStatus.color} ${stockStatus.border}`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  stock <= 0
-                    ? "bg-red-500"
-                    : stock <= 5
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
-                }`}
-              />
-              <span>{stockStatus.text}</span>
-            </div> */}
+            
           </div>
         </Link>
 

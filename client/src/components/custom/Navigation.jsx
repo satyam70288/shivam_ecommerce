@@ -97,10 +97,10 @@ export default function Navigation() {
   }, []);
 
   return (
-    <nav className="w-full border-b bg-white dark:bg-zinc-900 shadow-sm">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3">
+    <nav className="w-full border-b bg-gray-100 dark:bg-zinc-900 shadow-sm font-sans">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3 font-sans">
         {/* Desktop: Horizontal Scroll with Arrows */}
-        <div className="hidden md:flex items-center justify-center">
+        <div className="hidden md:flex items-center justify-center font-sans">
           {/* Left Arrow */}
           {canScrollLeft && (
             <button
@@ -128,7 +128,7 @@ export default function Navigation() {
                    className={({ isActive }) =>
                   `
                     flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full
-                    border transition-all duration-200 whitespace-nowrap font-thin 
+                    border transition-all duration-200 whitespace-nowrap font-sans 
                     ${
                       isActive
                         ? "bg-pink-50 border-pink-200 text-pink-600 dark:bg-pink-900/30 dark:border-pink-800 dark:text-pink-400"
@@ -169,7 +169,7 @@ export default function Navigation() {
         </div>
 
         {/* Mobile: Simple Horizontal Scroll (No Drawer) */}
-        <div className="flex md:hidden overflow-x-auto scrollbar-hide -mx-2 px-2 pb-2">
+        <div className="flex md:hidden overflow-x-auto scrollbar-hide -mx-2 px-2 pb-2 font-sans">
           <div className="flex items-center gap-2 min-w-max py-1">
             {navLinks.map((link, index) => (
               <NavLink

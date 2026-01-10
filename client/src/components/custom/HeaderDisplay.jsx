@@ -92,8 +92,14 @@ const HeaderDisplay = () => {
 
   return (
     <div className="w-full">
-      <div className="relative h-[400px] md:h-[500px] overflow-hidden rounded-xl md:rounded-2xl">
-        {/* Background Image */}
+<div className="relative h-[260px] sm:h-[300px] md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl md:rounded-2xl">
+  {/* 
+    Mobile: 260px
+    Small tablets: 300px
+    Tablets: 400px
+    Desktop: 500px
+  */}
+    {/* Background Image */}
         <img
           src={currentSlide.image}
           alt={currentSlide.title || "Banner"}

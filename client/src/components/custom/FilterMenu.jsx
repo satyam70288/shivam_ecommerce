@@ -25,7 +25,7 @@ const FilterMenu = ({ onSearch }) => {
   };
 
   return (
-    <div className="w-full px-3 sm:px-4 lg:px-6 pt-4 sm:py-6">
+    <div className="w-full px-3 sm:px-4 lg:px-6 pt-4 sm:py-6 bg-background dark:bg-background bg-gray-100">
       {/* Modern Search Container - Mobile Optimized */}
       <div className="relative max-w-4xl mx-auto">
         {/* Subtle Glow Effect - Mobile Friendly */}

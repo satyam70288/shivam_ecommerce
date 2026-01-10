@@ -43,7 +43,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-gray-100 dark:bg-zinc-900 border-b border-gray-200 dark:border-zinc-700 shadow-sm">
         <div className="flex items-center justify-between px-3 sm:px-5 py-2">
           {/* LOGO */}
   <Link to="/" className="flex items-center group">

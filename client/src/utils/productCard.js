@@ -1,12 +1,54 @@
 // utils/productHelpers.js
 
-export const formatPrice = (amount) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
+// Flipkart जैसा price formatting
+export const formatPrice = (amount) => {
+  if (!amount && amount !== 0) return '₹--';
+  
+  // Indian numbering system with commas
+  const formatted = new Intl.NumberFormat('en-IN', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+  
+  return `₹${formatted}`;
+};
+
+// Discounted price के लिए (Flipkart जैसा)
+export const formatPriceWithDiscount = (price, discountedPrice) => {
+  if (!price || !discountedPrice) return { original: '₹--', discounted: '₹--' };
+  
+  const formattedPrice = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+  
+  const formattedDiscounted = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(discountedPrice);
+  
+  return {
+    original: `₹${formattedPrice}`,
+    discounted: `₹${formattedDiscounted}`,
+    discountPercent: Math.round(((price - discountedPrice) / price) * 100)
+  };
+};
+
+// Flipkart style - Short format (for large amounts)
+export const formatPriceShort = (amount) => {
+  if (!amount && amount !== 0) return '₹--';
+  
+  if (amount >= 10000000) {
+    return `₹${(amount / 10000000).toFixed(1)} Cr`;
+  }
+  if (amount >= 100000) {
+    return `₹${(amount / 100000).toFixed(1)} L`;
+  }
+  if (amount >= 1000) {
+    return `₹${(amount / 1000).toFixed(1)} K`;
+  }
+  return `₹${amount}`;
+};
 
 export const getStockStatus = (stock) => {
   if (stock <= 0) {
