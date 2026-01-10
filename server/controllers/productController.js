@@ -682,6 +682,99 @@ const getProductsByCategory = async (req, res) => {
   }
 };
 
+const getSimilarProducts = async (req, res) => {
+  try {
+    console.log(req.params)
+    let { productId } = req.params;
+    let { limit } = req.query;         // From query string
+
+    limit = parseInt(limit) || 6;
+    const productIdStr = productId?.trim();
+
+    if (!productIdStr) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+
+    console.log("🔍 Getting similar products for:", productIdStr);
+
+    // 1. Find the current product
+    const currentProduct = await Product.findById(productIdStr);
+    
+    if (!currentProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+
+    // 2. Build query for similar products
+    const query = { 
+      blacklisted: false,
+      _id: { $ne: currentProduct._id } // Exclude current product
+    };
+
+    // 3. Add category filter if available
+    if (currentProduct.category) {
+      query.category = currentProduct.category;
+    }
+
+    // 4. Get total count
+    const totalProducts = await Product.countDocuments(query);
+
+    // 5. Get similar products
+    const similarProducts = await Product.find(query)
+      .select("_id name price rating discount offerValidFrom offerValidTill variants images colors brand stock reviewCount description category")
+      .sort({ 
+        rating: -1,       // Higher rated first
+        reviewCount: -1,  // More reviews first
+        createdAt: -1     // Newer products first
+      })
+      .limit(limit);
+
+    console.log("✅ Found", similarProducts.length, "similar products");
+
+    // 6. Process products (same pattern as getProducts)
+    const processedProducts = similarProducts.map((product) => {
+      const productData = product.getProductCardData();
+      
+      const savings = productData.price - productData.discountedPrice;
+      const discountPercentage = productData.discount || Math.round((savings / productData.price) * 100);
+      
+      return {
+        ...productData,
+        savings: savings > 0 ? savings : 0,
+        discountPercentage: discountPercentage,
+        category: product.category // Include category in response
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Found ${similarProducts.length} similar products`,
+      data: processedProducts,
+      metadata: {
+        currentProduct: {
+          _id: currentProduct._id,
+          name: currentProduct.name,
+          category: currentProduct.category
+        },
+        totalSimilarProducts: totalProducts,
+        limit: limit
+      }
+    });
+  } catch (error) {
+    console.error("Get Similar Products Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching similar products",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 module.exports = {
   createProduct,
   updateProduct,
@@ -694,4 +787,5 @@ module.exports = {
   getProductsforadmin,
   getProductsByCategory,
   // getProductById
+  getSimilarProducts
 };

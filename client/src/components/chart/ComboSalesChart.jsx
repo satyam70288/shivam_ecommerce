@@ -51,9 +51,9 @@ export default function RevenueDashboard({ data }) {
 
   const first = chartData[0].revenue;
   const last = chartData.at(-1).revenue;
-  console.log(first, last)
+
   const overallGrowth = first > 0 ? Number((((last - first) / first) * 100).toFixed(1)) : 0;
-console.log(overallGrowth)
+
   const bestMonth = chartData.reduce(
     (best, cur) => (cur.revenue > best.revenue ? cur : best),
     chartData[0]

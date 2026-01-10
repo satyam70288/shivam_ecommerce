@@ -62,7 +62,7 @@ function generateProduct(namePrefix, categoryId, images, index) {
 async function seed() {
   try {
     await mongoose.connect("mongodb+srv://satyamb971_db_user:mQkimJ4UeyRnldla@cluster0.ajggbjn.mongodb.net/");
-    console.log("MongoDB connected");
+   
 
     const allProducts = [];
 
@@ -79,7 +79,7 @@ async function seed() {
 
     await Product.insertMany(allProducts);
 
-    console.log("🔥 Successfully inserted 200 simple products!");
+   
     process.exit();
   } catch (err) {
     console.error(err);

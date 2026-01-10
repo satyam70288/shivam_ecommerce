@@ -5,7 +5,7 @@ const Razorpay = require('razorpay');
 const keyId = (process.env.RAZORPAY_KEY_ID || '').trim();
 const keySecret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
 
-console.log("🔄 Initializing Razorpay with key:", keyId.substring(0, 15) + '...');
+
 
 if (!keyId || !keySecret) {
   console.error("❌ Razorpay keys are missing in environment variables");
@@ -21,11 +21,11 @@ const razorpayInstance = new Razorpay({
 // Test the instance immediately
 async function testRazorpay() {
   try {
-    console.log("🔐 Testing Razorpay authentication...");
+  
     
     // Method 1: Try to fetch account details
     const account = await razorpayInstance.api.get('/');
-    console.log("✅ Razorpay authentication successful!");
+
     return true;
     
   } catch (error) {
@@ -37,12 +37,7 @@ async function testRazorpay() {
     
     // Provide specific guidance
     if (error.statusCode === 401) {
-      console.error("\n🔑 AUTHENTICATION FAILURE SOLUTIONS:");
-      console.error("1. Your API keys are INVALID or EXPIRED");
-      console.error("2. Generate NEW keys from Razorpay dashboard");
-      console.error("3. Ensure you copy COMPLETE key (no truncation)");
-      console.error("4. Check for extra spaces or newlines in .env");
-      console.error("5. Use test keys (rzp_test_) for development");
+      
     }
     
     return false;

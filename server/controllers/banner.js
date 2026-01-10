@@ -41,25 +41,16 @@ exports.createBanner = async (req, res) => {
 
   try {
     const { title, subtitle, tag, link, priority, isActive } = req.body;
-    
-    console.log("Request body:", req.body);
-    console.log("Request file exists:", !!req.file);
-    
+  
     let imageUrl = "";
     let publicId = "";
 
     // Priority 1: Check for uploaded file
     if (req.file) {
-      console.log("File details:", {
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        bufferLength: req.file.buffer?.length || 0
-      });
+     
       
       try {
-        console.log("Uploading to Cloudinary using buffer...");
-        
+         
         // Use the same upload function as products
         const uploadResult = await cloudinaryUploadBuffer(req.file.buffer, {
           folder: "banners",
@@ -70,17 +61,12 @@ exports.createBanner = async (req, res) => {
           ]
         });
         
-        console.log("Cloudinary upload successful!");
-        console.log("Result:", {
-          url: uploadResult.secure_url,
-          publicId: uploadResult.public_id
-        });
+        
         
         imageUrl = uploadResult.secure_url;
         publicId = uploadResult.public_id;
         
       } catch (cloudinaryError) {
-        console.error("Cloudinary upload error:", cloudinaryError);
         
         return res.status(500).json({
           success: false,
@@ -91,11 +77,9 @@ exports.createBanner = async (req, res) => {
     } 
     // Priority 2: Check if image URL is provided in form
     else if (req.body.image && req.body.image.startsWith('http')) {
-      console.log("Using provided image URL:", req.body.image);
       imageUrl = req.body.image;
     } 
     else {
-      console.log("No image provided");
       return res.status(400).json({
         success: false,
         message: "Image is required"
@@ -110,16 +94,7 @@ exports.createBanner = async (req, res) => {
       });
     }
 
-    console.log("Creating banner with data:", {
-      title,
-      subtitle,
-      imageUrl,
-      tag,
-      link,
-      priority,
-      isActive
-    });
-
+    
     // Create banner in database
     const banner = new Banner({
       title: title.trim(),
@@ -134,7 +109,7 @@ exports.createBanner = async (req, res) => {
 
     await banner.save();
     
-    console.log("Banner created successfully:", banner._id);
+  
     
     res.status(201).json({
       success: true,

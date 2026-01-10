@@ -35,7 +35,7 @@ export default function useCategory(slug, selectedFilters = {}) {
          * ---------------------------*/
         const url = `${import.meta.env.VITE_API_URL}/products/by-category/${slug}${query}`;
 
-        console.log("FINAL URL:", url);
+      
 
         /** ---------------------------
          *   STEP 3: Call API

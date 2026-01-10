@@ -44,8 +44,7 @@ const CheckoutSection = ({
       setLoading(true);
 
       if (paymentMode === "COD") {
-        // COD order API
-        console.log("inside")
+
        const res = await axios.post(
           `${import.meta.env.VITE_API_URL}/create-cod-order`,
           orderPayload,
@@ -55,7 +54,7 @@ const CheckoutSection = ({
             },
           }
         );
-     console.log(data)
+   
         toast({ title: "COD Order Placed Successfully" });
         onComplete();
       } else {

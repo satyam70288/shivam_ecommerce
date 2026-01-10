@@ -10,8 +10,7 @@ const useCart = () => {
       if (!userId) return;
 
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/cart/${userId}`);
-      console.log(res.data, "Cart fetch response");
-
+   
       if (res.data.success && res.data.cart) {
         dispatch(setCart(res.data.cart));
       }

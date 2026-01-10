@@ -22,10 +22,10 @@ const [selectedFilters, setSelectedFilters] = useState({
 });
 
   const updateFilter = (key, value) => {
-    console.log(key,value)
+
   setSelectedFilters((prev) => {
     const arr = prev[key];
-    console.log(arr,"arr")
+   
 
     if (arr.includes(value)) {
       return { ...prev, [key]: arr.filter((v) => v !== value) };

@@ -11,7 +11,6 @@ const useProductDetails = (productId) => {
 
   /* ================= FETCH PRODUCT ================= */
   useEffect(() => {
-    console.log(productId,"productId")
   if (!productId) return;
 
   const fetchProduct = async () => {

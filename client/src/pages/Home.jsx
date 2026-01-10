@@ -7,7 +7,6 @@ import React, { useState } from "react";
 const Home = () => {
   const [search, setSearch] = useState("");
 
-  console.log("Home Component - Search State:", search); // Debug ke liye
 
   return (
     <div className="">

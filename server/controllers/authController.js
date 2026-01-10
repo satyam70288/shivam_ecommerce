@@ -6,11 +6,11 @@ const {welcomeEmailTemplate}=require("../utils/userTemplate")
 const sendMail = require("../utils/mailer"); // ✅ Adjust path as needed
 // handles common MongoDB/Mongoose errors
 const handleMongoError = (error) => {
-  console.log(error,"errrr")
+
   if (error.name === "ValidationError") {
     // Mongoose validation errors
     const messages = Object.values(error.errors).map((val) => val.message);
-    console.log(messages,"jjjj")
+   
     return {
       statusCode: 400,
       message: messages.join(", "),
@@ -94,7 +94,7 @@ const signup = async (req, res) => {
 
 
 const login = async (req, res) => {
-  console.log(req.body)
+
   const { email, password } = req.body;
 
   try {
@@ -148,7 +148,7 @@ const forgotPassword = async (req, res) => {
   const html = `<p>Click below to reset your password:</p><a href="${resetLink}">Reset Password</a>`;
 
  const data= await sendMail(user.email, "Password Reset", html);
- console.log(data)
+
   res.json({ message: "Reset email sent" });
 };
 const resetPasword = async (req, res) => {
@@ -197,7 +197,7 @@ const adminSignup = async (req, res) => {
 
 const adminLogin = async (req, res) => {
   const { username, password } = req.body;
-  console.log(req.body);
+
   try {
     let admin = await Admin.findOne({ username });
     if (!admin) {

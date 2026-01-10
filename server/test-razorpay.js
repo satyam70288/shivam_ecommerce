@@ -8,7 +8,7 @@ const testKeys = async () => {
   });
 
   try {
-    console.log("🔍 Testing Razorpay API Keys...");
+   
     
     // Try to create a small test order
     const order = await razorpay.orders.create({
@@ -17,12 +17,10 @@ const testKeys = async () => {
       receipt: "test_receipt"
     });
     
-    console.log("✅ SUCCESS: Razorpay keys are valid");
-    console.log("Order ID:", order.id);
+   
     
     // Try to fetch the order
     const fetched = await razorpay.orders.fetch(order.id);
-    console.log("✅ Order fetched successfully");
     
     return true;
   } catch (error) {

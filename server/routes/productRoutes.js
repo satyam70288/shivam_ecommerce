@@ -10,6 +10,7 @@ const {
   getProductById,
   getProductsforadmin,
   getProductsByCategory,
+  getSimilarProducts,
 } = require("../controllers/productController");
 const verifyToken = require("../middlewares/verifyToken");
 const upload = require("../middlewares/multer");
@@ -45,5 +46,5 @@ router.put("/remove-from-blacklist/:id", verifyToken, removeFromBlacklist);
 
 router.get("/product/:id", getProductById); // ALWAYS LAST
 router.get("/admin/products/:id", getProductById); // ALWAYS LAST
-
+router.get('/similar/:productId', getSimilarProducts);
 module.exports = router;

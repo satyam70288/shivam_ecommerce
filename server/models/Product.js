@@ -163,8 +163,6 @@ productSchema.methods.getTotalStock = function () {
 // ⭐ Returns if offer is active
 // ⭐ Returns if offer is active - FIXED VERSION
 productSchema.methods.isOfferActive = function () {
-  // अगर offer dates ही नहीं हैं
-   console.log(this.offerValidFrom,"kkkkkkkkkkkkkkk" )
   if (!this.offerValidFrom || !this.offerValidTill) return false;
  
   const now = new Date();

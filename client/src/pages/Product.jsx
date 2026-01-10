@@ -14,6 +14,7 @@ import ProductTabs from "@/components/Product/ProductTabs";
 
 import MobileStickyCTA from "@/components/Product/MobileStickyCTA";
 import ReviewsComponent from "@/components/custom/ReviewsComponent";
+import SimilarProducts from "@/components/Product/SimilarProducts";
 // import RelatedProductsCarousel from "./RelatedProductsCarousel";
 
 const Product = () => {
@@ -57,7 +58,7 @@ const Product = () => {
   };
 
   const handleBuyNowClick = () => {
-  console.log("HANDLE BUY NOW");
+ 
   buyNow({
     productId: product._id,
     quantity,
@@ -164,6 +165,8 @@ const Product = () => {
         onAddToCart={handleAddToCartClick}
         onBuyNow={handleBuyNowClick}
       />
+
+      <SimilarProducts productId={id} />
     </div>
   );
 };

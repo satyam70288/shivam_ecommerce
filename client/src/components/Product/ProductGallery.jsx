@@ -11,7 +11,7 @@ const ProductGallery = ({
   const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(null);
   const [showZoom, setShowZoom] = useState(false);
   const [bgPos, setBgPos] = useState("50% 50%");
-  console.log("isZoomed", isZoomed);
+
   const activeImage = images[selectedImage]?.url;
   if (!activeImage) return null;
 

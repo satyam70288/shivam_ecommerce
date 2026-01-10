@@ -13,10 +13,7 @@ const PlaceOrderButton = () => {
   // ✅ Make sure hook returns openRazorpayModal
   const { openRazorpayModal } = useRazorpay();
   
-  console.log("🔍 Hook functions:", { 
-    hasOpenRazorpayModal: !!openRazorpayModal,
-    type: typeof openRazorpayModal 
-  });
+ 
   
   const isProcessing = useRef(false);
 
@@ -30,7 +27,7 @@ const PlaceOrderButton = () => {
 
   const handlePlaceOrder = async () => {
     if (isProcessing.current) {
-      console.log("⏸️ Already processing");
+   
       return;
     }
     
@@ -79,7 +76,7 @@ const PlaceOrderButton = () => {
       if (paymentMethod === "RAZORPAY") {
         // Step 1: Create Razorpay order via Redux
         const result = await dispatch(createRazorpayOrder()).unwrap();
-        console.log("✅ Razorpay order created:", result);
+
         
         // Step 2: Get user details
         const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -98,7 +95,6 @@ const PlaceOrderButton = () => {
             quantity: qty || 1
           },
           onSuccess: (orderId) => {
-            console.log("🎉 Payment success, order:", orderId);
             window.location.href = `/orders`;
           },
           onFailure: (error) => {

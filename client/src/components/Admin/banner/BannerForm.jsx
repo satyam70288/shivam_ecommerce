@@ -37,16 +37,8 @@ const BannerForm = ({
 
   // BannerForm.jsx - Add logging
 useEffect(() => {
-  console.log("🔍 useEffect triggered!");
-  console.log("initialData value:", initialData);
-  console.log("initialData type:", typeof initialData);
-  
+
   if (initialData) {
-    console.log("✅ Setting form data with:", {
-      title: initialData.title,
-      image: initialData.image,
-      priority: initialData.priority
-    });
     
     setFormData({
       title: initialData.title || "",
@@ -59,14 +51,13 @@ useEffect(() => {
     });
     setPreviewImage(initialData.image || "");
   } else {
-    console.log("❌ initialData is null/undefined");
+
   }
 }, [initialData]);
 
 // Also add to handleEdit in BannerManager
 const handleEdit = (banner) => {
-  console.log("🖱️ Edit button clicked!");
-  console.log("Banner data received:", banner);
+ 
   setEditingBanner(banner);
 };
 
@@ -91,20 +82,20 @@ const handleEdit = (banner) => {
     
     // CASE 1: User selected NEW file (create or edit)
     if (selectedFile) {
-      console.log("✅ CASE 1: Adding new file:", selectedFile.name);
+    
       submitFormData.append("image", selectedFile);
     }
     
     // CASE 2: Editing existing banner, NO new file selected
     else if (isEditing && initialData?.image) {
       // User is editing but didn't change the image
-      console.log("✅ CASE 2: Keeping existing image:", initialData.image);
+      
       
       // Check if formData.image is different from original
       if (formData.image !== initialData.image && formData.image.startsWith('http')) {
         // User entered a new URL manually
         submitFormData.append("image", formData.image);
-        console.log("User changed URL to:", formData.image);
+     
       } else {
         // User didn't change image, keep the original
         submitFormData.append("image", initialData.image);
@@ -113,13 +104,13 @@ const handleEdit = (banner) => {
     
     // CASE 3: Creating new banner with URL (not file)
     else if (formData.image && formData.image.startsWith('http')) {
-      console.log("✅ CASE 3: Adding URL:", formData.image);
+     
       submitFormData.append("image", formData.image);
     }
     
     // CASE 4: Blob URL error (user selected file but we have blob in formData)
     else if (formData.image && formData.image.startsWith('blob:')) {
-      console.log("❌ CASE 4: Blob URL detected!");
+    
       alert("Please complete the file upload by clicking 'Create Banner'");
       setLoading(false);
       return;
@@ -127,7 +118,7 @@ const handleEdit = (banner) => {
     
     // CASE 5: No image at all
     else {
-      console.log("❌ CASE 5: No image provided");
+  
       alert("Please select an image or provide an image URL");
       setLoading(false);
       return;
@@ -144,17 +135,17 @@ const handleEdit = (banner) => {
     submitFormData.append("isActive", formData.isActive.toString());
 
     // Debug what we're sending
-    console.log("📦 SENDING FORMDATA:");
+  
     for (let [key, value] of submitFormData.entries()) {
       if (value instanceof File) {
-        console.log(`${key}: FILE - ${value.name} (${value.size} bytes)`);
+   
       } else {
-        console.log(`${key}: TEXT - ${value}`);
+  
       }
     }
 
     if (isEditing && initialData?._id) {
-      console.log("🔄 Updating banner ID:", initialData._id);
+   
       // Update banner
       await dispatch(updateBanner({
         id: initialData._id,
@@ -164,7 +155,7 @@ const handleEdit = (banner) => {
       alert("Banner updated successfully!");
       handleReset();
     } else {
-      console.log("🆕 Creating new banner");
+  
       // Create banner
       await dispatch(createBanner(submitFormData)).unwrap();
       alert("Banner created successfully!");

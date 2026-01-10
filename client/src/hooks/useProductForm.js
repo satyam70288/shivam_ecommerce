@@ -341,7 +341,7 @@ export const useProductForm = (productId) => {
       toast({ title: "Success", description: "Product saved successfully" });
       return true;
     } catch (err) {
-      console.log(err,"eeeeeee")
+    
       handleErrorLogout(err, "Error saving product");
       return false;
     } finally {

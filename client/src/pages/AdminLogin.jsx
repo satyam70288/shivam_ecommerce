@@ -36,7 +36,7 @@ const AdminLogin = () => {
       });
       navigate("/admin/dashboard");
     } catch (error) {
-      console.log(error)
+ 
       return toast({
         title: error.response.data.message,
         variant: "destructive",

@@ -11,7 +11,7 @@ export const useAdminProducts = () => {
   const [category, setCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [price, setPrice] = useState("");
-  console.log(category,"cate")
+
   const dispatch = useDispatch();
 
   const fetchProducts = async () => {

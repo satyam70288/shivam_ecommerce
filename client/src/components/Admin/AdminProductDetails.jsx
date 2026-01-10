@@ -34,7 +34,7 @@ const AdminProductDetails = () => {
 
     fetchProduct();
   }, [id]);
-  console.log(product);
+ 
   // 🔥 IMPORTANT GUARDS
   if (loading) {
     return <p>Loading product...</p>;

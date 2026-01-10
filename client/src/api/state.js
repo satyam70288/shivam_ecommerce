@@ -10,7 +10,6 @@ export const fetchStates = async () => {
     if (!res.data?.success) {
       throw new Error("Failed to fetch states");
     }
-    console.log(res.data.data)
     return res.data.data; // states array
   } catch (error) {
     console.error("Fetch states error:", error);
