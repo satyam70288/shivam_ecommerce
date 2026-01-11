@@ -105,7 +105,7 @@ const [selectedFilters, setSelectedFilters] = useState({
     bg-white dark:bg-zinc-900
   "
 >
-  <TopBar productsCount={products?.length} />
+  {/* <TopBar productsCount={products?.length} /> */}
   {loading ? <ProductGrid loading /> : <ProductGrid products={products} />}
 </section>
 

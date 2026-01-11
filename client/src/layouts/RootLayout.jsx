@@ -10,7 +10,7 @@ const RootLayout = () => {
     <>
     <ScrollToTop />
       <Navbar className="bg-gray-200 "/>
-      <main className=" bg-gray-200  dark:bg-black">
+      <main className=" bg-gray-100  dark:bg-black">
         <Outlet />
       </main>
       <Footer />

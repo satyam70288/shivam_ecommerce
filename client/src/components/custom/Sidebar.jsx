@@ -8,7 +8,6 @@ export function Sidebar() {
   const navigate = useNavigate();
   const menu = [
     { label: "My Profile", icon: User, to: "/account" },
-    { label: "Address", icon: MapPin, to: "/account/address" },
     { label: "My List", icon: Heart, to: "/account/wishlist" },
     { label: "My Orders", icon: ShoppingBag, to: "/orders" },
   ];

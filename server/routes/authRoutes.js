@@ -5,10 +5,11 @@ const {
   adminLogin,
   resetPasword,
   forgotPassword,
+  changePassword,
 } = require("../controllers/authController");
 const router = require("express").Router();
 const rateLimit = require("express-rate-limit");
-
+const verifyToken = require("../middlewares/verifyToken");
 // 🔹 Login-specific limiter (extra strict)
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -28,6 +29,11 @@ router.post("/signup", authLimiter, signup);
 router.post("/login", loginLimiter, login);
 router.post("/forgot-password", authLimiter, forgotPassword);
 router.post("/reset-password/:token", authLimiter, resetPasword);
+router.put(
+  "/auth/change-password",
+  verifyToken,
+  changePassword
+);
 
 router.post("/admin-signup", authLimiter, adminSignup);
 router.post("/admin-login", loginLimiter, adminLogin);

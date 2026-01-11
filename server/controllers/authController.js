@@ -237,6 +237,54 @@ const adminLogin = async (req, res) => {
   }
 };
 
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.id; // from JWT middleware
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    // 1. Validate input
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    // if (newPassword.length < 8) {
+    //   return res.status(400).json({ message: "Password must be at least 8 characters" });
+    // }
+
+    // 2. Find user
+    const user = await User.findById(userId).select("+password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 3. Verify old password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Old password is incorrect" });
+    }
+
+    // 4. Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // 5. Save new password
+    user.password = hashedPassword;
+    user.passwordChangedAt = new Date();
+    await user.save();
+
+    return res.json({
+      message: "Password updated successfully. Please login again."
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -244,4 +292,5 @@ module.exports = {
   adminLogin,
   forgotPassword,
   resetPasword,
+  changePassword
 };

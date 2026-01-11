@@ -97,7 +97,7 @@ export default function Navigation() {
   }, []);
 
   return (
-    <nav className="w-full border-b bg-gray-100 dark:bg-zinc-900 shadow-sm font-sans">
+    <nav className="w-full border-b bg-gray-50 dark:bg-zinc-900 shadow-sm font-sans">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-3 font-sans">
         {/* Desktop: Horizontal Scroll with Arrows */}
         <div className="hidden md:flex items-center justify-center font-sans">

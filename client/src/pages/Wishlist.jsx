@@ -166,26 +166,14 @@ const WishlistPage = () => {
                 >
                   View Details
                 </button>
-                <button
-                  onClick={() => {
-                    // Add to cart logic here
-                    toast({
-                      title: "Added to cart",
-                      description: `${product.name} added to cart`,
-                    });
-                  }}
-                  className="flex-1 py-2 text-center bg-pink-500 text-white rounded-lg hover:bg-pink-600 flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart size={16} />
-                  Add to Cart
-                </button>
+                
               </div>
             </div>
           ))}
         </div>
 
         {/* Summary */}
-        <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        {/* <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Your Saved Items
@@ -217,7 +205,7 @@ const WishlistPage = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

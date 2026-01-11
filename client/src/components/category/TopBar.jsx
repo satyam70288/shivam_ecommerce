@@ -23,7 +23,7 @@ export default function TopBar({ productsCount }) {
         products
       </p>
 
-      <DropdownMenu>
+      {/* <DropdownMenu>
         <DropdownMenuTrigger
           className="
             border px-5 py-2.5 rounded-lg text-sm shadow-sm
@@ -41,7 +41,7 @@ export default function TopBar({ productsCount }) {
           <DropdownMenuItem>Price: Low to High</DropdownMenuItem>
           <DropdownMenuItem>Price: High to Low</DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu> */}
     </div>
   );
 }
