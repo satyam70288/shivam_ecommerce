@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const {welcomeEmailTemplate}=require("../utils/userTemplate")
 const sendMail = require("../utils/mailer"); // ✅ Adjust path as needed
+const  sendResetEmail  = require("../utils/templates/password_reset_link");
 // handles common MongoDB/Mongoose errors
 const handleMongoError = (error) => {
 
@@ -144,10 +145,10 @@ const forgotPassword = async (req, res) => {
     expiresIn: "15m",
   });
 
-  const resetLink = `https://www.swagfashion.in/reset-password/${token}`;
-  const html = `<p>Click below to reset your password:</p><a href="${resetLink}">Reset Password</a>`;
+  const resetLink = `https://shivam-ecommerce.vercel.app/reset-password/${token}`;
+  const html = sendResetEmail(resetLink,user.name)
 
- const data= await sendMail(user.email, "Password Reset", html);
+ const data= await sendMail(user.email, html.subject, html.htmlContent);
 
   res.json({ message: "Reset email sent" });
 };

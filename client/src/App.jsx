@@ -71,6 +71,8 @@ export default function App() {
         },
       ],
     },
+    { path: "forgot-password", element: <ForgotPassword /> },
+    { path: "reset-password/:token", element: <ResetPassword /> },
     {
       path: "/admin/login",
       element: <AdminLogin />,
