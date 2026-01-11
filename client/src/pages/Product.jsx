@@ -76,7 +76,7 @@ const Product = () => {
       />
 
       {/* Main Product Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
             {/* Left Column - Images */}
@@ -150,12 +150,7 @@ const Product = () => {
         <ReviewsComponent productId={product._id} product={product} />
       </main>
 
-      {/* Related Products */}
-      {/* <RelatedProductsCarousel
-        category={product.category}
-        productId={product._id}
-        title={product.relatedProductsTitle}
-      /> */}
+
 
       {/* Mobile Sticky CTA */}
       <MobileStickyCTA

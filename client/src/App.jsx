@@ -37,6 +37,7 @@ import WishlistPage from "./pages/Wishlist";
 import OrderDetails from "./components/order/OrderDetails";
 import AdminBannerManager from "./components/Admin/AdminBannerManager";
 import BannerManager from "./components/Admin/banner/BannerManager";
+import AllReviewsPage from "./components/Review/AllReviewsPage";
 
 export default function App() {
   const router = createBrowserRouter([
@@ -56,6 +57,7 @@ export default function App() {
         {
           element: <ProtectedRoute />, // <Outlet /> yahan render hota hai
           children: [
+            { path: "product/:productId/reviews", element: <AllReviewsPage /> },
             { path: "checkout", element: <Checkout /> },
             { path: "orders", element: <MyOrders /> },
             { path: "orders/:orderId", element: <OrderDetails /> },
