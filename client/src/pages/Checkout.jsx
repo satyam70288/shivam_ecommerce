@@ -43,13 +43,32 @@ const CheckoutPage = () => {
   // }, [addressId, currentStep]);
 
   // Load checkout data
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const productId = params.get("productId");
-    const qty = params.get("qty");
-    dispatch(setProductId(productId));
-    dispatch(initCheckout({ productId, qty }));
-  }, [dispatch]);
+  // CheckoutPage.jsx में useEffect update करें
+useEffect(() => {
+  if (!addressId) return;
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get("productId");
+  const qty = params.get("qty");
+  
+  dispatch(setProductId(productId));
+  
+  // Address के साथ calculation call करें
+  if (addressId) {
+    const selectedAddress = addresses.find(addr => addr._id === addressId);
+    dispatch(initCheckout({ 
+      productId, 
+      qty, 
+      addressId,
+      address: selectedAddress 
+    }));
+  } else {
+    dispatch(initCheckout({ 
+      addressId,
+      address: selectedAddress,
+      checkoutType: "CART"  // ✅ YEH IMPORTANT LINE HAI
+    }));
+  }
+}, [dispatch, addressId, addresses]); // ✅ addresses dependency add की
 
   // Calculate total
   const getTotalAmount = () => {

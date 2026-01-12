@@ -178,7 +178,7 @@ const SimpleCartDrawer = ({ iconSize = 20, className = "" }) => {
                   navigate("/checkout");
                 }}
               >
-                PROCEED TO SECURE CHECKOUT
+                PROCEED TO SECURE CHECKOUT555
               </Button>
             </div>
           </div>

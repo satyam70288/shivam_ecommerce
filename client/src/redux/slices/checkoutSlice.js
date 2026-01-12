@@ -15,13 +15,24 @@ const authHeader = () => ({
 /* 1️⃣ INIT CHECKOUT (PREVIEW ONLY) */
 export const initCheckout = createAsyncThunk(
   "checkout/init",
-  async ({ productId, qty } = {}, { rejectWithValue }) => {
+  async ({ productId, qty, addressId, checkoutType = "PRODUCT" } = {}, { rejectWithValue }) => {
     try {
       const params = new URLSearchParams();
 
-      if (productId) {
+      // ✅ सभी cases handle करो
+      if (checkoutType === "PRODUCT" && productId) {
         params.append("productId", productId);
         params.append("qty", qty || 1);
+        params.append("addressId", addressId);
+      } else if (checkoutType === "CART") {
+        // ✅ Cart checkout के लिए सिर्फ addressId और checkoutType भेजो
+        params.append("checkoutType", "CART");
+        params.append("addressId", addressId);
+      }
+      
+      // ✅ अगर addressId है तो हमेशा add करो
+      if (addressId) {
+        params.append("addressId", addressId);
       }
 
       const res = await axios.get(
@@ -31,7 +42,10 @@ export const initCheckout = createAsyncThunk(
         }
       );
 
-      return res.data; // { items, summary }
+      return {
+        ...res.data,
+        checkoutType // ✅ Frontend को भी checkoutType return करो
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Checkout init failed");
     }

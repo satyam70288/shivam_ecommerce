@@ -1,66 +1,60 @@
 // helpers/orderCalculator.js
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
+const User = require("../models/User");
+const { calculateShippingCharge } = require("../service/shiprocketService");
 
-exports.calculateOrder = async (userId, { productId, quantity }) => {
-  console.log(productId,"productId")
+exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => {
   let items = [];
   let subtotal = 0;
   let discount = 0;
+  let totalWeight = 0;
 
   const processItem = (product, qty, extra = {}) => {
     const price = product.price;
     const finalPrice = product.getDiscountedPrice();
+    const quantity = Number(qty);
 
     const discountAmountPerUnit = price - finalPrice;
-    const discountPercent = product.discount || 0;
 
-    subtotal += price * qty;
-    discount += discountAmountPerUnit * qty;
+    subtotal += price * quantity;
+    discount += discountAmountPerUnit * quantity;
+    totalWeight += (product.dimensions?.weight || 0) * quantity;
 
     items.push({
       productId: product._id,
       name: product.name,
       image: product.images?.[0]?.url,
-
       price,
-      discountPercent,
+      discountPercent: product.discount || 0,
       discountAmount: discountAmountPerUnit,
       finalPrice,
-
-      quantity: qty,
-      lineTotal: finalPrice * qty,
-      weight: product.dimensions.weight,
-      length: product.dimensions.length,
-      width: product.dimensions.width,
-      height: product.dimensions.height,
+      quantity,
+      lineTotal: finalPrice * quantity,
+      weight: product.dimensions?.weight || 0,
+      length: product.dimensions?.length || 0,
+      width: product.dimensions?.width || 0,
+      height: product.dimensions?.height || 0,
       ...extra,
     });
   };
 
+  /* ---------------- PRODUCTS ---------------- */
+
   if (productId) {
     const product = await Product.findById(productId);
-    if (!product || product.blacklisted) {
-      throw new Error("Product not available");
-    }
+    if (!product || product.blacklisted) throw new Error("Product not available");
 
     const qty = Number(quantity) || 1;
-    if (product.stock < qty) {
-      throw new Error(`${product.name} out of stock`);
-    }
+    if (product.stock < qty) throw new Error(`${product.name} out of stock`);
 
     processItem(product, qty);
   } else {
-    const cart = await Cart.findOne({ user: userId }).populate(
-      "products.product"
-    );
-    if (!cart || cart.products.length === 0) {
-      throw new Error("Cart empty");
-    }
+    const cart = await Cart.findOne({ user: userId }).populate("products.product");
+    if (!cart || cart.products.length === 0) throw new Error("Cart empty");
 
     for (const cartItem of cart.products) {
       const product = cartItem.product;
-
       if (product.stock < cartItem.quantity) {
         throw new Error(`${product.name} out of stock`);
       }
@@ -72,9 +66,45 @@ exports.calculateOrder = async (userId, { productId, quantity }) => {
     }
   }
 
+  /* ---------------- AMOUNT ---------------- */
+
   const payable = subtotal - discount;
-  const shipping = payable === 0 ? 0 : payable > 500 ? 0 : 50;
+
+  /* ---------------- ADDRESS ---------------- */
+
+  let deliveryAddress = addressDoc;
+
+  if (!deliveryAddress) {
+    const user = await User.findById(userId).select("defaultAddress");
+    if (user?.defaultAddress) {
+      deliveryAddress = await Address.findById(user.defaultAddress);
+    }
+  }
+
+  /* ---------------- SHIPPING ---------------- */
+
+  let shipping = 0;
+  let shippingInfo = null;
+
+  if (deliveryAddress?.pincode && totalWeight > 0) {
+    try {
+      shippingInfo = await calculateShippingCharge({
+        deliveryPincode: deliveryAddress.pincode,
+        totalWeight,
+      });
+
+      shipping = shippingInfo.shippingCharge || 0;
+    } catch (err) {
+      console.error("Shiprocket error:", err.message);
+      shipping = payable > 500 ? 0 : 50; // fallback
+    }
+  } else {
+    shipping = payable > 500 ? 0 : 50;
+  }
+
   const total = payable + shipping;
+
+  /* ---------------- RESULT ---------------- */
 
   return {
     items,
@@ -83,10 +113,13 @@ exports.calculateOrder = async (userId, { productId, quantity }) => {
       discount,
       shipping,
       total,
+      totalWeight,
+      shippingInfo,
     },
     checkoutType: productId ? "BUY_NOW" : "CART",
   };
 };
+
 // ✅ Helper function file में (calculationHelpers.js)
 const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
@@ -107,7 +140,7 @@ const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 //     const discountAmountPerUnit = price - finalPrice;
 //     const discountPercent = product.discount || 0;
-    
+
 //     // Calculations with rounding
 //     const itemSubtotal = roundToTwo(price * quantity);
 //     const itemDiscount = roundToTwo(discountAmountPerUnit * quantity);
@@ -174,7 +207,7 @@ const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
 //   const payable = roundToTwo(subtotal - discount);
 //   const shipping = payable === 0 ? 0 : payable > 500 ? 0 : 50;
-  
+
 //   const total = roundToTwo(payable + shipping + totalTax);
 
 //   return {
@@ -215,4 +248,107 @@ exports.processPaymentAndCreateOrder = async (
   }
 
   return { items, total };
+};
+
+exports.calculateOrderBase = async (userId, { productId, quantity }) => {
+  let items = [];
+  let subtotal = 0;
+  let discount = 0;
+  let totalWeight = 0;
+
+  const processItem = (product, qty, extra = {}) => {
+    const price = product.price;
+    const finalPrice = product.getDiscountedPrice();
+    const q = Number(qty);
+
+    subtotal += price * q;
+    discount += (price - finalPrice) * q;
+    totalWeight += (product.dimensions?.weight || 0) * q;
+    const discountAmountPerUnit = price - finalPrice;
+    discount += discountAmountPerUnit * quantity;
+    items.push({
+      productId: product._id,
+      name: product.name,
+      image: product.images?.[0]?.url,
+      price,
+      finalPrice,
+      quantity: q,
+      lineTotal: finalPrice * q,
+      weight: product.dimensions?.weight || 0,
+      ...extra,
+    });
+  };
+
+  if (productId) {
+    const product = await Product.findById(productId);
+    if (!product || product.blacklisted)
+      throw new Error("Product not available");
+
+    const qty = Number(quantity) || 1;
+    if (product.stock < qty) throw new Error(`${product.name} out of stock`);
+
+    processItem(product, qty);
+  } else {
+    const cart = await Cart.findOne({ user: userId }).populate(
+      "products.product"
+    );
+    if (!cart || cart.products.length === 0) throw new Error("Cart empty");
+
+    for (const cartItem of cart.products) {
+      if (cartItem.product.stock < cartItem.quantity) {
+        throw new Error(`${cartItem.product.name} out of stock`);
+      }
+
+      processItem(cartItem.product, cartItem.quantity, {
+        color: cartItem.color,
+        size: cartItem.size,
+      });
+    }
+  }
+
+  return {
+    items,
+    subtotal,
+    discount,
+    payable: subtotal - discount,
+    totalWeight,
+    checkoutType: productId ? "BUY_NOW" : "CART",
+  };
+};
+
+exports.calculateOrderWithShipping = async (userId, params, addressDoc) => {
+  const base = await exports.calculateOrderBase(userId, params);
+
+  let shipping = 0;
+  let shippingInfo = null;
+
+  if (addressDoc?.pincode && base.totalWeight > 0) {
+    try {
+      shippingInfo = await calculateShippingCharge({
+        deliveryPincode: addressDoc.pincode,
+        totalWeight: base.totalWeight,
+      });
+
+      shipping = shippingInfo.shippingCharge || 0;
+    } catch (err) {
+      shipping = base.payable > 500 ? 0 : 50;
+    }
+  } else {
+    shipping = base.payable > 500 ? 0 : 50;
+  }
+
+  return {
+    items: base.items,
+    summary: {
+      subtotal: base.subtotal,
+      discount: base.discount,
+      shipping,
+      total: base.payable + shipping,
+      totalWeight: base.totalWeight,
+      shippingInfo,
+      discountPercent: product.discount || 0,
+      discountAmount: discountAmountPerUnit,
+    },
+    checkoutType: base.checkoutType,
+  };
 };

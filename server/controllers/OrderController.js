@@ -10,7 +10,7 @@ const { createShipment } = require("./shiprocketController"); // Import your Shi
 const axios = require("axios");
 const Cart = require("../models/Cart");
 const address = require("../models/address");
-const { calculateOrder } = require("../helper/createOrder");
+const { calculateOrder, calculateOrderBase } = require("../helper/createOrder");
 const { createShiprocketOrder } = require("../service/shiprocketService");
 const { default: mongoose } = require("mongoose");
 const { validateStatusTransition } = require("../utils/orderStatusValidator");
@@ -808,7 +808,7 @@ const createOrder = async (req, res) => {
     const orderData = await calculateOrder(userId, {
       productId,
       quantity,
-    });
+    },shippingAddress);
 
     /* 3️⃣ CREATE ORDER FIRST */
     const order = await Order.create(
@@ -858,11 +858,10 @@ const createOrder = async (req, res) => {
     session.endSession();
     setImmediate(async () => {
       try {
-        console.log("inside");
         const freshOrder = await Order.findById(orderId);
         if (!freshOrder) return;
-
-        await createShiprocketOrder(freshOrder);
+console.log("freshOrder",freshOrder)
+        // await createShiprocketOrder(freshOrder);
       } catch (err) {
         console.error("❌ Auto Shiprocket failed:", err.message);
       }
