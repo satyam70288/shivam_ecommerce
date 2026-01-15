@@ -1,107 +1,141 @@
 const axios = require("axios");
 const getShiprocketToken = require("../helper/shiprocket");
+const shipmentSchema = require("../models/shipmentSchema");
+const Order = require("../models/Order");
+
 
 const createShiprocketOrder = async (order) => {
   const token = await getShiprocketToken();
-  // 🔴 Calculate total weight
+
+  /* ============ BASIC VALIDATION ============ */
+
+  if (!order.shippingAddress?.name) {
+    throw new Error("Customer name missing");
+  }
+
+  const fullName = order.shippingAddress.name.trim();
+  const nameParts = fullName.split(" ");
+
+  const firstName = nameParts[0];
+  const lastName = nameParts.slice(1).join(" ") || "Customer";
+
+  if (!order.shippingAddress.phone || !order.shippingAddress.pincode) {
+    throw new Error("Incomplete shipping address");
+  }
+
+  /* ============ WEIGHT CALCULATION ============ */
+
   const totalWeight = order.items.reduce(
-    (sum, item) => sum + (item.weight || 0.5) * item.quantity, // ✅ Default weight if not available
+    (sum, item) => sum + (item.weight || 0.5) * item.quantity,
     0
   );
-  const boxLength = Math.max(...order.items.map((i) => i.length || 10));
-  const boxWidth = Math.max(...order.items.map((i) => i.width || 10));
+
+  const boxLength = Math.max(...order.items.map(i => i.length || 10));
+  const boxWidth  = Math.max(...order.items.map(i => i.width || 10));
   const boxHeight = order.items.reduce((sum, i) => sum + (i.height || 5), 0);
 
-  // 🔴 Payload mapping
+  /* ============ PAYLOAD ============ */
+
   const payload = {
     order_id: order._id.toString(),
-    order_date: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    order_date: new Date(order.createdAt).toISOString().split("T")[0],
     payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
     sub_total: order.subtotal,
 
-    billing_customer_name: order.shippingAddress.name,
+    billing_customer_name: firstName,
+    billing_last_name: lastName,
     billing_phone: order.shippingAddress.phone,
-    billing_email: order.shippingAddress.email,
+    billing_email: order.shippingAddress.email || "noreply@example.com",
     billing_address: order.shippingAddress.addressLine1,
     billing_address_2: order.shippingAddress.addressLine2 || "",
     billing_city: order.shippingAddress.city,
     billing_state: order.shippingAddress.state,
-    billing_pincode: order.shippingAddress.pincode.toString(),
+    billing_pincode: String(order.shippingAddress.pincode),
     billing_country: order.shippingAddress.country || "India",
 
     shipping_is_billing: true,
 
-    order_items: order.items.map((item) => ({
+    order_items: order.items.map(item => ({
       name: item.name,
       units: item.quantity,
       selling_price: item.finalPrice || item.price,
       discount: item.discountAmount || 0,
       sku: item.sku || `SKU-${item.productId}`,
-      hsn: item.hsn || "999999"
+      hsn: item.hsn || "999999",
     })),
 
-    // Package dimensions
     length: boxLength,
     breadth: boxWidth,
     height: boxHeight,
-    weight: totalWeight || 0.5, // Minimum weight
+    weight: totalWeight || 0.5,
   };
 
+  /* ============ SHIPPING MODE ============ */
+
+  if (order.paymentMethod === "COD") {
+    payload.is_pickup = 0;
+    payload.auto_assign = 0;
+  } else {
+    payload.is_pickup = 1;
+    payload.auto_assign = 1;
+  }
+
+  /* ============ API CALL ============ */
+
   try {
-    // ✅ Store response in variable
     const response = await axios.post(
       "https://apiv2.shiprocket.in/v1/external/orders/create/adhoc",
       payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
+        timeout: 15000,
       }
     );
 
-    const shiprocketResponse = response.data; // ✅ YEH LINE ADD KARO
-    
-    console.log("✅ Shiprocket response:", shiprocketResponse);
+    const shiprocketResponse = response.data;
 
-    // ✅ Now update database with shiprocketResponse
-    await Order.findByIdAndUpdate(
-      order._id,
-      {
-        shippingProvider: "Shiprocket",
-        shippingOrderId: shiprocketResponse.order_id,
-        awbCode: shiprocketResponse.awb_code || shiprocketResponse.shipment_id,
-        courierName: shiprocketResponse.courier_name,
-        estimatedDelivery: shiprocketResponse.estimated_delivery_date 
-          ? new Date(shiprocketResponse.estimated_delivery_date)
-          : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Default 5 days
-        trackingUrl: shiprocketResponse.tracking_url || shiprocketResponse.tracking_data?.tracking_url,
-        shiprocketData: shiprocketResponse,
-        status: "PROCESSING"
-      }
-    );
+    console.log("✅ Shiprocket order created:", shiprocketResponse);
 
-    console.log("✅ Database updated with Shiprocket details");
+    /* ============ SAVE SHIPMENT ============ */
 
-    // ✅ Generate AWB for prepaid orders
-    if (order.paymentMethod !== "COD") {
-      await generateAWB(order._id, shiprocketResponse.order_id);
-    }
+    const shipment = await shipmentSchema.create({
+      orderId: order._id,
+      provider: "Shiprocket",
+      shiprocketOrderId: shiprocketResponse.order_id,
+      awb: shiprocketResponse.awb_code || null,
+      courier: shiprocketResponse.courier_name || null,
+      trackingUrl: shiprocketResponse.tracking_url || null,
+      shippingStatus: payload.auto_assign
+        ? "COURIER_ASSIGNED"
+        : "SHIPMENT_CREATED",
+      estimatedCharge: order.shippingCharge,
+      rawResponse: shiprocketResponse
+    });
+
+    await Order.findByIdAndUpdate(order._id, {
+      shiprocketOrderId: shiprocketResponse.order_id,
+      shippingStatus: shipment.shippingStatus,
+      currentShipmentId: shipment._id,
+    });
 
     return shiprocketResponse;
 
   } catch (error) {
-    console.error("❌ Shiprocket order creation failed:", error.response?.data || error.message);
-    
-    // Mark order as failed in database
+    console.error("❌ Shiprocket error:", error.response?.data || error.message);
+
     await Order.findByIdAndUpdate(order._id, {
-      status: "SHIPROCKET_FAILED",
-      failureReason: error.response?.data?.message || error.message
+      shippingStatus: "SHIPMENT_FAILED",
+      shipmentError: error.response?.data || error.message,
     });
 
     throw error;
   }
 };
+
+
 // async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
 //   const token = await getShiprocketToken();
 
@@ -121,8 +155,8 @@ const createShiprocketOrder = async (order) => {
 // // India Post को exclude करने के लिए
 // const EXCLUDED_COURIERS = ['India Post', 'Speed Post', 'Business Parcel'];
 
-// const filteredCouriers = couriers.filter(courier => 
-//   !EXCLUDED_COURIERS.some(excluded => 
+// const filteredCouriers = couriers.filter(courier =>
+//   !EXCLUDED_COURIERS.some(excluded =>
 //     courier.courier_name.includes(excluded)
 //   )
 // );
@@ -163,7 +197,7 @@ async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
 
   // ✅ Find recommended courier
   const recommendedCourier = couriers.find(
-    c => c.courier_company_id === recommendedId
+    (c) => c.courier_company_id === recommendedId
   );
 
   if (!recommendedCourier) {
@@ -178,5 +212,63 @@ async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
     courierRating: recommendedCourier.rating,
   };
 }
+const assignCourier = async (orderId) => {
+  const order = await Order.findById(orderId);
 
-module.exports = { createShiprocketOrder,calculateShippingCharge };
+  if (!order) throw new Error("Order not found");
+
+  if (!order.shiprocketOrderId) {
+    throw new Error("Shiprocket order not created yet");
+  }
+
+  if (order.shippingStatus === "COURIER_ASSIGNED") {
+    throw new Error("Courier already assigned");
+  }
+
+  const token = await getShiprocketToken();
+
+  // ✅ Send Shiprocket Order ID (not Mongo ID)
+  const response = await axios.post(
+    "https://apiv2.shiprocket.in/v1/external/courier/assign/awb",
+    {
+      order_id: order.shiprocketOrderId
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  const data = response.data;
+
+  if (!data.awb_code) {
+    throw new Error("Courier assignment failed");
+  }
+
+  // ✅ Update Shipment
+  await Shipment.findOneAndUpdate(
+    { orderId: order._id },
+    {
+      awb: data.awb_code,
+      courier: data.courier_name,
+      shippingStatus: "COURIER_ASSIGNED"
+    }
+  );
+
+  // ✅ Update Order
+  await Order.findByIdAndUpdate(orderId, {
+    shippingStatus: "COURIER_ASSIGNED"
+  });
+
+  return data;
+};
+
+
+
+module.exports = {
+  createShiprocketOrder,
+  calculateShippingCharge,
+  assignCourier,
+};

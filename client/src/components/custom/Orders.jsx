@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/pagination";
 import useErrorLogout from "@/hooks/use-error-logout";
 import axios from "axios";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatDate, getStatusColor } from "@/utils/orderHelpers";
 const getPaymentStatusColor = (status) => {
@@ -34,13 +34,72 @@ const getPaymentStatusColor = (status) => {
   }
 };
 const formatShortDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-    });
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+};
+
+const ShippingActions = ({ order }) => {
+
+  const createShipment = async () => {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/admin/orders/${order._id}/create-shipment`,
+      {},
+      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+    );
+    window.location.reload();
   };
+
+ const assignCourier = async () => {
+  try {
+    await axios.post(
+      `${import.meta.env.VITE_API_URL}/admin/orders/${order._id}/assign-courier`,
+      {},
+      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+    );
+
+    toast({ title: "Courier assigned successfully" });
+
+    fetchOrders(); // reload via state, not window reload
+  } catch (err) {
+    toast({
+      title: "Courier assign failed",
+      description: err.response?.data?.message || "Something went wrong",
+      variant: "destructive"
+    });
+  }
+};
+
+
+  return (
+    <div className="flex gap-2 mt-3">
+      {/* {order.status === "CONFIRMED" && order.shippingStatus === "NOT_CREATED" && ( */}
+        <button onClick={createShipment} className="btn-primary">
+          Create Shipment
+        </button>
+      {/* )} */}
+
+      {order.shippingStatus === "SHIPMENT_CREATED" && (
+        <button onClick={assignCourier} className="btn-warning">
+          Assign Courier
+        </button>
+      )}
+
+      {order.shippingStatus === "COURIER_ASSIGNED" && order.trackingUrl && (
+        <a
+          href={order.trackingUrl}
+          target="_blank"
+          className="btn-success"
+        >
+          Track
+        </a>
+      )}
+    </div>
+  );
+};
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -186,8 +245,6 @@ const Orders = () => {
     setExpandedOrders(newExpanded);
   };
 
-  /* ================= FORMAT SHORT DATE ================= */
-  
   /* ================= RENDER ================= */
   return (
     <>
@@ -196,7 +253,7 @@ const Orders = () => {
           Orders
         </h1>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Total: {orders.length} orders
+          Total: {orders.length} orderskuhhh
           {loading && <span className="ml-2 animate-pulse">• Updating...</span>}
         </div>
       </div>
@@ -235,6 +292,7 @@ const Orders = () => {
                   />
                 </div>
               </div>
+<ShippingActions order={order} />
 
               {/* Cancellation Reason */}
               {order.cancelReason && (
@@ -481,12 +539,11 @@ const PaymentInfo = ({ payment }) => (
 );
 
 const OrderStatusSelector = ({ order, loading, updateOrderStatus }) => {
+
+  console.log(order)
   const statusOptions = [
     { value: "PLACED", label: "Placed" },
     { value: "CONFIRMED", label: "Confirmed" },
-    { value: "PACKED", label: "Packed" },
-    { value: "SHIPPED", label: "Shipped" },
-    { value: "DELIVERED", label: "Delivered" },
     { value: "CANCELLED", label: "Cancelled" },
   ];
 
@@ -499,6 +556,13 @@ const OrderStatusSelector = ({ order, loading, updateOrderStatus }) => {
         )}`}
       >
         {order.status}
+      </span>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(
+          order.shippingStatus
+        )}`}
+      >
+        {order.shippingStatus}
       </span>
 
       {/* Status Selector */}
@@ -546,7 +610,7 @@ const StatusHistoryHeader = ({
         {historyLength} updates
       </span>
     </h4>
-    
+
     <button
       onClick={() => toggleStatusHistory(orderId)}
       className="flex items-center justify-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 w-full xs:w-auto px-3 py-1.5 xs:px-0 xs:py-0 bg-blue-50 dark:bg-blue-900/20 xs:bg-transparent xs:dark:bg-transparent rounded-md xs:rounded-none border border-blue-100 dark:border-blue-800/30 xs:border-0"

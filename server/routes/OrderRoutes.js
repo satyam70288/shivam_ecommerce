@@ -9,8 +9,11 @@ const {
   cancelOrder,
   createOrder,
   getOrdersByOrderId,
+  assignCourierController,
+  createShipmentForOrder,
 } = require("../controllers/OrderController");
 const verifyToken = require("../middlewares/verifyToken");
+const { assignCourier } = require("../service/shiprocketService");
 
 router.get("/get-orders-by-user-id", verifyToken, getOrdersByUserId);
 
@@ -25,6 +28,7 @@ router.post("/orders/create", verifyToken, createOrder);
 router.get("/track/:id", trackShipment);
 
 router.post("/cancel-order", verifyToken, cancelOrder);
-
+router.post("/admin/orders/:id/assign-courier", verifyToken, assignCourierController);
+router.post("/admin/orders/:id/create-shipment", verifyToken, createShipmentForOrder);
 router.get("/orders/:orderId", verifyToken, getOrdersByOrderId);
 module.exports = router;

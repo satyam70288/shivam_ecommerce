@@ -11,7 +11,10 @@ const axios = require("axios");
 const Cart = require("../models/Cart");
 const address = require("../models/address");
 const { calculateOrder, calculateOrderBase } = require("../helper/createOrder");
-const { createShiprocketOrder } = require("../service/shiprocketService");
+const {
+  createShiprocketOrder,
+  assignCourier,
+} = require("../service/shiprocketService");
 const { default: mongoose } = require("mongoose");
 const { validateStatusTransition } = require("../utils/orderStatusValidator");
 var razorpay = new Razorpay({
@@ -34,7 +37,7 @@ const getOrdersByUserId = async (req, res) => {
       return {
         orderId: order._id,
         date: order.createdAt,
-        orderNumber:order.orderNumber,
+        orderNumber: order.orderNumber,
         status: order.status,
 
         // ✅ NEW SCHEMA SOURCE OF TRUTH
@@ -161,8 +164,8 @@ const getOrdersByOrderId = async (req, res) => {
     });
   }
 };
+
 const getAllOrders = async (req, res) => {
-  // Admin check
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
@@ -173,7 +176,8 @@ const getAllOrders = async (req, res) => {
   let {
     page = 1,
     limit = 10,
-    status,
+    orderStatus,
+    shippingStatus,
     search,
     startDate,
     endDate,
@@ -183,25 +187,32 @@ const getAllOrders = async (req, res) => {
   page = Number(page);
   limit = Number(limit);
 
-  // Build filter
   const filter = {};
 
-  // Add status filter
+  /* ================= ORDER STATUS FILTER ================= */
   if (
-    status &&
-    [
-      "PLACED",
-      "CONFIRMED",
-      "PACKED",
-      "SHIPPED",
-      "DELIVERED",
-      "CANCELLED",
-    ].includes(status)
+    orderStatus &&
+    ["PLACED", "CONFIRMED", "CANCELLED"].includes(orderStatus)
   ) {
-    filter.status = status;
+    filter.orderStatus = orderStatus;
   }
 
-  // Add payment method filter
+  /* ================= SHIPPING STATUS FILTER ================= */
+  if (
+    shippingStatus &&
+    [
+      "NOT_CREATED",
+      "SHIPMENT_CREATED",
+      "COURIER_ASSIGNED",
+      "IN_TRANSIT",
+      "DELIVERED",
+      "RTO",
+    ].includes(shippingStatus)
+  ) {
+    filter.shippingStatus = shippingStatus;
+  }
+
+  /* ================= PAYMENT METHOD FILTER ================= */
   if (
     paymentMethod &&
     ["COD", "RAZORPAY", "CARD", "UPI", "NETBANKING"].includes(paymentMethod)
@@ -209,25 +220,33 @@ const getAllOrders = async (req, res) => {
     filter.paymentMethod = paymentMethod;
   }
 
-  // Add date range filter
+  /* ================= DATE FILTER ================= */
   if (startDate || endDate) {
     filter.createdAt = {};
     if (startDate) filter.createdAt.$gte = new Date(startDate);
     if (endDate) filter.createdAt.$lte = new Date(endDate);
   }
 
-  // Add search filter
+  /* ================= SEARCH FILTER ================= */
   if (search) {
-    filter.$or = [
-      { _id: search },
+    const searchConditions = [];
+
+    // ObjectId search
+    if (mongoose.Types.ObjectId.isValid(search)) {
+      searchConditions.push({ _id: new mongoose.Types.ObjectId(search) });
+    }
+
+    searchConditions.push(
       { "shippingAddress.name": { $regex: search, $options: "i" } },
-      { "shippingAddress.phone": search },
+      { "shippingAddress.phone": { $regex: search, $options: "i" } },
       { "shippingAddress.email": { $regex: search, $options: "i" } },
-    ];
+      { orderNumber: { $regex: search, $options: "i" } }
+    );
+
+    filter.$or = searchConditions;
   }
 
   try {
-    // Execute both queries in parallel
     const [orders, count] = await Promise.all([
       Order.find(filter)
         .populate({
@@ -238,6 +257,9 @@ const getAllOrders = async (req, res) => {
           path: "statusHistory.changedBy",
           select: "name",
         })
+        .populate({
+          path: "currentShipmentId", // 🔥 Shipment reference
+        })
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -246,14 +268,16 @@ const getAllOrders = async (req, res) => {
       Order.countDocuments(filter),
     ]);
 
-    // Transform data for frontend
     const data = orders.map((order) => ({
       _id: order._id,
+      orderNumber: order.orderNumber,
+
       user: {
         name: order.userId?.name || "Guest",
         email: order.userId?.email || "",
         phone: order.userId?.phone || "",
       },
+
       items: (order.items || []).map((item) => ({
         productId: item.productId,
         name: item.name,
@@ -264,23 +288,38 @@ const getAllOrders = async (req, res) => {
         size: item.size || "",
         lineTotal: (item.finalPrice ?? item.price) * item.quantity,
       })),
+
       address: order.shippingAddress || {},
-      totalAmount: order.totalAmount || 0,
+
       subtotal: order.subtotal || 0,
       shippingCharge: order.shippingCharge || 0,
       taxAmount: order.taxAmount || 0,
+      totalAmount: order.totalAmount || 0,
+
       payment: {
         method: order.paymentMethod,
         status: order.paymentStatus || "PENDING",
         paymentId: order.paymentGateway?.paymentId || null,
       },
-      status: order.status || "PLACED",
+
+      status: order.status,
+      shippingStatus: order.shippingStatus,
+
+      shipment: order.currentShipmentId
+        ? {
+            provider: order.currentShipmentId.provider,
+            awb: order.currentShipmentId.awb,
+            courier: order.currentShipmentId.courier,
+            trackingUrl: order.currentShipmentId.trackingUrl,
+            shippingStatus: order.currentShipmentId.shippingStatus,
+          }
+        : null,
+
       statusHistory: order.statusHistory || [],
+
       cancelReason: order.cancelReason,
       deliveredAt: order.deliveredAt,
-      shippingProvider: order.shippingProvider,
-      awbCode: order.awbCode,
-      estimatedDelivery: order.estimatedDelivery,
+
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
     }));
@@ -805,10 +844,14 @@ const createOrder = async (req, res) => {
     };
 
     /* 2️⃣ CALCULATE ORDER (READ ONLY) */
-    const orderData = await calculateOrder(userId, {
-      productId,
-      quantity,
-    },shippingAddress);
+    const orderData = await calculateOrder(
+      userId,
+      {
+        productId,
+        quantity,
+      },
+      shippingAddress
+    );
 
     /* 3️⃣ CREATE ORDER FIRST */
     const order = await Order.create(
@@ -860,7 +903,7 @@ const createOrder = async (req, res) => {
       try {
         const freshOrder = await Order.findById(orderId);
         if (!freshOrder) return;
-console.log("freshOrder",freshOrder)
+        console.log("freshOrder", freshOrder);
         // await createShiprocketOrder(freshOrder);
       } catch (err) {
         console.error("❌ Auto Shiprocket failed:", err.message);
@@ -879,6 +922,49 @@ console.log("freshOrder",freshOrder)
     return res.status(400).json({ message: err.message });
   }
 };
+const assignCourierController = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+
+    const result = await assignCourier(orderId);
+
+    res.json({
+      success: true,
+      message: "Courier assigned successfully",
+      data: result
+    });
+  } catch (err) {
+    console.error("Assign courier error:", err);
+    res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+const createShipmentForOrder = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    if (order.shippingStatus !== "NOT_CREATED") {
+      return res.status(400).json({ message: "Shipment already created" });
+    }
+
+    // Call Shiprocket
+    const shiprocketResponse = await createShiprocketOrder(order);
+
+    res.json({
+      success: true,
+      message: "Shipment created successfully",
+      shiprocketOrderId: shiprocketResponse.order_id,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
 
 module.exports = {
   getOrdersByUserId,
@@ -890,4 +976,6 @@ module.exports = {
   cancelOrder,
   exchangeOrder,
   trackShipment,
+  assignCourierController,
+  createShipmentForOrder
 };

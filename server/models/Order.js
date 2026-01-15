@@ -22,7 +22,7 @@ const orderItemSchema = new mongoose.Schema(
     quantity: Number,
     lineTotal: Number,
 
-    // 🔥 DIMENSIONS SNAPSHOT (REQUIRED)
+    // Dimensions snapshot (required for shipping)
     weight: { type: Number, required: true }, // kg
     length: { type: Number, required: true }, // cm
     width: { type: Number, required: true },
@@ -35,45 +35,36 @@ const orderItemSchema = new mongoose.Schema(
 );
 
 /* =========================
-   ORDER SCHEMA
+   ORDER SCHEMA (BUSINESS)
 ========================= */
 const orderSchema = new mongoose.Schema(
   {
+    orderNumber: { type: String, unique: true, sparse: true },
 
-    orderNumber: {
-      type: String,
-      unique: true,
-      sparse: true, // Allow null for old orders
-    },
-    /* 👤 USER */
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
-    /* 📦 ITEMS */
-    items: {
-      type: [orderItemSchema],
-      required: true,
-    },
+    items: { type: [orderItemSchema], required: true },
 
-    /* 💰 AMOUNTS (CLEAR ACCOUNTING) */
+    /* 💰 AMOUNTS */
     subtotal: { type: Number, required: true },
-    shippingCharge: { type: Number, default: 0 },
+    shippingCharge: { type: Number, default: 0 }, // estimated
     taxAmount: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
 
-    /* 📍 SHIPPING ADDRESS (SNAPSHOT) */
+    /* 📍 ADDRESS SNAPSHOT */
     shippingAddress: {
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
+      name: String,
+      phone: String,
       email: String,
-      addressLine1: { type: String, required: true },
+      addressLine1: String,
       addressLine2: String,
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      pincode: { type: String, required: true },
+      city: String,
+      state: String,
+      pincode: String,
       country: { type: String, default: "India" },
     },
 
@@ -96,62 +87,75 @@ const orderSchema = new mongoose.Schema(
       signature: String,
     },
 
-    /* 🚚 ORDER STATUS */
-    status: {
+    /* 🧾 BUSINESS STATUS */
+    orderStatus: {
       type: String,
-      enum: [
-        "PLACED",
-        "CONFIRMED",
-        "PACKED",
-        "SHIPPED",
-        "DELIVERED",
-        "CANCELLED",
-        "RETURNED",
-      ],
+      enum: ["PLACED", "CONFIRMED", "CANCELLED", "REFUNDED"],
       default: "PLACED",
     },
+
+    /* 🚚 SHIPPING STATUS */
+    shippingStatus: {
+      type: String,
+      enum: [
+        "NOT_CREATED",
+        "SHIPMENT_CREATED",
+        "COURIER_ASSIGNED",
+        "PICKED_UP",
+        "IN_TRANSIT",
+        "OUT_FOR_DELIVERY",
+        "DELIVERED",
+        "RTO",
+      ],
+      default: "NOT_CREATED",
+    },
+
+    currentShipmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shipment",
+    },
+    shiprocketOrderId: {
+      type: String,
+      index: true,
+    },
+
     statusHistory: [
       {
-        status: String,
-        changedAt: { type: Date, default: Date.now },
+        orderStatus: String,
+        shippingStatus: String,
         changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        changedAt: { type: Date, default: Date.now },
         reason: String,
       },
     ],
-    /* 🚛 SHIPPING / COURIER (OPTIONAL INTEGRATION) */
-    shippingProvider: String, // Shiprocket, Delhivery, etc
-    shippingOrderId: String,
-    awbCode: String,
-    courierName: String,
-    estimatedDelivery: Date,
 
-    /* 🔁 META */
     cancelReason: String,
     deliveredAt: Date,
   },
   { timestamps: true }
 );
+
 // Schema ke baad, model banane se pehle
-orderSchema.pre('save', async function(next) {
+orderSchema.pre("save", async function (next) {
   if (this.isNew && !this.orderNumber) {
     try {
       // Format: SIS-YYYYMMDD-XXXXX
       const date = new Date();
-      const dateStr = date.getFullYear().toString() + 
-                     (date.getMonth() + 1).toString().padStart(2, '0') + 
-                     date.getDate().toString().padStart(2, '0');
-      
+      const dateStr =
+        date.getFullYear().toString() +
+        (date.getMonth() + 1).toString().padStart(2, "0") +
+        date.getDate().toString().padStart(2, "0");
+
       // Get today's order count
       const startOfDay = new Date(date.setHours(0, 0, 0, 0));
       const endOfDay = new Date(date.setHours(23, 59, 59, 999));
-      
-      const todaysOrders = await mongoose.model('Order').countDocuments({
-        createdAt: { $gte: startOfDay, $lte: endOfDay }
+
+      const todaysOrders = await mongoose.model("Order").countDocuments({
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
       });
-      
-      const sequence = (todaysOrders + 1).toString().padStart(4, '0');
+
+      const sequence = (todaysOrders + 1).toString().padStart(4, "0");
       this.orderNumber = `SIS-${dateStr}-${sequence}`;
-      
     } catch (error) {
       // Fallback
       this.orderNumber = `SIS-${Date.now().toString().slice(-9)}`;
