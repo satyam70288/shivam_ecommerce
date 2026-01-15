@@ -21,6 +21,7 @@ import axios from "axios";
 import { toast, useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatDate, getStatusColor } from "@/utils/orderHelpers";
+import ShippingActions from "../Admin/ShippingActions";
 const getPaymentStatusColor = (status) => {
   switch (status) {
     case "PAID":
@@ -42,64 +43,7 @@ const formatShortDate = (dateString) => {
   });
 };
 
-const ShippingActions = ({ order }) => {
 
-  const createShipment = async () => {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/admin/orders/${order._id}/create-shipment`,
-      {},
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-    );
-    window.location.reload();
-  };
-
- const assignCourier = async () => {
-  try {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/admin/orders/${order._id}/assign-courier`,
-      {},
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-    );
-
-    toast({ title: "Courier assigned successfully" });
-
-    fetchOrders(); // reload via state, not window reload
-  } catch (err) {
-    toast({
-      title: "Courier assign failed",
-      description: err.response?.data?.message || "Something went wrong",
-      variant: "destructive"
-    });
-  }
-};
-
-
-  return (
-    <div className="flex gap-2 mt-3">
-      {/* {order.status === "CONFIRMED" && order.shippingStatus === "NOT_CREATED" && ( */}
-        <button onClick={createShipment} className="btn-primary">
-          Create Shipment
-        </button>
-      {/* )} */}
-
-      {order.shippingStatus === "SHIPMENT_CREATED" && (
-        <button onClick={assignCourier} className="btn-warning">
-          Assign Courier
-        </button>
-      )}
-
-      {order.shippingStatus === "COURIER_ASSIGNED" && order.trackingUrl && (
-        <a
-          href={order.trackingUrl}
-          target="_blank"
-          className="btn-success"
-        >
-          Track
-        </a>
-      )}
-    </div>
-  );
-};
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -292,7 +236,10 @@ const Orders = () => {
                   />
                 </div>
               </div>
-<ShippingActions order={order} />
+              <ShippingActions
+                order={order}
+
+              />
 
               {/* Cancellation Reason */}
               {order.cancelReason && (
@@ -539,8 +486,7 @@ const PaymentInfo = ({ payment }) => (
 );
 
 const OrderStatusSelector = ({ order, loading, updateOrderStatus }) => {
-
-  console.log(order)
+  console.log(order);
   const statusOptions = [
     { value: "PLACED", label: "Placed" },
     { value: "CONFIRMED", label: "Confirmed" },

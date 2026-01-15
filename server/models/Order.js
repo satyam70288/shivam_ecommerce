@@ -88,27 +88,12 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* 🧾 BUSINESS STATUS */
-    orderStatus: {
+    status: {
       type: String,
       enum: ["PLACED", "CONFIRMED", "CANCELLED", "REFUNDED"],
       default: "PLACED",
     },
 
-    /* 🚚 SHIPPING STATUS */
-    shippingStatus: {
-      type: String,
-      enum: [
-        "NOT_CREATED",
-        "SHIPMENT_CREATED",
-        "COURIER_ASSIGNED",
-        "PICKED_UP",
-        "IN_TRANSIT",
-        "OUT_FOR_DELIVERY",
-        "DELIVERED",
-        "RTO",
-      ],
-      default: "NOT_CREATED",
-    },
 
     currentShipmentId: {
       type: mongoose.Schema.Types.ObjectId,

@@ -192,24 +192,9 @@ const getAllOrders = async (req, res) => {
   /* ================= ORDER STATUS FILTER ================= */
   if (
     orderStatus &&
-    ["PLACED", "CONFIRMED", "CANCELLED"].includes(orderStatus)
+    ["PLACED", "CONFIRMED", "CANCELLED", "REFUNDED"].includes(orderStatus)
   ) {
     filter.orderStatus = orderStatus;
-  }
-
-  /* ================= SHIPPING STATUS FILTER ================= */
-  if (
-    shippingStatus &&
-    [
-      "NOT_CREATED",
-      "SHIPMENT_CREATED",
-      "COURIER_ASSIGNED",
-      "IN_TRANSIT",
-      "DELIVERED",
-      "RTO",
-    ].includes(shippingStatus)
-  ) {
-    filter.shippingStatus = shippingStatus;
   }
 
   /* ================= PAYMENT METHOD FILTER ================= */
@@ -231,7 +216,6 @@ const getAllOrders = async (req, res) => {
   if (search) {
     const searchConditions = [];
 
-    // ObjectId search
     if (mongoose.Types.ObjectId.isValid(search)) {
       searchConditions.push({ _id: new mongoose.Types.ObjectId(search) });
     }
@@ -247,28 +231,47 @@ const getAllOrders = async (req, res) => {
   }
 
   try {
-    const [orders, count] = await Promise.all([
-      Order.find(filter)
-        .populate({
-          path: "userId",
-          select: "name email phone",
-        })
-        .populate({
-          path: "statusHistory.changedBy",
-          select: "name",
-        })
-        .populate({
-          path: "currentShipmentId", // 🔥 Shipment reference
-        })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
+    const orders = await Order.find(filter)
+      .populate({
+        path: "userId",
+        select: "name email phone",
+      })
+      .populate({
+        path: "statusHistory.changedBy",
+        select: "name",
+      })
+      .populate({
+        path: "currentShipmentId",
+      })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
 
-      Order.countDocuments(filter),
-    ]);
+    /* ================= SHIPPING STATUS FILTER (FROM SHIPMENT) ================= */
+    let filteredOrders = orders;
 
-    const data = orders.map((order) => ({
+    if (
+      shippingStatus &&
+      [
+        "CREATED",
+        "COURIER_ASSIGNED",
+        "PICKED_UP",
+        "IN_TRANSIT",
+        "OUT_FOR_DELIVERY",
+        "DELIVERED",
+        "RTO",
+        "CANCELLED",
+      ].includes(shippingStatus)
+    ) {
+      filteredOrders = orders.filter(
+        (order) => order.currentShipmentId?.shippingStatus === shippingStatus
+      );
+    }
+
+    const count = filteredOrders.length;
+
+    const data = filteredOrders.map((order) => ({
       _id: order._id,
       orderNumber: order.orderNumber,
 
@@ -295,7 +298,6 @@ const getAllOrders = async (req, res) => {
       shippingCharge: order.shippingCharge || 0,
       taxAmount: order.taxAmount || 0,
       totalAmount: order.totalAmount || 0,
-
       payment: {
         method: order.paymentMethod,
         status: order.paymentStatus || "PENDING",
@@ -303,7 +305,7 @@ const getAllOrders = async (req, res) => {
       },
 
       status: order.status,
-      shippingStatus: order.shippingStatus,
+      statusHistory: order.statusHistory || [],
 
       shipment: order.currentShipmentId
         ? {
@@ -312,10 +314,9 @@ const getAllOrders = async (req, res) => {
             courier: order.currentShipmentId.courier,
             trackingUrl: order.currentShipmentId.trackingUrl,
             shippingStatus: order.currentShipmentId.shippingStatus,
+            shiprocketOrderId: order.currentShipmentId.shiprocketOrderId,
           }
         : null,
-
-      statusHistory: order.statusHistory || [],
 
       cancelReason: order.cancelReason,
       deliveredAt: order.deliveredAt,
@@ -793,23 +794,55 @@ const exchangeOrder = async (req, res) => {
 };
 
 const trackShipment = async (req, res) => {
-  const order = await Order.findById(req.params.id);
-  if (!order || !order.shiprocketId)
-    return res
-      .status(404)
-      .json({ success: false, message: "Order not found or not shipped" });
+  try {
+    const order = await Order.findById(req.params.id).populate(
+      "currentShipmentId"
+    );
 
-  const token = await getShiprocketToken();
+    if (!order || !order.currentShipmentId) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not created for this order",
+      });
+    }
 
-  const resShip = await axios.get(
-    `https://apiv2.shiprocket.in/v1/external/courier/track/shipment/${order.shiprocketId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+    const shipment = order.currentShipmentId;
 
-  return res.json({
-    success: true,
-    tracking: resShip.data.data[0].tracking_data,
-  });
+    if (!shipment.awb) {
+      return res.status(400).json({
+        success: false,
+        message: "Courier not assigned yet",
+      });
+    }
+
+    const token = await getShiprocketToken();
+
+    const response = await axios.get(
+      `https://apiv2.shiprocket.in/v1/external/courier/track/awb/${shipment.awb}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return res.json({
+      success: true,
+      shipment: {
+        courier: shipment.courier,
+        awb: shipment.awb,
+        trackingUrl: shipment.trackingUrl,
+        currentStatus: response.data?.tracking_data?.shipment_status,
+        history: response.data?.tracking_data?.shipment_track_activities,
+      },
+    });
+  } catch (err) {
+    console.error("Track error:", err.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch tracking details",
+    });
+  }
 };
 
 const createOrder = async (req, res) => {
@@ -931,13 +964,13 @@ const assignCourierController = async (req, res) => {
     res.json({
       success: true,
       message: "Courier assigned successfully",
-      data: result
+      data: result,
     });
   } catch (err) {
     console.error("Assign courier error:", err);
     res.status(400).json({
       success: false,
-      message: err.message
+      message: err.message,
     });
   }
 };
@@ -948,9 +981,9 @@ const createShipmentForOrder = async (req, res) => {
 
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.shippingStatus !== "NOT_CREATED") {
-      return res.status(400).json({ message: "Shipment already created" });
-    }
+    // if (order.shippingStatus !== "NOT_CREATED") {
+    //   return res.status(400).json({ message: "Shipment already created" });
+    // }
 
     // Call Shiprocket
     const shiprocketResponse = await createShiprocketOrder(order);
@@ -977,5 +1010,5 @@ module.exports = {
   exchangeOrder,
   trackShipment,
   assignCourierController,
-  createShipmentForOrder
+  createShipmentForOrder,
 };

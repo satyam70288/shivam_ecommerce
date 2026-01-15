@@ -9,36 +9,60 @@ const shipmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
       required: true,
+      index: true,
     },
 
-    provider: { type: String, default: "Shiprocket" },
+    provider: {
+      type: String,
+      default: "Shiprocket",
+    },
 
-    shiprocketOrderId: String,
-    awb: String,
+    shiprocketOrderId: {
+      type: String,
+      index: true,
+    },
+
+    awb: {
+      type: String,
+      index: true,
+    },
+
     courier: String,
+    trackingUrl: String,
 
     pickupDate: Date,
     deliveredAt: Date,
 
-    trackingUrl: String,
-
     shippingStatus: {
       type: String,
       enum: [
-        "SHIPMENT_CREATED",
+        "CREATED",
         "COURIER_ASSIGNED",
         "PICKED_UP",
         "IN_TRANSIT",
         "OUT_FOR_DELIVERY",
         "DELIVERED",
         "RTO",
+        "CANCELLED",
       ],
+      default: "CREATED",
     },
 
-    estimatedCharge: Number,
-    finalCharge: Number,
-    extraCharge: Number,
-    refundAmount: Number,
+    charges: {
+      estimated: Number,
+      final: Number,
+      extra: Number,
+      refund: Number,
+    },
+
+    statusHistory: [
+      {
+        status: String,
+        source: String, // shiprocket / system / admin
+        at: { type: Date, default: Date.now },
+        remark: String,
+      },
+    ],
   },
   { timestamps: true }
 );

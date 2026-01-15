@@ -7,6 +7,7 @@ const Cart = require("../models/Cart");
 const Address = require("../models/address");
 const { calculateOrder } = require("../helper/createOrder");
 const { default: mongoose } = require("mongoose");
+const { createShiprocketOrder } = require("../service/shiprocketService");
 
 const updateOrderStatusWithHistory = async (
   orderId,
@@ -118,12 +119,11 @@ exports.verifyRazorpayPayment = async (req, res) => {
       addressId,
     } = req.body;
 
-    /* ================= BASIC VALIDATION ================= */
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       throw new Error("Missing payment details");
     }
 
-    /* ================= SIGNATURE VERIFY ================= */
+    // ✅ Signature verify
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -133,38 +133,33 @@ exports.verifyRazorpayPayment = async (req, res) => {
       throw new Error("Invalid payment signature");
     }
 
-    /* ================= IDEMPOTENCY ================= */
+    // ✅ Idempotency
     const existingOrder = await Order.findOne(
       { "paymentGateway.paymentId": razorpay_payment_id },
       null,
       { session }
     );
+
     if (existingOrder) {
       await session.commitTransaction();
       session.endSession();
       return res.json({ success: true, orderId: existingOrder._id });
     }
 
-    /* ================= RE-CALCULATE ORDER ================= */
-    const orderData = await calculateOrder(userId, {
-      productId,
-      quantity,
-    });
+    // ✅ Recalculate order
+    const orderData = await calculateOrder(userId, { productId, quantity });
 
-    /* ================= AMOUNT VERIFY ================= */
+    // ✅ Amount verify
     const rpOrder = await razorpay.orders.fetch(razorpay_order_id);
-
     const expectedAmount = Math.round(orderData.summary.total * 100);
 
     if (rpOrder.amount !== expectedAmount) {
       throw new Error("Payment amount mismatch");
     }
 
-    /* ================= ADDRESS SNAPSHOT ================= */
+    // ✅ Address snapshot
     const addressDoc = await Address.findById(addressId).session(session);
-    if (!addressDoc) {
-      throw new Error("Invalid address");
-    }
+    if (!addressDoc) throw new Error("Invalid address");
 
     const shippingAddress = {
       name: addressDoc.name,
@@ -178,8 +173,8 @@ exports.verifyRazorpayPayment = async (req, res) => {
       country: addressDoc.country || "India",
     };
 
-    /* ================= CREATE ORDER FIRST ================= */
-    const order = await Order.create(
+    // ✅ Create order
+    const [order] = await Order.create(
       [
         {
           userId,
@@ -190,35 +185,28 @@ exports.verifyRazorpayPayment = async (req, res) => {
           shippingAddress,
           paymentMethod: "RAZORPAY",
           paymentStatus: "PAID",
+          shippingStatus: "NOT_CREATED",
           paymentGateway: {
             provider: "razorpay",
             orderId: razorpay_order_id,
             paymentId: razorpay_payment_id,
             signature: razorpay_signature,
           },
-          status: "PLACED",
+          status: "CONFIRMED",
           statusHistory: [
             {
-              status: "PLACED",
+              status: "CONFIRMED",
               changedAt: new Date(),
-              changedBy: userId,
-              reason: "Order placed by customer",
+              changedBy: "system",
+              reason: "Payment confirmed via Razorpay",
             },
           ],
         },
       ],
       { session }
     );
-    const orderId = order[0]._id;
 
-    // 🔴 After successful payment, update to CONFIRMED
-    await updateOrderStatusWithHistory(
-      orderId,
-      "CONFIRMED",
-      "system",
-      `Payment confirmed via Razorpay (ID: ${razorpay_payment_id})`
-    );
-    /* ================= STOCK REDUCTION ================= */
+    // ✅ Reduce stock
     for (const item of orderData.items) {
       const updated = await Product.findOneAndUpdate(
         { _id: item.productId, stock: { $gte: item.quantity } },
@@ -226,29 +214,32 @@ exports.verifyRazorpayPayment = async (req, res) => {
         { session }
       );
 
-      if (!updated) {
-        throw new Error(`${item.name} out of stock`);
-      }
+      if (!updated) throw new Error(`${item.name} out of stock`);
     }
 
-    /* ================= CLEAR CART ================= */
+    // ✅ Clear cart
     if (orderData.checkoutType === "CART") {
       await Cart.deleteOne({ user: userId }).session(session);
     }
 
+    // ✅ Commit DB transaction
     await session.commitTransaction();
     session.endSession();
 
+    
+    await createShiprocketOrder(order);
+
     return res.json({
       success: true,
-      message: "Payment verified, order placed",
-      orderId: order[0]._id,
+      message: "Payment verified, order confirmed & shipment created",
+      orderId: order._id,
     });
+
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
-
-    console.error("❌ Verify Razorpay Payment Error:", err);
+    console.error("Verify Razorpay Payment Error:", err);
     return res.status(400).json({ message: err.message });
   }
 };
+
