@@ -31,7 +31,7 @@ exports.createRazorpayOrder = async (req, res) => {
   try {
     const userId = req.id;
     const { productId, quantity, addressId } = req.body;
-
+   console.log("regggggg",req.body)
     /* ================= BASIC VALIDATION ================= */
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -41,11 +41,18 @@ exports.createRazorpayOrder = async (req, res) => {
       return res.status(400).json({ message: "Address is required" });
     }
 
-    /* ================= SERVER-SIDE PRICE CALC ================= */
-    const orderData = await calculateOrder(userId, {
-      productId,
-      quantity,
-    });
+    // ✅ Address pehle get karo (shipping calculation ke liye)
+    const addressDoc = await Address.findById(addressId);
+    if (!addressDoc) {
+      return res.status(400).json({ message: "Address not found" });
+    }
+
+    /* ================= SERVER-SIDE PRICE CALC WITH ADDRESS ================= */
+    const orderData = await calculateOrder(
+      userId, 
+      { productId, quantity },
+      addressDoc // ✅ IMPORTANT: Address pass karo
+    );
 
     /**
      * orderData structure:
@@ -55,6 +62,14 @@ exports.createRazorpayOrder = async (req, res) => {
      *   checkoutType
      * }
      */
+
+    // ✅ Debug logging
+    console.log("Create Razorpay Order - Shipping Details:", {
+      shippingCharge: orderData.summary.shipping,
+      pincode: addressDoc.pincode,
+      totalWeight: orderData.summary.totalWeight,
+      totalAmount: orderData.summary.total
+    });
 
     if (
       !orderData ||
@@ -84,6 +99,7 @@ exports.createRazorpayOrder = async (req, res) => {
         userId,
         checkoutType: orderData.checkoutType,
         addressId,
+        pincode: addressDoc.pincode, // ✅ For reference
       },
     });
 
@@ -94,7 +110,7 @@ exports.createRazorpayOrder = async (req, res) => {
       amount: rpOrder.amount,
       currency: rpOrder.currency,
       key: process.env.RAZORPAY_KEY_ID,
-      orderSummary: orderData.summary, // frontend ke liye
+      orderSummary: orderData.summary, // ✅ Now includes shipping charge
     });
   } catch (error) {
     console.error("❌ Create Razorpay Order Error:", error);
@@ -146,21 +162,41 @@ exports.verifyRazorpayPayment = async (req, res) => {
       return res.json({ success: true, orderId: existingOrder._id });
     }
 
-    // ✅ Recalculate order
-    const orderData = await calculateOrder(userId, { productId, quantity });
+    // ✅ Address pehle get karo (calculateOrder ke liye chahiye)
+    const addressDoc = await Address.findById(addressId).session(session);
+    if (!addressDoc) throw new Error("Invalid address");
+
+    // ✅ Recalculate order WITH ADDRESS
+    const orderData = await calculateOrder(
+      userId, 
+      { productId, quantity },
+      addressDoc // ✅ IMPORTANT: Address pass karo
+    );
+
+    // ✅ Debug logging
+    console.log("Order Calculation Summary:", {
+      subtotal: orderData.summary.subtotal,
+      discount: orderData.summary.discount,
+      shipping: orderData.summary.shipping,
+      total: orderData.summary.total,
+      shippingInfo: orderData.summary.shippingInfo
+    });
 
     // ✅ Amount verify
     const rpOrder = await razorpay.orders.fetch(razorpay_order_id);
     const expectedAmount = Math.round(orderData.summary.total * 100);
 
     if (rpOrder.amount !== expectedAmount) {
-      throw new Error("Payment amount mismatch");
+      console.error("Amount Mismatch:", {
+        razorpayAmount: rpOrder.amount,
+        calculatedAmount: expectedAmount,
+        total: orderData.summary.total,
+        shipping: orderData.summary.shipping
+      });
+      throw new Error(`Payment amount mismatch. Expected: ₹${orderData.summary.total}, Got: ₹${rpOrder.amount/100}`);
     }
 
-    // ✅ Address snapshot
-    const addressDoc = await Address.findById(addressId).session(session);
-    if (!addressDoc) throw new Error("Invalid address");
-
+    // ✅ Shipping address snapshot
     const shippingAddress = {
       name: addressDoc.name,
       phone: addressDoc.phone,
@@ -173,15 +209,16 @@ exports.verifyRazorpayPayment = async (req, res) => {
       country: addressDoc.country || "India",
     };
 
-    // ✅ Create order
+    // ✅ Create order with shipping charge
     const [order] = await Order.create(
       [
         {
           userId,
           items: orderData.items,
           subtotal: orderData.summary.subtotal,
-          shippingCharge: orderData.summary.shipping,
-          totalAmount: orderData.summary.total,
+          shippingCharge: orderData.summary.shipping, // ✅ Shipping charge included
+          taxAmount: 0,
+          totalAmount: orderData.summary.total, // ✅ This includes shipping
           shippingAddress,
           paymentMethod: "RAZORPAY",
           paymentStatus: "PAID",
@@ -195,9 +232,9 @@ exports.verifyRazorpayPayment = async (req, res) => {
           status: "CONFIRMED",
           statusHistory: [
             {
-              status: "CONFIRMED",
+              orderStatus: "CONFIRMED",
               changedAt: new Date(),
-              changedBy: "system",
+              changedBy: null,
               reason: "Payment confirmed via Razorpay",
             },
           ],
@@ -222,24 +259,39 @@ exports.verifyRazorpayPayment = async (req, res) => {
       await Cart.deleteOne({ user: userId }).session(session);
     }
 
-    // ✅ Commit DB transaction
+    // ✅ Commit DB transaction FIRST
     await session.commitTransaction();
     session.endSession();
 
-    
-    await createShiprocketOrder(order);
+    // ✅ NOW call createShiprocketOrder (outside transaction)
+    try {
+      await createShiprocketOrder(order);
+      console.log("✅ Shiprocket order created successfully");
+    } catch (shiprocketError) {
+      console.error("⚠️ Shiprocket order creation failed:", shiprocketError);
+      // Shiprocket fail hua, lekin order database mein save ho gaya
+    }
 
     return res.json({
       success: true,
-      message: "Payment verified, order confirmed & shipment created",
+      message: "Payment verified & order confirmed",
       orderId: order._id,
+      orderSummary: {
+        subtotal: order.subtotal,
+        shippingCharge: order.shippingCharge, // ✅ Confirm shipping charge
+        totalAmount: order.totalAmount
+      },
+      shiprocketCreated: true,
     });
 
   } catch (err) {
-    await session.abortTransaction();
+    // ✅ Only abort if transaction hasn't been committed
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
+
     console.error("Verify Razorpay Payment Error:", err);
     return res.status(400).json({ message: err.message });
   }
 };
-

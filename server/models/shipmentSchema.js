@@ -37,13 +37,24 @@ const shipmentSchema = new mongoose.Schema(
       type: String,
       enum: [
         "CREATED",
-        "COURIER_ASSIGNED",
-        "PICKED_UP",
-        "IN_TRANSIT",
-        "OUT_FOR_DELIVERY",
-        "DELIVERED",
-        "RTO",
-        "CANCELLED",
+        "PROCESSING", // ✅ MISSING
+        "READY_TO_SHIP", // ✅ MISSING
+        "PICKUP_SCHEDULED", // ✅ MISSING
+        "PICKUP_GENERATED", // ✅ MISSING
+        "PICKUP_QUEUED", // ✅ MISSING
+        "MANIFEST_GENERATED", // ✅ MISSING
+        "PICKED_UP", // ✅ ALREADY EXISTS
+        "IN_TRANSIT", // ✅ ALREADY EXISTS
+        "OUT_FOR_DELIVERY", // ✅ ALREADY EXISTS
+        "DELIVERED", // ✅ ALREADY EXISTS
+        "RTO", // ✅ ALREADY EXISTS
+        "RTO_IN_TRANSIT", // ✅ MISSING
+        "RTO_OUT_FOR_DELIVERY", // ✅ MISSING
+        "RTO_DELIVERED", // ✅ MISSING
+        "CANCELLED", // ✅ ALREADY EXISTS
+        "LOST", // ✅ MISSING
+        "DAMAGED", // ✅ MISSING
+        "SHIPPED", // ✅ MISSING
       ],
       default: "CREATED",
     },

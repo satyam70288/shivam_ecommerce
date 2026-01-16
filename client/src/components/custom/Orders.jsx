@@ -197,7 +197,7 @@ const Orders = () => {
           Orders
         </h1>
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          Total: {orders.length} orderskuhhh
+          Total: {orders.length} order
           {loading && <span className="ml-2 animate-pulse">• Updating...</span>}
         </div>
       </div>
@@ -505,10 +505,10 @@ const OrderStatusSelector = ({ order, loading, updateOrderStatus }) => {
       </span>
       <span
         className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(
-          order.shippingStatus
+          order.shipment
         )}`}
       >
-        {order.shippingStatus}
+        {order.shipment.shippingStatus}
       </span>
 
       {/* Status Selector */}
