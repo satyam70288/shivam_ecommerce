@@ -2,6 +2,8 @@ const axios = require("axios");
 const getShiprocketToken = require("../helper/shiprocket");
 const shipmentSchema = require("../models/shipmentSchema");
 const Order = require("../models/Order");
+
+const pickupPincode = 401404;
 async function createShiprocketOrder(order) {
   const token = await getShiprocketToken();
 
@@ -36,16 +38,21 @@ async function createAdhocOrderOnShiprocket(order, token) {
     0
   );
 
-  const boxLength = Math.max(...order.items.map(i => i.length));
-  const boxWidth = Math.max(...order.items.map(i => i.width));
-  const boxHeight = Math.max(...order.items.map(i => i.height));
+  const boxLength = Math.max(...order.items.map((i) => i.length));
+  const boxWidth = Math.max(...order.items.map((i) => i.width));
+  const boxHeight = Math.max(...order.items.map((i) => i.height));
 
   const payload = {
     order_id: order._id.toString(),
     order_date: new Date(order.createdAt).toISOString().split("T")[0],
     payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
     sub_total: order.subtotal,
+    shipping_charges: order.shippingCharge, // ₹72.6
 
+    // ✅ LINE 2: COD AMOUNT (ONLY FOR COD)
+    ...(order.paymentMethod === "COD" && {
+      cod_amount: order.totalAmount, // ₹414.6
+    }),
     billing_customer_name: firstName,
     billing_last_name: lastName,
     billing_phone: order.shippingAddress.phone,
@@ -59,7 +66,7 @@ async function createAdhocOrderOnShiprocket(order, token) {
 
     shipping_is_billing: true,
 
-    order_items: order.items.map(item => ({
+    order_items: order.items.map((item) => ({
       name: item.name,
       units: item.quantity,
       selling_price: item.finalPrice || item.price,
@@ -138,7 +145,6 @@ async function saveShipment(order, shiprocketOrder) {
 
   return shipment;
 }
-
 
 async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
   const token = await getShiprocketToken();
