@@ -15,7 +15,10 @@ const authHeader = () => ({
 /* 1️⃣ INIT CHECKOUT (PREVIEW ONLY) */
 export const initCheckout = createAsyncThunk(
   "checkout/init",
-  async ({ productId, qty, addressId, checkoutType = "PRODUCT" } = {}, { rejectWithValue }) => {
+  async (
+    { productId, qty, addressId, checkoutType = "PRODUCT" } = {},
+    { rejectWithValue }
+  ) => {
     try {
       const params = new URLSearchParams();
 
@@ -29,25 +32,24 @@ export const initCheckout = createAsyncThunk(
         params.append("checkoutType", "CART");
         params.append("addressId", addressId);
       }
-      
+
       // ✅ अगर addressId है तो हमेशा add करो
       if (addressId) {
         params.append("addressId", addressId);
       }
 
-      const res = await axios.get(
-        `${API}/checkout/init?${params.toString()}`,
-        {
-          headers: authHeader(),
-        }
-      );
+      const res = await axios.get(`${API}/checkout/init?${params.toString()}`, {
+        headers: authHeader(),
+      });
 
       return {
         ...res.data,
-        checkoutType // ✅ Frontend को भी checkoutType return करो
+        checkoutType, // ✅ Frontend को भी checkoutType return करो
       };
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Checkout init failed");
+      return rejectWithValue(
+        err.response?.data?.message || "Checkout init failed"
+      );
     }
   }
 );
@@ -62,7 +64,9 @@ export const fetchAddresses = createAsyncThunk(
       });
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to load addresses");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to load addresses"
+      );
     }
   }
 );
@@ -77,7 +81,9 @@ export const createAddress = createAsyncThunk(
       });
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to add address");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to add address"
+      );
     }
   }
 );
@@ -92,7 +98,9 @@ export const updateAddress = createAsyncThunk(
       });
       return res.data.data;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to update address");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to update address"
+      );
     }
   }
 );
@@ -107,7 +115,9 @@ export const deleteAddress = createAsyncThunk(
       });
       return id;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to delete address");
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to delete address"
+      );
     }
   }
 );
@@ -119,23 +129,23 @@ export const applyCoupon = createAsyncThunk(
     try {
       const state = getState();
       const { productId, qty } = state.checkout;
-      
+
       const params = new URLSearchParams();
       if (productId) {
         params.append("productId", productId);
         params.append("qty", qty || 1);
       }
-      
+
       const res = await axios.post(
         `${API}/coupons/apply?${params.toString()}`,
         { code },
         { headers: authHeader() }
       );
-      
-      return { 
-        code, 
+
+      return {
+        code,
         summary: res.data.summary,
-        discount: res.data.discount || 0
+        discount: res.data.discount || 0,
       };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Invalid coupon");
@@ -143,25 +153,38 @@ export const applyCoupon = createAsyncThunk(
   }
 );
 
-/* 7️⃣ PLACE COD ORDER */
 export const placeCodOrder = createAsyncThunk(
   "checkout/placeCodOrder",
   async (_, { rejectWithValue, getState }) => {
     try {
       const state = getState();
-      const { addressId, productId, qty } = state.checkout;
-  
+      const { addressId, productId, qty, summary } = state.checkout;
+      // console.log(addressId, productId, qty, .courierId)
       if (!addressId) {
         return rejectWithValue("Address is required");
       }
+      const shippingInfo = summary.shippingInfo;
+      if (!shippingInfo?.courierId) {
+        return rejectWithValue("Shipping info missing. Please re-checkout.");
+      }
 
-      // ✅ FIX: template string
       const endpoint = `${API}/orders/create`;
 
-      // ✅ Payload matches backend logic
       const payload = productId
-        ? { addressId, productId, quantity: qty || 1 } // BUY NOW
-        : { addressId }; // CART
+        ? {
+            addressId,
+            productId,
+            quantity: qty || 1,
+            shippingMeta: {
+              courierId: shippingInfo.courierId,
+            },
+          } // BUY NOW
+        : {
+            addressId,
+            shippingMeta: {
+              courierId: shippingInfo.courierId,
+            },
+          }; // CART
 
       const res = await axios.post(endpoint, payload, {
         headers: authHeader(),
@@ -178,7 +201,6 @@ export const placeCodOrder = createAsyncThunk(
   }
 );
 
-
 /* 8️⃣ CREATE RAZORPAY ORDER (Payment Initiation) */
 export const createRazorpayOrder = createAsyncThunk(
   "checkout/createRazorpayOrder",
@@ -186,11 +208,11 @@ export const createRazorpayOrder = createAsyncThunk(
     try {
       const state = getState();
       const { addressId, productId, qty, summary } = state.checkout;
-      
+
       if (!addressId) {
         throw new Error("Address is required");
       }
-      
+
       // Create Razorpay order for payment initiation
       const res = await axios.post(
         `${API}/generate-payment`,
@@ -198,19 +220,18 @@ export const createRazorpayOrder = createAsyncThunk(
           addressId,
           productId,
           quantity: qty || 1,
-          amount: summary.total // Total amount from checkout summary
+          amount: summary.total, // Total amount from checkout summary
         },
         {
           headers: authHeader(),
         }
       );
-      
+
       if (!res.data.success) {
         throw new Error(res.data.message);
       }
-      
+
       return res.data; // { razorpayOrderId, amount, key, success: true }
-      
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Failed to create payment order"
@@ -226,26 +247,25 @@ export const verifyRazorpayPayment = createAsyncThunk(
     try {
       const state = getState();
       const { addressId, productId, qty } = state.checkout;
-      
+
       const res = await axios.post(
         `${API}/verify-payment`,
         {
           ...paymentData,
           addressId,
           productId,
-          quantity: qty || 1
+          quantity: qty || 1,
         },
         {
           headers: authHeader(),
         }
       );
-      
+
       if (!res.data.success) {
         throw new Error(res.data.message);
       }
-      
+
       return res.data; // { orderId, success: true, message }
-      
     } catch (err) {
       return rejectWithValue(
         err.response?.data?.message || "Payment verification failed"
@@ -305,19 +325,19 @@ const checkoutSlice = createSlice({
     setPaymentMethod(state, action) {
       state.paymentMethod = action.payload;
     },
-    
+
     setProductId(state, action) {
       state.productId = action.payload;
     },
-    
+
     setQuantity(state, action) {
       state.qty = action.payload;
     },
-    
+
     setRazorpayOrder(state, action) {
       state.razorpayOrder = action.payload;
     },
-    
+
     clearCoupon(state) {
       state.coupon = null;
       state.appliedCoupon = null;
@@ -327,7 +347,7 @@ const checkoutSlice = createSlice({
     resetCheckout() {
       return checkoutSlice.getInitialState();
     },
-    
+
     clearError(state) {
       state.error = null;
     },
@@ -372,7 +392,9 @@ const checkoutSlice = createSlice({
 
       /* UPDATE ADDRESS */
       .addCase(updateAddress.fulfilled, (state, action) => {
-        const index = state.addresses.findIndex(addr => addr._id === action.payload._id);
+        const index = state.addresses.findIndex(
+          (addr) => addr._id === action.payload._id
+        );
         if (index !== -1) {
           state.addresses[index] = action.payload;
         }

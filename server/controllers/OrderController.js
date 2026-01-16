@@ -10,10 +10,15 @@ const { createShipment } = require("./shiprocketController"); // Import your Shi
 const axios = require("axios");
 const Cart = require("../models/Cart");
 const address = require("../models/address");
-const { calculateOrder, calculateOrderBase } = require("../helper/createOrder");
+const {
+  calculateOrder,
+  calculateOrderBase,
+  calculateOrderValidation,
+} = require("../helper/createOrder");
 const {
   createShiprocketOrder,
   assignCourier,
+  calculateShippingCharge,
 } = require("../service/shiprocketService");
 const { default: mongoose } = require("mongoose");
 const { validateStatusTransition } = require("../utils/orderStatusValidator");
@@ -851,18 +856,17 @@ const createOrder = async (req, res) => {
 
   try {
     const userId = req.id;
-    console.log();
-    const { addressId, productId, quantity } = req.body;
-
+    const { addressId, productId, quantity, shippingMeta } = req.body;
+    if (!shippingMeta?.courierId) {
+      throw new Error("Shipping info missing. Please re-checkout.");
+    }
     if (!addressId) {
       throw new Error("Address required");
     }
 
     /* 1️⃣ ADDRESS SNAPSHOT */
     const addressDoc = await address.findById(addressId).session(session);
-    if (!addressDoc) {
-      throw new Error("Invalid address");
-    }
+    if (!addressDoc) throw new Error("Invalid address");
 
     const shippingAddress = {
       name: addressDoc.name,
@@ -876,25 +880,41 @@ const createOrder = async (req, res) => {
       country: addressDoc.country || "India",
     };
 
-    /* 2️⃣ CALCULATE ORDER (READ ONLY) */
-    const orderData = await calculateOrder(
+    /* 2️⃣ VALIDATE ORDER (price, stock, weight) */
+    const orderData = await calculateOrderValidation(
       userId,
-      {
-        productId,
-        quantity,
-      },
+      { productId, quantity },
       shippingAddress
     );
 
-    /* 3️⃣ CREATE ORDER FIRST */
+    /* 3️⃣ AUTHORITATIVE SHIPPING (Shiprocket) */
+    const preview = await calculateShippingCharge({
+      deliveryPincode: shippingAddress.pincode,
+      totalWeight: orderData.summary.totalWeight,
+    });
+
+    // ❌ If frontend courier is outdated / tampered
+    if (preview.courierId !== shippingMeta.courierId) {
+      throw new Error("Shipping option expired. Please re-checkout.");
+    }
+
+    const finalTotal = orderData.summary.payable + preview.shippingCharge;
+
+    /* 4️⃣ CREATE ORDER */
     const order = await Order.create(
       [
         {
           userId,
           items: orderData.items,
-          subtotal: orderData.summary.subtotal,
-          shippingCharge: orderData.summary.shipping,
-          totalAmount: orderData.summary.total,
+          subtotal: orderData.summary.payable, // ✅ final selling amount
+          shippingCharge: preview.shippingCharge,
+          totalAmount: finalTotal,
+          shippingMeta: {
+            courierId: preview.courierId,
+            courierName: preview.courierName,
+            estimatedDelivery: preview.estimatedDelivery,
+          },
+
           shippingAddress,
           paymentMethod: "COD",
           paymentStatus: "PENDING",
@@ -911,8 +931,10 @@ const createOrder = async (req, res) => {
       ],
       { session }
     );
+
     const orderId = order[0]._id;
-    /* 4️⃣ REDUCE STOCK (ATOMIC) */
+
+    /* 5️⃣ REDUCE STOCK */
     for (const item of orderData.items) {
       const updated = await Product.findOneAndUpdate(
         { _id: item.productId, stock: { $gte: item.quantity } },
@@ -920,32 +942,21 @@ const createOrder = async (req, res) => {
         { session }
       );
 
-      if (!updated) {
-        throw new Error(`${item.name} out of stock`);
-      }
+      if (!updated) throw new Error(`${item.name} out of stock`);
     }
 
-    /* 5️⃣ CLEAR CART (ONLY CART CHECKOUT) */
+    /* 6️⃣ CLEAR CART */
     if (orderData.checkoutType === "CART") {
       await Cart.deleteOne({ user: userId }).session(session);
     }
 
     await session.commitTransaction();
     session.endSession();
-    setImmediate(async () => {
-      try {
-        const freshOrder = await Order.findById(orderId);
-        if (!freshOrder) return;
-        console.log("freshOrder", freshOrder);
-        // await createShiprocketOrder(freshOrder);
-      } catch (err) {
-        console.error("❌ Auto Shiprocket failed:", err.message);
-      }
-    });
+
     return res.status(201).json({
       success: true,
       message: "COD order placed successfully",
-      orderId: order[0]._id,
+      orderId,
     });
   } catch (err) {
     await session.abortTransaction();
@@ -955,6 +966,7 @@ const createOrder = async (req, res) => {
     return res.status(400).json({ message: err.message });
   }
 };
+
 const assignCourierController = async (req, res) => {
   try {
     const orderId = req.params.id;

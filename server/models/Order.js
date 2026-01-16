@@ -94,7 +94,6 @@ const orderSchema = new mongoose.Schema(
       default: "PLACED",
     },
 
-
     currentShipmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Shipment",
@@ -113,6 +112,11 @@ const orderSchema = new mongoose.Schema(
         reason: String,
       },
     ],
+    shippingMeta: {
+      courierId: Number,
+      courierName: String,
+      estimatedDelivery: String,
+    },
 
     cancelReason: String,
     deliveredAt: Date,

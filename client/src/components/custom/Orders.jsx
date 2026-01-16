@@ -508,7 +508,7 @@ const OrderStatusSelector = ({ order, loading, updateOrderStatus }) => {
           order.shipment
         )}`}
       >
-        {order.shipment.shippingStatus}
+        {order?.shipment?.shippingStatus}
       </span>
 
       {/* Status Selector */}

@@ -173,14 +173,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       addressDoc // ✅ IMPORTANT: Address pass karo
     );
 
-    // ✅ Debug logging
-    console.log("Order Calculation Summary:", {
-      subtotal: orderData.summary.subtotal,
-      discount: orderData.summary.discount,
-      shipping: orderData.summary.shipping,
-      total: orderData.summary.total,
-      shippingInfo: orderData.summary.shippingInfo
-    });
+    
 
     // ✅ Amount verify
     const rpOrder = await razorpay.orders.fetch(razorpay_order_id);
@@ -215,7 +208,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
         {
           userId,
           items: orderData.items,
-          subtotal: orderData.summary.subtotal,
+          subtotal: orderData.summary.payable,
           shippingCharge: orderData.summary.shipping, // ✅ Shipping charge included
           taxAmount: 0,
           totalAmount: orderData.summary.total, // ✅ This includes shipping

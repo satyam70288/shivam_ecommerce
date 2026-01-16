@@ -111,10 +111,86 @@ exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => 
     summary: {
       subtotal,
       discount,
+      payable,
       shipping,
       total,
       totalWeight,
       shippingInfo,
+    },
+    checkoutType: productId ? "BUY_NOW" : "CART",
+  };
+};
+exports.calculateOrderValidation = async (userId, { productId, quantity }, addressDoc) => {
+  let items = [];
+  let subtotal = 0;
+  let discount = 0;
+  let totalWeight = 0;
+
+  const processItem = (product, qty, extra = {}) => {
+    const price = product.price;
+    const finalPrice = product.getDiscountedPrice();
+    const q = Number(qty);
+
+    const discountAmountPerUnit = price - finalPrice;
+
+    subtotal += price * q;
+    discount += discountAmountPerUnit * q;
+    totalWeight += (product.dimensions?.weight || 0) * q;
+
+    items.push({
+      productId: product._id,
+      name: product.name,
+      image: product.images?.[0]?.url,
+      price,
+      discountPercent: product.discount || 0,
+      discountAmount: discountAmountPerUnit,
+      finalPrice,
+      quantity: q,
+      lineTotal: finalPrice * q,
+      weight: product.dimensions?.weight || 0,
+      length: product.dimensions?.length || 0,
+      width: product.dimensions?.width || 0,
+      height: product.dimensions?.height || 0,
+      ...extra,
+    });
+  };
+
+  /* -------- PRODUCTS -------- */
+
+  if (productId) {
+    const product = await Product.findById(productId);
+    if (!product || product.blacklisted) throw new Error("Product not available");
+
+    const qty = Number(quantity) || 1;
+    if (product.stock < qty) throw new Error(`${product.name} out of stock`);
+
+    processItem(product, qty);
+  } else {
+    const cart = await Cart.findOne({ user: userId }).populate("products.product");
+    if (!cart || cart.products.length === 0) throw new Error("Cart empty");
+
+    for (const cartItem of cart.products) {
+      const product = cartItem.product;
+      if (product.stock < cartItem.quantity) {
+        throw new Error(`${product.name} out of stock`);
+      }
+
+      processItem(product, cartItem.quantity, {
+        color: cartItem.color,
+        size: cartItem.size,
+      });
+    }
+  }
+
+  const payable = subtotal - discount;
+
+  return {
+    items,
+    summary: {
+      subtotal,
+      discount,
+      payable,
+      totalWeight,
     },
     checkoutType: productId ? "BUY_NOW" : "CART",
   };

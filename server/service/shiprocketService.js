@@ -2,14 +2,30 @@ const axios = require("axios");
 const getShiprocketToken = require("../helper/shiprocket");
 const shipmentSchema = require("../models/shipmentSchema");
 const Order = require("../models/Order");
-
-const createShiprocketOrder = async (order) => {
+async function createShiprocketOrder(order) {
   const token = await getShiprocketToken();
 
-  if (!order.shippingAddress?.name) throw new Error("Customer name missing");
-  if (!order.shippingAddress.phone || !order.shippingAddress.pincode)
-    throw new Error("Incomplete shipping address");
+  if (!order.shippingMeta?.courierId) {
+    throw new Error("Courier not locked in order");
+  }
 
+  // 1) Create order on Shiprocket
+  const shiprocketOrder = await createAdhocOrderOnShiprocket(order, token);
+
+  // 2) Assign locked courier
+  // const courierData = await assignLockedCourier(
+  //   shiprocketOrder.order_id,
+  //   order.shippingMeta.courierId,
+  //   token
+  // );
+
+  // 3) Save shipment in DB
+  // const shipment = await saveShipment(order, shiprocketOrder, courierData);
+  const shipment = await saveShipment(order, shiprocketOrder);
+
+  return shipment;
+}
+async function createAdhocOrderOnShiprocket(order, token) {
   const fullName = order.shippingAddress.name.trim();
   const parts = fullName.split(" ");
   const firstName = parts[0];
@@ -20,9 +36,9 @@ const createShiprocketOrder = async (order) => {
     0
   );
 
-  const boxLength = Math.max(...order.items.map((i) => i.length));
-  const boxWidth = Math.max(...order.items.map((i) => i.width));
-  const boxHeight = Math.max(...order.items.map((i) => i.height));
+  const boxLength = Math.max(...order.items.map(i => i.length));
+  const boxWidth = Math.max(...order.items.map(i => i.width));
+  const boxHeight = Math.max(...order.items.map(i => i.height));
 
   const payload = {
     order_id: order._id.toString(),
@@ -43,7 +59,7 @@ const createShiprocketOrder = async (order) => {
 
     shipping_is_billing: true,
 
-    order_items: order.items.map((item) => ({
+    order_items: order.items.map(item => ({
       name: item.name,
       units: item.quantity,
       selling_price: item.finalPrice || item.price,
@@ -56,8 +72,9 @@ const createShiprocketOrder = async (order) => {
     breadth: boxWidth,
     height: boxHeight,
     weight: totalWeight,
-    auto_assign: order.paymentMethod !== "COD",
-    is_pickup: order.paymentMethod !== "COD",
+
+    auto_assign: false,
+    is_pickup: false,
   };
 
   const response = await axios.post(
@@ -68,78 +85,60 @@ const createShiprocketOrder = async (order) => {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      timeout: 15000,
     }
   );
 
-  const shiprocket = response.data;
-  console.log(shiprocket);
-  // ✅ Create shipment (logistics master)
+  return response.data;
+}
+async function assignLockedCourier(orderId, courierId, token) {
+  const response = await axios.post(
+    "https://apiv2.shiprocket.in/v1/external/courier/assign",
+    {
+      order_id: orderId,
+      courier_id: courierId,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.data.awb_code) {
+    throw new Error("Courier assignment failed");
+  }
+
+  return response.data;
+}
+async function saveShipment(order, shiprocketOrder) {
   const shipment = await shipmentSchema.create({
     orderId: order._id,
     provider: "Shiprocket",
-    shiprocketOrderId: shiprocket.order_id,
-    awb: shiprocket.awb_code || null,
-    courier: shiprocket.courier_name || null,
-    trackingUrl: shiprocket.tracking_url || null,
-    shippingStatus: payload.auto_assign ? "COURIER_ASSIGNED" : "CREATED",
+    shiprocketOrderId: shiprocketOrder.order_id,
+    // awb: courierData.awb_code,
+    // courier: courierData.courier_name,
+    // trackingUrl: courierData.tracking_url || null,
+    shippingStatus: "COURIER_ASSIGNED",
     charges: {
       estimated: order.shippingCharge,
     },
     statusHistory: [
       {
-        status: payload.auto_assign ? "COURIER_ASSIGNED" : "CREATED",
+        status: "COURIER_ASSIGNED",
         source: "shiprocket",
-        remark: "Shipment created",
+        remark: "Courier assigned",
       },
     ],
   });
 
-  // ✅ Attach shipment to order
   await Order.findByIdAndUpdate(order._id, {
     currentShipmentId: shipment._id,
   });
-  // if (!payload.auto_assign) {
-  //   await assignCourier(shipment.shiprocketOrderId); // ✅ correct
-  // }
 
-  return shiprocket;
-};
+  return shipment;
+}
 
-// async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
-//   const token = await getShiprocketToken();
-
-//   const url = `https://apiv2.shiprocket.in/v1/external/courier/serviceability/?pickup_postcode=${400053}&delivery_postcode=${deliveryPincode}&weight=${totalWeight}&cod=0`;
-
-//   const res = await axios.get(url, {
-//     headers: {
-//       Authorization: `Bearer ${token}`,
-//     },
-//   });
-// console.log(res.data.data)
-//   const couriers = res.data?.data?.available_courier_companies;
-
-//   if (!couriers || couriers.length === 0) {
-//     throw new Error("Shipping not available for this pincode");
-//   }
-// // India Post को exclude करने के लिए
-// const EXCLUDED_COURIERS = ['India Post', 'Speed Post', 'Business Parcel'];
-
-// const filteredCouriers = couriers.filter(courier =>
-//   !EXCLUDED_COURIERS.some(excluded =>
-//     courier.courier_name.includes(excluded)
-//   )
-// );
-//   // Cheapest courier choose karo
-//   filteredCouriers.sort((a, b) => a.rate - b.rate);
-//   const cheapest = couriers[0];
-
-//   return {
-//     shippingCharge: Number(cheapest.rate),
-//     courierName: cheapest.courier_name,
-//     estimatedDelivery: cheapest.etd,
-//   };
-// }
 
 async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
   const token = await getShiprocketToken();
@@ -176,55 +175,15 @@ async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
 
   return {
     shippingCharge: Number(recommendedCourier.rate),
+    courierId: recommendedCourier.courier_company_id, // 🔥 MUST
     courierName: recommendedCourier.courier_name,
     estimatedDelivery: recommendedCourier.etd,
     deliveryDays: recommendedCourier.estimated_delivery_days,
     courierRating: recommendedCourier.rating,
   };
 }
-const assignCourier = async (shiprocketOrderId) => {
-  const token = await getShiprocketToken();
-
-  const response = await axios.post(
-    "https://apiv2.shiprocket.in/v1/external/courier/assign/awb",
-    {
-      order_id: shiprocketOrderId,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  const data = response.data;
-
-  if (!data.awb_code) {
-    throw new Error("Courier assignment failed");
-  }
-
-  await shipmentSchema.findOneAndUpdate(
-    { shiprocketOrderId },
-    {
-      awb: data.awb_code,
-      courier: data.courier_name,
-      shippingStatus: "COURIER_ASSIGNED",
-      $push: {
-        statusHistory: {
-          status: "COURIER_ASSIGNED",
-          source: "shiprocket",
-          remark: "Courier assigned",
-        },
-      },
-    }
-  );
-
-  return data;
-};
-
 module.exports = {
   createShiprocketOrder,
   calculateShippingCharge,
-  assignCourier,
+  // assignCourier,
 };

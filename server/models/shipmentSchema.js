@@ -32,29 +32,29 @@ const shipmentSchema = new mongoose.Schema(
 
     pickupDate: Date,
     deliveredAt: Date,
-
     shippingStatus: {
       type: String,
       enum: [
         "CREATED",
-        "PROCESSING", // ✅ MISSING
-        "READY_TO_SHIP", // ✅ MISSING
-        "PICKUP_SCHEDULED", // ✅ MISSING
-        "PICKUP_GENERATED", // ✅ MISSING
-        "PICKUP_QUEUED", // ✅ MISSING
-        "MANIFEST_GENERATED", // ✅ MISSING
-        "PICKED_UP", // ✅ ALREADY EXISTS
-        "IN_TRANSIT", // ✅ ALREADY EXISTS
-        "OUT_FOR_DELIVERY", // ✅ ALREADY EXISTS
-        "DELIVERED", // ✅ ALREADY EXISTS
-        "RTO", // ✅ ALREADY EXISTS
-        "RTO_IN_TRANSIT", // ✅ MISSING
-        "RTO_OUT_FOR_DELIVERY", // ✅ MISSING
-        "RTO_DELIVERED", // ✅ MISSING
-        "CANCELLED", // ✅ ALREADY EXISTS
-        "LOST", // ✅ MISSING
-        "DAMAGED", // ✅ MISSING
-        "SHIPPED", // ✅ MISSING
+        "COURIER_ASSIGNED", // ✅ add this
+        "PROCESSING",
+        "READY_TO_SHIP",
+        "PICKUP_SCHEDULED",
+        "PICKUP_GENERATED",
+        "PICKUP_QUEUED",
+        "MANIFEST_GENERATED",
+        "PICKED_UP",
+        "IN_TRANSIT",
+        "OUT_FOR_DELIVERY",
+        "DELIVERED",
+        "RTO",
+        "RTO_IN_TRANSIT",
+        "RTO_OUT_FOR_DELIVERY",
+        "RTO_DELIVERED",
+        "CANCELLED",
+        "LOST",
+        "DAMAGED",
+        "SHIPPED",
       ],
       default: "CREATED",
     },
