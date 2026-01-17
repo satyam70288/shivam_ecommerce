@@ -10,7 +10,7 @@ const mongoSanitize = require("express-mongo-sanitize");
 const hpp = require("hpp");
 const rateLimit = require("express-rate-limit");
 const { connectDb } = require("./db/connection");
-
+const webhookRoutes=require("./routes/webhook")
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -157,7 +157,12 @@ connectDb();
 app.get("/", (req, res) => {
   res.send(`<center><h1>✅ Server Running on PORT: ${port}</h1></center>`);
 });
+app.post("/api/webhook/shiprocket", (req, res) => {
+  console.log("Shiprocket webhook:", req.body);
+  res.send("OK");
+});
 
+app.use("/api/webhook", webhookRoutes);
 // load routes
 readdirSync("./routes").forEach((route) => {
   app.use("/api", require(`./routes/${route}`));
@@ -178,6 +183,7 @@ app.use((err, req, res, next) => {
     .status(err.status || 500)
     .json({ message: err.message || "Server error" });
 });
+
 
 /* ========== START ========== */
 app.listen(port, () => {
