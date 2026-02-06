@@ -7,7 +7,7 @@ import {
   decreaseQuantity,
   clearCart,
   fetchCart,
-  addItemOptimistic,
+  // addItemOptimistic,
   removeItemOptimistic
 } from "@/redux/slices/cartSlice";
 import { useToast } from "@/hooks/use-toast";
