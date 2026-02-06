@@ -1,9 +1,10 @@
-import { ShoppingBag, CreditCard } from "lucide-react";
+import { ShoppingBag, CreditCard, Loader2 } from "lucide-react";
 
 const ProductActions = ({
   stock,
   onAddToCart,
   onBuyNow,
+  loading = false,
   paymentOptions,
   highlights = []
 }) => {
@@ -16,27 +17,40 @@ const ProductActions = ({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onAddToCart}
-            disabled={isOutOfStock}
+            disabled={isOutOfStock || loading}
             className={`flex-1 py-3.5 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm font-semibold ${
               isOutOfStock
                 ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                : loading
+                ? "bg-yellow-400 text-white cursor-wait"
                 : "bg-yellow-500 hover:bg-yellow-600 text-white"
             }`}
           >
-            <ShoppingBag size={20} />
-            {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+            {loading ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={20} />
+                {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+              </>
+            )}
           </button>
           
           <button
             onClick={onBuyNow}
-            disabled={isOutOfStock}
+            disabled={isOutOfStock || loading}
             className={`flex-1 py-3.5 px-6 rounded-lg transition-colors shadow-sm font-semibold ${
               isOutOfStock
                 ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                : loading
+                ? "bg-orange-400 text-white cursor-wait"
                 : "bg-orange-500 hover:bg-orange-600 text-white"
             }`}
           >
-            Buy Now
+            {loading ? "Processing..." : "Buy Now"}
           </button>
         </div>
         

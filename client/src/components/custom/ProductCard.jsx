@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import useCartActions from "@/hooks/useCartActions";
 import { Heart, ShoppingBag, Star, Sparkles } from "lucide-react";
 import { formatPrice, getImageUrl, getStockStatus } from "@/utils/productCard";
 import {
@@ -10,7 +9,8 @@ import {
   revertOptimisticToggle,
   toggleWishlist,
 } from "@/redux/slices/wishlistSlice";
-import { addToCartThunk } from "@/redux/thunks/cartThunk";
+import { addToCart } from "@/redux/slices/cartSlice"; // ✅ Correct import
+import useCartActions from "@/hooks/useCartActions"; // ✅ Use hook instead
 
 const ProductCard = ({
   _id,
@@ -18,35 +18,41 @@ const ProductCard = ({
   price = 0,
   rating = 0,
   reviewCount = 0,
-  image = null, isOfferActive,   // 👈 ADD THIS
+  image = null,
+  isOfferActive = false,
   discountedPrice = 0,
   discount = 0,
   variants = [],
   stock = 0,
   isFeatured = false,
   isBestSeller = false,
+  slug, // Add slug for product link
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { wishlistStatus } = useSelector((state) => state.wishlist);
-  const { addToCart } = useCartActions();
+  
+  // ✅ CORRECT: Use cart actions hook
+  const { addToCart: addToCartHandler } = useCartActions();
 
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
   const isWishlisted = wishlistStatus[_id] || false;
- const finalPrice = isOfferActive && discountedPrice > 0
-  ? discountedPrice
-  : price;
+  
+  // Calculate final price
+  const finalPrice = isOfferActive && discountedPrice > 0
+    ? discountedPrice
+    : price;
 
   const savings = price - finalPrice;
- const discountPercentage =
-  isOfferActive && discount > 0 ? discount : 0;
-
+  const discountPercentage = isOfferActive && discount > 0 ? discount : 0;
   const displayImage = getImageUrl({ image, variants });
+  const stockStatus = getStockStatus(stock);
 
+  // ✅ CORRECT: Add to cart function
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -57,26 +63,54 @@ const ProductCard = ({
     }
 
     setIsAdding(true);
-    const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!user) {
+    try {
+      // Get first available variant or default
+      const firstVariant = variants?.[0];
+      const color = firstVariant?.color || "Default";
+      const size = firstVariant?.size || "M";
+      const variantId = firstVariant?._id;
+
+      // Prepare product data for optimistic update
+      const productData = {
+        _id,
+        name,
+        price: finalPrice,
+        images: [{ url: displayImage }],
+        variants: variants,
+      };
+
+      // ✅ Use hook instead of direct dispatch
+      await addToCartHandler({
+        productId: _id,
+        productData, // For optimistic update
+        quantity: 1,
+        color,
+        size,
+        variantId,
+      });
+
+      // Show success toast
+      toast({
+        title: "✅ Added to cart!",
+        description: `${name} added to cart successfully`,
+        duration: 3000,
+      });
+
+      // Optional: Trigger cart drawer to open
+      // window.dispatchEvent(new CustomEvent("openCartDrawer"));
+
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      toast({
+        title: "❌ Failed to add to cart",
+        description: error.message || "Please try again",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
       setIsAdding(false);
-      return;
     }
-
-    dispatch(
-    addToCartThunk({
-      userId: user.id,
-      productId: _id,
-      quantity: 1,
-      price: finalPrice,
-      color: variants?.[0]?.color || "Default",
-      size: "",
-      toast,
-    })
-  ).finally(() => {
-    setIsAdding(false);
-  });
   };
 
   const handleWishlistToggle = async (e) => {
@@ -119,7 +153,8 @@ const ProductCard = ({
     }
   };
 
-  const stockStatus = getStockStatus(stock);
+  // Product link - use slug if available, otherwise ID
+  const productLink = slug ? `/product/${slug}` : `/product/${_id}`;
 
   return (
     <div className="group relative font-sans">
@@ -133,6 +168,7 @@ const ProductCard = ({
           onClick={handleWishlistToggle}
           className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110"
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          disabled={isToggling}
         >
           <Heart
             size={16}
@@ -140,7 +176,7 @@ const ProductCard = ({
               isWishlisted
                 ? "fill-red-500 text-red-500"
                 : "text-gray-500 dark:text-gray-400 hover:text-red-500"
-            }`}
+            } ${isToggling ? "opacity-50" : ""}`}
           />
         </button>
 
@@ -169,8 +205,8 @@ const ProductCard = ({
         </div>
         {/* ========== END ABSOLUTE BADGES ========== */}
 
-        <Link to={`/product/${_id}`} className="block flex-grow">
-          {/* IMAGE SECTION - Less padding now */}
+        <Link to={productLink} className="block flex-grow">
+          {/* IMAGE SECTION */}
           <div className="pt-8 pb-3 px-4">
             <div className="w-full aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
               {/* Image loading skeleton */}
@@ -191,14 +227,14 @@ const ProductCard = ({
             </div>
           </div>
 
-          {/* CONTENT SECTION - Compact */}
+          {/* CONTENT SECTION */}
           <div className="px-4 pb-3 space-y-1 flex-grow">
-            {/* PRODUCT NAME - 2 lines */}
+            {/* PRODUCT NAME */}
             <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate leading-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors pb-1">
               {name}
             </h3>
 
-            {/* RATING - Compact */}
+            {/* RATING */}
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-2 py-1 rounded-lg">
                 <Star size={12} className="fill-white" />
@@ -232,12 +268,10 @@ const ProductCard = ({
                 )}
               </div>
             </div>
-
-            
           </div>
         </Link>
 
-        {/* ADD TO CART BUTTON - Compact */}
+        {/* ADD TO CART BUTTON */}
         <div className="px-4 pb-4">
           <button
             onClick={handleAddToCart}

@@ -11,7 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logoutUser } from "@/redux/slices/authSlice";
 import { persistor } from "../../redux/store"; // Adjust path as needed
-import { emptyCart } from "@/redux/slices/cartSlice";
+// import { emptyCart } from "@/redux/slices/cartSlice";
 import { clearWishlist } from "@/redux/slices/wishlistSlice";
 
 const LogoutToggle = ({ user }) => {
@@ -34,7 +34,7 @@ const LogoutToggle = ({ user }) => {
     
     // 3. Clear cart
     //console.log("Clearing cart...");
-    dispatch(emptyCart());
+    // dispatch(emptyCart());
     dispatch(clearWishlist());
     
     // 4. Navigate to login

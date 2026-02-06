@@ -3,11 +3,11 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import {
-  increaseQtyThunk,
-  decreaseQtyThunk,
-  removeItemThunk,
-} from "@/redux/thunks/cartThunk";
+import { 
+  increaseQuantity, 
+  decreaseQuantity, 
+  removeFromCart 
+} from "@/redux/slices/cartSlice";
 
 const CartProduct = ({
   name,
@@ -28,10 +28,17 @@ const CartProduct = ({
   const { isAuthenticated, user } = useSelector((state) => state.auth);
   const userId = user?.id;
 
-  const displayPrice = finalPrice ?? price;
-  const totalPrice = displayPrice * quantity;
-  const hasDiscount = price > finalPrice;
-  const discountPercent = hasDiscount ? Math.round((1 - finalPrice / price) * 100) : 0;
+  // ✅ FIX: Convert prices to numbers before calculations
+  const numericPrice = typeof price === 'string' ? parseFloat(price) : Number(price) || 0;
+  const numericFinalPrice = typeof finalPrice === 'string' ? parseFloat(finalPrice) : Number(finalPrice) || 0;
+  
+  const displayPrice = numericFinalPrice > 0 ? numericFinalPrice : numericPrice;
+  const totalPrice = displayPrice * (quantity || 1);
+  const hasDiscount = numericPrice > numericFinalPrice;
+  const discountPercent = hasDiscount 
+    ? Math.round((1 - numericFinalPrice / numericPrice) * 100) 
+    : 0;
+  const discountAmount = hasDiscount ? (numericPrice - numericFinalPrice) * (quantity || 1) : 0;
 
   const handleRemove = () => {
     if (!isAuthenticated) {
@@ -39,15 +46,30 @@ const CartProduct = ({
       return;
     }
 
-    dispatch(
-      removeItemThunk({
-        userId,
-        cartItemId,
-        color,
-        size,
-        toast,
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not found. Please login again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    dispatch(removeFromCart({ userId, cartItemId }))
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "Removed",
+          description: "Product removed from cart",
+        });
       })
-    );
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to remove item",
+          variant: "destructive",
+        });
+      });
   };
 
   const handleQuantityDecrease = () => {
@@ -56,16 +78,18 @@ const CartProduct = ({
       return;
     }
 
+    if (!userId) return;
+
     if (quantity > 1) {
-      dispatch(
-        decreaseQtyThunk({
-          userId,
-          cartItemId,
-          color,
-          size,
-          toast,
-        })
-      );
+      dispatch(decreaseQuantity({ userId, cartItemId }))
+        .unwrap()
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: error.message || "Failed to decrease quantity",
+            variant: "destructive",
+          });
+        });
     } else {
       handleRemove();
     }
@@ -77,23 +101,26 @@ const CartProduct = ({
       return;
     }
 
-    if (quantity >= stock) {
+    if (!userId) return;
+
+    if (quantity >= (stock || 99)) {
       toast({
         title: "Maximum stock reached",
-        description: `Only ${stock} items available`,
+        description: `Only ${stock || 0} items available`,
+        variant: "destructive",
       });
       return;
     }
 
-    dispatch(
-      increaseQtyThunk({
-        userId,
-        cartItemId,
-        color,
-        size,
-        toast,
-      })
-    );
+    dispatch(increaseQuantity({ userId, cartItemId }))
+      .unwrap()
+      .catch((error) => {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to increase quantity",
+          variant: "destructive",
+        });
+      });
   };
 
   return (
@@ -104,7 +131,7 @@ const CartProduct = ({
           {/* Product Image */}
           <div className="relative">
             <img
-              src={image}
+              src={image || "/placeholder.jpg"}
               alt={name}
               className="w-16 h-16 object-cover rounded"
             />
@@ -135,7 +162,7 @@ const CartProduct = ({
               </span>
               {hasDiscount && (
                 <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                  ₹{(price * quantity).toFixed(2)}
+                  ₹{(numericPrice * quantity).toFixed(2)}
                 </span>
               )}
             </div>
@@ -144,7 +171,8 @@ const CartProduct = ({
           {/* Remove Button */}
           <button
             onClick={handleRemove}
-            className="text-gray-400 hover:text-red-500"
+            className="text-gray-400 hover:text-red-500 transition-colors"
+            aria-label="Remove item"
           >
             <X size={18} />
           </button>
@@ -159,7 +187,7 @@ const CartProduct = ({
           {hasDiscount && (
             <div className="flex justify-between text-green-600 dark:text-green-400">
               <span>You save</span>
-              <span>₹{((price - finalPrice) * quantity).toFixed(2)}</span>
+              <span>₹{discountAmount.toFixed(2)}</span>
             </div>
           )}
         </div>
@@ -172,17 +200,19 @@ const CartProduct = ({
               <button
                 onClick={handleQuantityDecrease}
                 disabled={quantity <= 1}
-                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Decrease quantity"
               >
                 <Minus size={14} />
               </button>
-              <div className="w-10 h-8 flex items-center justify-center border-x border-gray-300 dark:border-gray-600">
+              <div className="w-10 h-8 flex items-center justify-center border-x border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
                 <span className="text-sm font-medium">{quantity}</span>
               </div>
               <button
                 onClick={handleQuantityIncrease}
-                disabled={quantity >= stock}
-                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40"
+                disabled={quantity >= (stock || 99)}
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Increase quantity"
               >
                 <Plus size={14} />
               </button>
@@ -191,7 +221,11 @@ const CartProduct = ({
 
           {/* Stock Status */}
           <div className="text-right">
-            {stock < 10 ? (
+            {stock === 0 ? (
+              <div className="text-xs text-red-600 dark:text-red-400">
+                Out of stock
+              </div>
+            ) : stock < 10 ? (
               <div className="text-xs text-amber-600 dark:text-amber-400">
                 Only {stock} left!
               </div>
