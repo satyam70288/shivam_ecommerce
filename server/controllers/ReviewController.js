@@ -11,6 +11,9 @@ const createReview = async (req, res) => {
     return res.status(401).json({ success: false, message: "Access denied" });
   }
 
+  console.log(req.body, "body");
+  console.log(req.files, "files");
+
   try {
     const userId = req.id;
     const { productId, review, rating } = req.body;
@@ -39,16 +42,40 @@ const createReview = async (req, res) => {
     }
 
     const uploadedImages = [];
-    if (req.files?.length) {
+    
+    // FIX: Check if files exist and handle buffer
+    if (req.files && req.files.length > 0) {
+      console.log("Processing files:", req.files.length);
+      
       for (const file of req.files) {
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: "review",
-        });
-        uploadedImages.push({
-          url: result.secure_url,
-          public_id: result.public_id,
-        });
+        try {
+          // For memory storage, use buffer instead of path
+          const uploadResult = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+              { folder: "review" },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            
+            // Write buffer to stream
+            stream.end(file.buffer);
+          });
+          
+          uploadedImages.push({
+            url: uploadResult.secure_url,
+            public_id: uploadResult.public_id,
+          });
+          
+          console.log("Image uploaded successfully:", uploadResult.secure_url);
+        } catch (uploadError) {
+          console.error("Error uploading image to cloudinary:", uploadError);
+          // Continue with other images even if one fails
+        }
       }
+    } else {
+      console.log("No files received in req.files");
     }
 
     const newReview = await Review.create({
@@ -62,7 +89,7 @@ const createReview = async (req, res) => {
     product.reviews.push(newReview._id);
     await product.save();
 
-    // ⭐ single source of truth
+    // Calculate average rating
     await product.calculateRating();
 
     return res.status(201).json({
@@ -74,7 +101,7 @@ const createReview = async (req, res) => {
     console.error("Create review error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Internal server error",
     });
   }
 };

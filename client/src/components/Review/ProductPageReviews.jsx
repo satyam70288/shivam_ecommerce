@@ -9,7 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 
 // Import divided components
 import ReviewCard from "./ReviewCard";
-import { getRandomAvatar, formatDate, calculateAverageRating } from "./reviewUtils";
+import {
+  getRandomAvatar,
+  formatDate,
+  calculateAverageRating,
+} from "./reviewUtils";
 
 const ProductPageReviews = ({ productId, productSlug }) => {
   const [newReply, setNewReply] = useState({ review: "" });
@@ -20,7 +24,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
     review: "",
     rating: 0,
   });
-  
+
   const { toast } = useToast();
   const { user } = useSelector((state) => state.auth);
 
@@ -73,7 +77,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
     }
 
     const result = await addReply(reviewId, { review: newReply.review });
-    
+
     if (result?.success) {
       toast({
         title: "Reply posted",
@@ -114,22 +118,23 @@ const ProductPageReviews = ({ productId, productSlug }) => {
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
           <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Customer Reviews
+            Customer Reviewsrrrrr
           </h3>
           {reviewList.length > 0 && (
             <div className="flex items-center gap-2 mt-1">
               <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm">
-                {reviewList.length} reviews • {calculateAverageRating(reviewList)}/5 average
+                {reviewList.length} reviews •{" "}
+                {calculateAverageRating(reviewList)}/5 average
               </p>
             </div>
           )}
         </div>
-        
+
         {/* Write Review Button */}
         {productSlug && (
           <Link to={`/product/${productId}/reviews`}>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <MessageCircle className="h-4 w-4 mr-2" />
@@ -149,7 +154,6 @@ const ProductPageReviews = ({ productId, productSlug }) => {
           <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base px-4 mb-6">
             Be the first to share your thoughts
           </p>
-        
         </div>
       ) : (
         <>
@@ -157,7 +161,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
             {displayedReviews.map((review) => (
               <ReviewCard
                 key={review._id}
-                review={review}
+                review={review} // ✅ यहाँ review object में images array है
                 user={user}
                 isEditing={editing.status && editing.reviewId === review._id}
                 editing={editing}
@@ -179,12 +183,12 @@ const ProductPageReviews = ({ productId, productSlug }) => {
           {/* View All Reviews Button - All Reviews Page पर ले जाएगा */}
           {reviewList.length > 2 && (
             <div className="mt-6 md:mt-8 flex flex-col items-center">
-              <Link 
-                to={`/product/${productId}/reviews`} 
+              <Link
+                to={`/product/${productId}/reviews`}
                 className="w-full md:w-auto"
               >
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="w-full text-sm border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <span>View All Reviews</span>
@@ -196,8 +200,6 @@ const ProductPageReviews = ({ productId, productSlug }) => {
               </p>
             </div>
           )}
-
-          
         </>
       )}
     </div>
