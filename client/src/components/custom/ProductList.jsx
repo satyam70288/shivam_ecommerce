@@ -152,20 +152,7 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
           </div>
         )}
 
-        {/* Products Count and Filter Info */}
-        {/* {(category !== "All" || price) && !search && products.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {products.length} products
-                {category !== "All" && ` in "${category}"`}
-                {price && ` • Price: ${price}`}
-              </div>
-            </div>
-          </div>
-        )} */}
-
-        {/* Products Grid */}
+       
         {products.length > 0 ? (
           <>
             <div className="relative">
