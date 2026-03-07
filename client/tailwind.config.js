@@ -5,9 +5,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Inter', 'Poppins', 'Manrope', 'system-ui', 'sans-serif'],
-        'display': ['Poppins', 'Inter', 'Manrope', 'sans-serif'],
-        'body': ['Inter', 'Manrope', 'system-ui', 'sans-serif'],
+        // ✅ Mulish ko add karo aur priority do
+        'sans': ['Mulish', 'Inter', 'Poppins', 'Manrope', 'system-ui', 'sans-serif'],
+        'display': ['Mulish', 'Poppins', 'Inter', 'Manrope', 'sans-serif'],
+        'body': ['Mulish', 'Inter', 'Manrope', 'system-ui', 'sans-serif'],
+        'mulish': ['Mulish', 'sans-serif'], // Sirf Mulish ke liye separate class
       },
       keyframes: {
         fadeIn: {
@@ -79,5 +81,4 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-  
 };
