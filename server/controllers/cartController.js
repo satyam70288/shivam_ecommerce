@@ -90,9 +90,9 @@ exports.addToCart = async (req, res) => {
 };
 
 // Get user's cart - ✅ FIXED: Use token, not params
+// Get user's cart with discounted prices
 exports.getCart = async function (req, res) {
   try {
-    // ✅ Get userId from token - NOT FROM PARAMS
     const userId = req.id || req.userId || req.user?.id;
 
     if (!userId) {
@@ -104,124 +104,77 @@ exports.getCart = async function (req, res) {
 
     const cart = await Cart.findOne({ user: userId }).populate({
       path: "products.product",
-      select: "name price discount images stock",
+      select: "name price discount images stock isOfferActive offerValidTill",
     });
 
     if (!cart) {
       return res.status(200).json({
         success: true,
-        cart: { products: [] },
+        cart: { items: [], summary: { subtotal: 0, discount: 0, total: 0 } }
       });
     }
 
-    // Initialize variables
     let subtotal = 0;
-    let discount = 0;
+    let totalDiscount = 0;
     const items = [];
 
-    // Helper function to round to 2 decimal places
-    const roundToTwo = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+    for (const item of cart.products) {
+      const product = item.product;
+      if (!product) continue;
 
-    const processItem = (cartItem, product, qty, extra = {}) => {
-      const price = roundToTwo(product.price);
-      const finalPrice = product.discount
-        ? roundToTwo(price * (1 - product.discount / 100))
-        : price;
+      // ✅ Use schema method to get current discounted price
+      const currentPrice = product.price;
+      const currentDiscountedPrice = product.getDiscountedPrice();
+      
+      // Use stored discountedPrice or calculate fresh
+      const finalPrice = item.discountedPrice || currentDiscountedPrice;
+      const discountPerUnit = currentPrice - finalPrice;
+      
+      const lineTotal = finalPrice * item.quantity;
+      const lineDiscount = discountPerUnit * item.quantity;
 
-      const discountAmountPerUnit = roundToTwo(price - finalPrice);
-      const discountPercent = product.discount || 0;
-
-      const lineSubtotal = roundToTwo(price * qty);
-      const lineDiscount = roundToTwo(discountAmountPerUnit * qty);
-
-      subtotal = roundToTwo(subtotal + lineSubtotal);
-      discount = roundToTwo(discount + lineDiscount);
+      subtotal += currentPrice * item.quantity;
+      totalDiscount += lineDiscount;
 
       items.push({
-        cartItemId: cartItem._id,
+        cartItemId: item._id,
         productId: product._id,
         name: product.name,
         image: product.images?.[0]?.url,
-        price: price.toFixed(2),
-        discountPercent,
-        finalPrice: finalPrice.toFixed(2),
-        quantity: qty,
-        lineTotal: roundToTwo(finalPrice * qty).toFixed(2),
-        stock: product.stock,
-        color: cartItem.color,
-        size: cartItem.size,
-        ...extra,
+        originalPrice: currentPrice,
+        discountedPrice: finalPrice,
+        discountPercent: product.discount || 0,
+        discountAmount: discountPerUnit,
+        quantity: item.quantity,
+        lineTotal,
+        lineDiscount,
+        color: item.color,
+        size: item.size,
+        stock: product.stock
       });
-    };
-
-    // Process cart items
-    for (const cartItem of cart.products) {
-      const product = cartItem.product;
-
-      if (!product) {
-        continue;
-      }
-
-      const requestedQuantity = cartItem.quantity;
-      const availableStock = product.stock;
-
-      if (availableStock === 0) {
-        items.push({
-          productId: product._id,
-          name: product.name,
-          image: product.images?.[0]?.url,
-          price: roundToTwo(product.price).toFixed(2),
-          finalPrice: roundToTwo(product.price).toFixed(2),
-          quantity: requestedQuantity,
-          stock: 0,
-          availableStock: 0,
-          outOfStock: true,
-          message: "Out of stock",
-        });
-        continue;
-      }
-
-      if (requestedQuantity > availableStock) {
-        const limitedQuantity = availableStock;
-        processItem(cartItem, product, limitedQuantity, {
-          requestedQuantity,
-          limited: true,
-          message: `Only ${availableStock} available, reduced from ${requestedQuantity}`,
-          stock: availableStock,
-        });
-      } else {
-        processItem(cartItem, product, requestedQuantity, {
-          stock: availableStock,
-        });
-      }
     }
 
-    const total = roundToTwo(subtotal - discount);
-    const grandTotal = roundToTwo(total);
-
-    const transformedCart = {
-      items,
-      summary: {
-        subtotal: subtotal.toFixed(2),
-        discount: discount.toFixed(2),
-        total: total.toFixed(2),
-        grandTotal: grandTotal.toFixed(2),
-        itemCount: items.reduce((sum, item) => {
-          if (item.outOfStock) return sum;
-          return sum + (item.quantity || 0);
-        }, 0),
-      },
-    };
+    const total = subtotal - totalDiscount;
 
     res.status(200).json({
       success: true,
-      cart: transformedCart,
+      cart: {
+        items,
+        summary: {
+          subtotal: Math.round(subtotal * 100) / 100,
+          discount: Math.round(totalDiscount * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          itemCount: items.length,
+          totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0)
+        }
+      }
     });
+
   } catch (error) {
     console.error("getCart error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server error while fetching cart",
+      message: error.message
     });
   }
 };

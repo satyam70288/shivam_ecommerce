@@ -1,3 +1,4 @@
+// components/custom/ReviewsComponent.jsx (FIXED)
 import React, { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useSelector } from "react-redux";
@@ -15,12 +16,18 @@ const ReviewsComponent = ({ productId }) => {
   const { toast } = useToast();
   const { user } = useSelector((state) => state.auth);
 
+  // ✅ SINGLE SOURCE OF TRUTH - Sirf yahan use karo
   const {
     reviews: reviewList,
     loading,
     fetchReviews,
+    createReview,
+    updateReview,
+    deleteReview,
+    addReply
   } = useReviewOperations(productId);
 
+  // ✅ Fetch on mount
   useEffect(() => {
     fetchReviews();
   }, [productId]);
@@ -29,8 +36,9 @@ const ReviewsComponent = ({ productId }) => {
     setShowReviewForm((prev) => !prev);
   };
 
+  // ✅ Review create hone ke baad
   const handleReviewSuccess = () => {
-    fetchReviews();
+    fetchReviews(); // Refresh reviews
     setShowReviewForm(false);
     toast({
       title: "Success!",
@@ -81,8 +89,16 @@ const ReviewsComponent = ({ productId }) => {
         )}
       </div>
 
-      {/* Reviews Preview */}
-      <ProductPageReviews productId={productId} />
+      {/* ✅ PASS REVIEWS AS PROPS - No internal hook */}
+      <ProductPageReviews 
+        productId={productId}
+        reviews={reviewList}
+        loading={loading}
+        onUpdate={fetchReviews}
+        onDelete={deleteReview}
+        onUpdateReview={updateReview}
+        onAddReply={addReply}
+      />
 
       {/* Image Modal */}
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>

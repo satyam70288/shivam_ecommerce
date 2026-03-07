@@ -10,35 +10,34 @@ import {
 } from "@/redux/slices/cartSlice";
 
 const CartProduct = ({
-  name,
-  price,
-  finalPrice,
+  // ✅ Match backend response field names
+  cartItemId,
   productId,
+  name,
   image,
+  originalPrice,      // ✅ From backend
+  discountedPrice,     // ✅ From backend
+  discountPercent,     // ✅ From backend
+  discountAmount,      // ✅ From backend
   quantity,
-  stock,
+  lineTotal,          // ✅ From backend
+  lineDiscount,       // ✅ From backend
   color,
   size,
-  cartItemId,
+  stock,
+  onUpdate
 }) => {
   const { toast } = useToast();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const userId = user?.id;
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
-  // ✅ FIX: Convert prices to numbers before calculations
-  const numericPrice = typeof price === 'string' ? parseFloat(price) : Number(price) || 0;
-  const numericFinalPrice = typeof finalPrice === 'string' ? parseFloat(finalPrice) : Number(finalPrice) || 0;
-  
-  const displayPrice = numericFinalPrice > 0 ? numericFinalPrice : numericPrice;
-  const totalPrice = displayPrice * (quantity || 1);
-  const hasDiscount = numericPrice > numericFinalPrice;
-  const discountPercent = hasDiscount 
-    ? Math.round((1 - numericFinalPrice / numericPrice) * 100) 
-    : 0;
-  const discountAmount = hasDiscount ? (numericPrice - numericFinalPrice) * (quantity || 1) : 0;
+  // ✅ Use the values directly from backend
+  const displayPrice = discountedPrice || originalPrice || 0;
+  const hasDiscount = discountPercent > 0 && originalPrice > discountedPrice;
+  const itemTotal = lineTotal || (displayPrice * quantity);
+  const itemDiscount = lineDiscount || (discountAmount * quantity) || 0;
 
   const handleRemove = () => {
     if (!isAuthenticated) {
@@ -46,22 +45,14 @@ const CartProduct = ({
       return;
     }
 
-    if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not found. Please login again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    dispatch(removeFromCart({ userId, cartItemId }))
+    dispatch(removeFromCart({ cartItemId }))  // ✅ No userId needed with interceptor
       .unwrap()
       .then(() => {
         toast({
           title: "Removed",
           description: "Product removed from cart",
         });
+        if (onUpdate) onUpdate();
       })
       .catch((error) => {
         toast({
@@ -78,11 +69,12 @@ const CartProduct = ({
       return;
     }
 
-    if (!userId) return;
-
     if (quantity > 1) {
-      dispatch(decreaseQuantity({ userId, cartItemId }))
+      dispatch(decreaseQuantity({ cartItemId }))  // ✅ No userId
         .unwrap()
+        .then(() => {
+          if (onUpdate) onUpdate();
+        })
         .catch((error) => {
           toast({
             title: "Error",
@@ -101,8 +93,6 @@ const CartProduct = ({
       return;
     }
 
-    if (!userId) return;
-
     if (quantity >= (stock || 99)) {
       toast({
         title: "Maximum stock reached",
@@ -112,8 +102,11 @@ const CartProduct = ({
       return;
     }
 
-    dispatch(increaseQuantity({ userId, cartItemId }))
+    dispatch(increaseQuantity({ cartItemId }))  // ✅ No userId
       .unwrap()
+      .then(() => {
+        if (onUpdate) onUpdate();
+      })
       .catch((error) => {
         toast({
           title: "Error",
@@ -158,12 +151,17 @@ const CartProduct = ({
 
             <div className="mt-2 flex items-center gap-2">
               <span className="text-base font-bold text-gray-900 dark:text-white">
-                ₹{totalPrice.toFixed(2)}
+                ₹{itemTotal.toFixed(2)}
               </span>
               {hasDiscount && (
-                <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                  ₹{(numericPrice * quantity).toFixed(2)}
-                </span>
+                <>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
+                    ₹{(originalPrice * quantity).toFixed(2)}
+                  </span>
+                  <span className="text-xs text-green-600 font-medium">
+                    Save ₹{itemDiscount.toFixed(2)}
+                  </span>
+                </>
               )}
             </div>
           </div>
@@ -181,18 +179,18 @@ const CartProduct = ({
         {/* Price Details */}
         <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
           <div className="flex justify-between mb-1">
-            <span>₹{displayPrice.toFixed(2)} × {quantity} items</span>
-            <span>₹{totalPrice.toFixed(2)}</span>
+            <span>₹{displayPrice.toFixed(2)} × {quantity} item{quantity > 1 ? 's' : ''}</span>
+            <span>₹{itemTotal.toFixed(2)}</span>
           </div>
           {hasDiscount && (
             <div className="flex justify-between text-green-600 dark:text-green-400">
-              <span>You save</span>
-              <span>₹{discountAmount.toFixed(2)}</span>
+              <span>Discount</span>
+              <span>-₹{itemDiscount.toFixed(2)}</span>
             </div>
           )}
         </div>
 
-        {/* Quantity Controls - Flipkart Style */}
+        {/* Quantity Controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <span className="text-sm text-gray-600 dark:text-gray-400 mr-3">Quantity:</span>

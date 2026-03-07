@@ -1,13 +1,12 @@
-// components/Review/ProductPageReviews.js
-import React, { useEffect, useState } from "react";
+// components/Review/ProductPageReviews.jsx (FIXED)
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import { useReviewOperations } from "@/hooks/useReviewOperations";
 import { useSelector } from "react-redux";
 import { MessageCircle, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Import divided components
+// Import components
 import ReviewCard from "./ReviewCard";
 import {
   getRandomAvatar,
@@ -15,7 +14,16 @@ import {
   calculateAverageRating,
 } from "./reviewUtils";
 
-const ProductPageReviews = ({ productId, productSlug }) => {
+const ProductPageReviews = ({ 
+  productId, 
+  productSlug,
+  reviews,           // ✅ Props se aayenge
+  loading,
+  onUpdate,
+  onDelete,
+  onUpdateReview,
+  onAddReply
+}) => {
   const [newReply, setNewReply] = useState({ review: "" });
   const [replyingTo, setReplyingTo] = useState(null);
   const [editing, setEditing] = useState({
@@ -28,41 +36,38 @@ const ProductPageReviews = ({ productId, productSlug }) => {
   const { toast } = useToast();
   const { user } = useSelector((state) => state.auth);
 
-  const {
-    reviews: reviewList,
-    loading,
-    fetchReviews,
-    updateReview,
-    deleteReview,
-    addReply,
-  } = useReviewOperations(productId);
-
-  useEffect(() => {
-    if (productId) {
-      fetchReviews();
-    }
-  }, [productId]);
+  // ❌ REMOVED - No internal hook
+  // const {
+  //   reviews: reviewList,
+  //   loading,
+  //   fetchReviews,
+  //   updateReview,
+  //   deleteReview,
+  //   addReply,
+  // } = useReviewOperations(productId);
 
   const handleDeleteReview = async (reviewId) => {
     if (!confirm("Are you sure you want to delete this review?")) return;
-    await deleteReview(reviewId);
+    await onDelete(reviewId);
+    onUpdate(); // Refresh after delete
   };
 
   const handleEditReview = async (reviewId) => {
     if (!confirm("Are you sure you want to save changes?")) return;
 
-    const result = await updateReview(reviewId, {
+    const result = await onUpdateReview(reviewId, {
       updatedReview: editing.review,
       rating: editing.rating,
     });
 
-    if (result.success) {
+    if (result?.success) {
       setEditing({
         status: false,
         reviewId: null,
         review: "",
         rating: 0,
       });
+      onUpdate(); // Refresh after edit
     }
   };
 
@@ -76,7 +81,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
       return;
     }
 
-    const result = await addReply(reviewId, { review: newReply.review });
+    const result = await onAddReply(reviewId, { review: newReply.review });
 
     if (result?.success) {
       toast({
@@ -85,11 +90,11 @@ const ProductPageReviews = ({ productId, productSlug }) => {
       });
       setNewReply({ review: "" });
       setReplyingTo(null);
-      fetchReviews();
+      onUpdate(); // Refresh after reply
     }
   };
 
-  if (loading.fetch) {
+  if (loading?.fetch) {
     return (
       <div className="mt-8 md:mt-12">
         <div className="flex items-center justify-between mb-4 md:mb-6 px-4 md:px-0">
@@ -110,7 +115,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
   }
 
   // सिर्फ 3 reviews ही show करें
-  const displayedReviews = reviewList.slice(0, 2);
+  const displayedReviews = reviews?.slice(0, 2) || [];
 
   return (
     <div className="mt-8 md:mt-12 md:px-0">
@@ -120,11 +125,11 @@ const ProductPageReviews = ({ productId, productSlug }) => {
           <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
             Customer Reviews
           </h3>
-          {reviewList.length > 0 && (
+          {reviews?.length > 0 && (
             <div className="flex items-center gap-2 mt-1">
               <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm">
-                {reviewList.length} reviews •{" "}
-                {calculateAverageRating(reviewList)}/5 average
+                {reviews.length} reviews •{" "}
+                {calculateAverageRating(reviews)}/5 average
               </p>
             </div>
           )}
@@ -145,7 +150,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
       </div>
 
       {/* Reviews List */}
-      {reviewList.length === 0 ? (
+      {reviews?.length === 0 ? (
         <div className="text-center py-8 md:py-12 bg-white dark:bg-gray-900 rounded-xl md:rounded-2xl border border-gray-200 dark:border-gray-800">
           <MessageCircle className="h-10 w-10 md:h-12 md:w-12 text-gray-400 dark:text-gray-600 mx-auto mb-3 md:mb-4" />
           <h4 className="text-lg md:text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -161,7 +166,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
             {displayedReviews.map((review) => (
               <ReviewCard
                 key={review._id}
-                review={review} // ✅ यहाँ review object में images array है
+                review={review}
                 user={user}
                 isEditing={editing.status && editing.reviewId === review._id}
                 editing={editing}
@@ -171,17 +176,17 @@ const ProductPageReviews = ({ productId, productSlug }) => {
                 newReply={newReply}
                 setNewReply={setNewReply}
                 loading={loading}
-                handleAddReply={handleAddReply}
-                handleEditReview={handleEditReview}
-                handleDeleteReview={handleDeleteReview}
+                handleAddReply={() => handleAddReply(review._id)}
+                handleEditReview={() => handleEditReview(review._id)}
+                handleDeleteReview={() => handleDeleteReview(review._id)}
                 formatDate={formatDate}
                 getRandomAvatar={getRandomAvatar}
               />
             ))}
           </div>
 
-          {/* View All Reviews Button - All Reviews Page पर ले जाएगा */}
-          {reviewList.length > 2 && (
+          {/* View All Reviews Button */}
+          {reviews?.length > 2 && (
             <div className="mt-6 md:mt-8 flex flex-col items-center">
               <Link
                 to={`/product/${productId}/reviews`}
