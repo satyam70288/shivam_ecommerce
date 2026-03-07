@@ -1,12 +1,13 @@
 // redux/slices/checkoutSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from "@/api/axiosInterceptor"; // ✅ ONLY THIS LINE CHANGED
 
 const API = import.meta.env.VITE_API_URL;
 
-const authHeader = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
+// ❌ REMOVED - Interceptor handles this automatically
+// const authHeader = () => ({
+//   Authorization: `Bearer ${localStorage.getItem("token")}`,
+// });
 
 /* =====================================================
    ASYNC THUNKS
@@ -38,9 +39,7 @@ export const initCheckout = createAsyncThunk(
         params.append("addressId", addressId);
       }
 
-      const res = await axios.get(`${API}/checkout/init?${params.toString()}`, {
-        headers: authHeader(),
-      });
+      const res = await axiosInstance.get(`${API}/checkout/init?${params.toString()}`); // ✅ axios → axiosInstance
 
       return {
         ...res.data,
@@ -59,9 +58,7 @@ export const fetchAddresses = createAsyncThunk(
   "checkout/fetchAddresses",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`${API}/addresses`, {
-        headers: authHeader(),
-      });
+      const res = await axiosInstance.get(`${API}/addresses`); // ✅ axios → axiosInstance
       return res.data.data;
     } catch (err) {
       return rejectWithValue(
@@ -76,9 +73,7 @@ export const createAddress = createAsyncThunk(
   "checkout/createAddress",
   async (data, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API}/addresses`, data, {
-        headers: authHeader(),
-      });
+      const res = await axiosInstance.post(`${API}/addresses`, data); // ✅ axios → axiosInstance
       return res.data.data;
     } catch (err) {
       return rejectWithValue(
@@ -93,9 +88,7 @@ export const updateAddress = createAsyncThunk(
   "checkout/updateAddress",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const res = await axios.put(`${API}/addresses/${id}`, data, {
-        headers: authHeader(),
-      });
+      const res = await axiosInstance.put(`${API}/addresses/${id}`, data); // ✅ axios → axiosInstance
       return res.data.data;
     } catch (err) {
       return rejectWithValue(
@@ -110,9 +103,7 @@ export const deleteAddress = createAsyncThunk(
   "checkout/deleteAddress",
   async (id, { rejectWithValue }) => {
     try {
-      await axios.delete(`${API}/addresses/${id}`, {
-        headers: authHeader(),
-      });
+      await axiosInstance.delete(`${API}/addresses/${id}`); // ✅ axios → axiosInstance
       return id;
     } catch (err) {
       return rejectWithValue(
@@ -136,10 +127,9 @@ export const applyCoupon = createAsyncThunk(
         params.append("qty", qty || 1);
       }
 
-      const res = await axios.post(
+      const res = await axiosInstance.post( // ✅ axios → axiosInstance
         `${API}/coupons/apply?${params.toString()}`,
-        { code },
-        { headers: authHeader() }
+        { code }
       );
 
       return {
@@ -153,16 +143,18 @@ export const applyCoupon = createAsyncThunk(
   }
 );
 
+/* 7️⃣ PLACE COD ORDER */
 export const placeCodOrder = createAsyncThunk(
   "checkout/placeCodOrder",
   async (_, { rejectWithValue, getState }) => {
     try {
       const state = getState();
       const { addressId, productId, qty, summary } = state.checkout;
-      // console.log(addressId, productId, qty, .courierId)
+      
       if (!addressId) {
         return rejectWithValue("Address is required");
       }
+      
       const shippingInfo = summary.shippingInfo;
       if (!shippingInfo?.courierId) {
         return rejectWithValue("Shipping info missing. Please re-checkout.");
@@ -186,9 +178,7 @@ export const placeCodOrder = createAsyncThunk(
             },
           }; // CART
 
-      const res = await axios.post(endpoint, payload, {
-        headers: authHeader(),
-      });
+      const res = await axiosInstance.post(endpoint, payload); // ✅ axios → axiosInstance
 
       return res.data;
     } catch (err) {
@@ -214,16 +204,13 @@ export const createRazorpayOrder = createAsyncThunk(
       }
 
       // Create Razorpay order for payment initiation
-      const res = await axios.post(
+      const res = await axiosInstance.post( // ✅ axios → axiosInstance
         `${API}/generate-payment`,
         {
           addressId,
           productId,
           quantity: qty || 1,
           amount: summary.total, // Total amount from checkout summary
-        },
-        {
-          headers: authHeader(),
         }
       );
 
@@ -248,16 +235,13 @@ export const verifyRazorpayPayment = createAsyncThunk(
       const state = getState();
       const { addressId, productId, qty } = state.checkout;
 
-      const res = await axios.post(
+      const res = await axiosInstance.post( // ✅ axios → axiosInstance
         `${API}/verify-payment`,
         {
           ...paymentData,
           addressId,
           productId,
           quantity: qty || 1,
-        },
-        {
-          headers: authHeader(),
         }
       );
 

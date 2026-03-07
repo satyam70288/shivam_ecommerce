@@ -118,7 +118,7 @@ const ProductPageReviews = ({ productId, productSlug }) => {
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
           <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Customer Reviewsrrrrr
+            Customer Reviews
           </h3>
           {reviewList.length > 0 && (
             <div className="flex items-center gap-2 mt-1">

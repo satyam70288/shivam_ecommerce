@@ -37,6 +37,7 @@ const Navbar = () => {
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
+      console.log(user.id)
       // ✅ Correct: Use fetchCart from cartSlice
       dispatch(fetchCart(user.id));
     }

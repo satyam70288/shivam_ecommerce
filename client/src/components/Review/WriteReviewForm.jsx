@@ -40,8 +40,9 @@ const WriteReviewForm = ({
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     try {
+      // Validation
       if (!newReview.review.trim()) {
         return toast({
           title: "Review required",
@@ -65,7 +66,7 @@ const WriteReviewForm = ({
         images,
       });
 
-      if (result.success) {
+      if (result?.success) {  // ✅ Optional chaining use karo
         toast({
           title: "Review submitted",
           description: "Thanks for your feedback!",
@@ -80,14 +81,28 @@ const WriteReviewForm = ({
           onSuccess();
         }
       }
-      // Error handling is done inside createReview hook
+      
     } catch (error) {
-      // Fallback error handling
+      // ✅ Safe error handling
+      console.error("Review submission error:", error);
+      
+      let errorMessage = "Something went wrong. Please try again.";
+      
+      // Check if error has response
+      if (error.response) {
+        // Server ne response diya hai
+        errorMessage = error.response.data?.message || errorMessage;
+      } else if (error.request) {
+        // Request bheji gayi but response nahi aaya
+        errorMessage = "Network error. Please check your connection.";
+      } else {
+        // Kuch aur error hai
+        errorMessage = error.message || errorMessage;
+      }
+      
       toast({
         title: "Error",
-        description:
-          error.response.data.message ||
-          "Something went wrong. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

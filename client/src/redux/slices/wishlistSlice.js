@@ -1,24 +1,22 @@
 // store/slices/wishlistSlice.js
+import axiosInstance from '@/api/axiosInterceptor';
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL;
+// ✅ No need for API variable - axiosInstance already has baseURL
 
-// Helper function for auth headers
-const getAuthHeader = () => ({
-  Authorization: `Bearer ${localStorage.getItem("token")}`,
-});
-
-// ✅ Async thunks - सिर्फ दो ही (Toggle + Fetch)
+// Async thunks
 export const fetchWishlist = createAsyncThunk(
   'wishlist/fetch',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API}/wishlist`, {
-        headers: getAuthHeader(),
-      });
+      // ✅ Just use relative path
+      const response = await axiosInstance.get('/wishlist');
       return response.data.data || [];
     } catch (error) {
+      // ✅ Check for 401 specifically
+      if (error.response?.status === 401) {
+        return rejectWithValue('Please login to view wishlist');
+      }
       return rejectWithValue(
         error.response?.data?.message || 'Failed to fetch wishlist'
       );
@@ -26,25 +24,31 @@ export const fetchWishlist = createAsyncThunk(
   }
 );
 
-// ✅ सिर्फ एक toggle function - Backend में /wishlist/toggle endpoint होना चाहिए
-// store/slices/wishlistSlice.js
 export const toggleWishlist = createAsyncThunk(
   'wishlist/toggle',
-  async (productId, { rejectWithValue }) => {
+  async (productId, { rejectWithValue, dispatch }) => {
     try {
-      const response = await axios.post(
-        `${API}/toggle`,
-        { productId },
-        { headers: getAuthHeader() }
-      );
+      // ✅ First do optimistic update
+      dispatch(optimisticToggle(productId));
+      
+      // ✅ Then make API call
+      const response = await axiosInstance.post('/toggle', { productId });
       
       return {
         productId,
         action: response.data.action,
-        isInWishlist: response.data.isInWishlist
+        isInWishlist: response.data.isInWishlist,
+        product: response.data.product // If backend sends product data
       };
     } catch (error) {
-      // ✅ Error को string में convert करें
+      // ✅ Revert optimistic update on error
+      dispatch(revertOptimisticToggle(productId));
+      
+      // ✅ Handle specific errors
+      if (error.response?.status === 401) {
+        return rejectWithValue('Please login to modify wishlist');
+      }
+      
       return rejectWithValue(
         error.response?.data?.message || 
         error.message || 
@@ -56,7 +60,7 @@ export const toggleWishlist = createAsyncThunk(
 
 // Initial state
 const initialState = {
-  items: [], // पूरे product objects
+  items: [],
   wishlistStatus: {}, // { productId: true/false }
   loading: false,
   error: null,
@@ -68,31 +72,33 @@ const wishlistSlice = createSlice({
   name: 'wishlist',
   initialState,
   reducers: {
-    // ✅ Clear wishlist (logout पर use करें)
     clearWishlist: (state) => {
       state.items = [];
       state.wishlistStatus = {};
       state.error = null;
     },
     
-    // ✅ Optimistic toggle - instant UI update के लिए
+    // ✅ Fixed optimistic toggle
     optimisticToggle: (state, action) => {
       const productId = action.payload;
-      const currentStatus = state.wishlistStatus[productId] || false;
-      state.wishlistStatus[productId] = !currentStatus;
+      state.wishlistStatus[productId] = !state.wishlistStatus[productId];
     },
     
-    // ✅ Revert optimistic toggle - अगर API fail हो
+    // ✅ Fixed revert toggle
     revertOptimisticToggle: (state, action) => {
       const productId = action.payload;
-      const currentStatus = state.wishlistStatus[productId] || false;
-      state.wishlistStatus[productId] = !currentStatus;
+      state.wishlistStatus[productId] = !state.wishlistStatus[productId];
     },
     
-    // ✅ Set status manually (product page से आने पर)
     setWishlistStatus: (state, action) => {
       const { productId, status } = action.payload;
       state.wishlistStatus[productId] = status;
+    },
+    
+    // ✅ New: Batch update status
+    setBatchWishlistStatus: (state, action) => {
+      const statusMap = action.payload;
+      state.wishlistStatus = { ...state.wishlistStatus, ...statusMap };
     }
   },
   extraReducers: (builder) => {
@@ -105,11 +111,12 @@ const wishlistSlice = createSlice({
       .addCase(fetchWishlist.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.error = null; // ✅ Clear error on success
         
         // Reset and update status
         state.wishlistStatus = {};
         action.payload.forEach(product => {
-          if (product && product._id) {
+          if (product?._id) {
             state.wishlistStatus[product._id] = true;
           }
         });
@@ -119,6 +126,9 @@ const wishlistSlice = createSlice({
       .addCase(fetchWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        
+        // ✅ Don't clear items on error - keep old data
+        // state.items = []; // ❌ Don't do this
       })
       
       // 🔄 Toggle wishlist
@@ -128,6 +138,8 @@ const wishlistSlice = createSlice({
       })
       .addCase(toggleWishlist.fulfilled, (state, action) => {
         state.loading = false;
+        state.error = null; // ✅ Clear error on success
+        
         const { productId, isInWishlist, product } = action.payload;
         
         // Update status
@@ -135,7 +147,7 @@ const wishlistSlice = createSlice({
         
         // Update items array
         if (isInWishlist) {
-          // Product added - अगर backend product data भेजे तो add करें
+          // Product added - if product data provided
           if (product && !state.items.some(item => item._id === productId)) {
             state.items.push(product);
           }
@@ -149,6 +161,8 @@ const wishlistSlice = createSlice({
       .addCase(toggleWishlist.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+        
+        // ✅ Note: optimistic toggle already reverted in thunk
       });
   }
 });
@@ -157,7 +171,8 @@ export const {
   clearWishlist, 
   optimisticToggle, 
   revertOptimisticToggle,
-  setWishlistStatus 
+  setWishlistStatus,
+  setBatchWishlistStatus // ✅ Export new action
 } = wishlistSlice.actions;
 
 export default wishlistSlice.reducer;

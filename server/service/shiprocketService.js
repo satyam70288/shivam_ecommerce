@@ -147,46 +147,46 @@ async function saveShipment(order, shiprocketOrder) {
 }
 
 async function calculateShippingCharge({ deliveryPincode, totalWeight }) {
-  const token = await getShiprocketToken();
+  try {
+    const token = await getShiprocketToken();
+    const url = `https://apiv2.shiprocket.in/v1/external/courier/serviceability/?pickup_postcode=400053&delivery_postcode=${deliveryPincode}&weight=${totalWeight}&cod=0`;
+    
+    const res = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  const url = `https://apiv2.shiprocket.in/v1/external/courier/serviceability/?pickup_postcode=400053&delivery_postcode=${deliveryPincode}&weight=${totalWeight}&cod=0`;
+    const data = res.data?.data;
+    
+    if (!data?.available_courier_companies?.length) {
+      throw new Error("Shipping not available for this pincode");
+    }
 
-  const res = await axios.get(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    const couriers = data.available_courier_companies;
+    const recommendedId = data.shiprocket_recommended_courier_id || data.recommended_courier_company_id;
 
-  const data = res.data?.data;
+    // 🔥 Find recommended OR select cheapest
+    let selectedCourier = couriers.find(c => c.courier_company_id === recommendedId);
+    
+    if (!selectedCourier) {
+      console.log("⚠️ Recommended not found, selecting cheapest");
+      selectedCourier = couriers.reduce((cheapest, current) => 
+        current.rate < cheapest.rate ? current : cheapest
+      );
+    }
 
-  if (!data || !data.available_courier_companies?.length) {
-    throw new Error("Shipping not available for this pincode");
+    return {
+      shippingCharge: Number(selectedCourier.rate),
+      courierId: selectedCourier.courier_company_id,
+      courierName: selectedCourier.courier_name,
+      estimatedDelivery: selectedCourier.etd,
+      deliveryDays: selectedCourier.estimated_delivery_days,
+      isRecommended: selectedCourier.courier_company_id === recommendedId
+    };
+
+  } catch (error) {
+    console.error("Shipping error:", error);
+    throw error;
   }
-
-  const couriers = data.available_courier_companies;
-
-  // ✅ Shiprocket recommended courier ID
-  const recommendedId =
-    data.shiprocket_recommended_courier_id ||
-    data.recommended_courier_company_id;
-
-  // ✅ Find recommended courier
-  const recommendedCourier = couriers.find(
-    (c) => c.courier_company_id === recommendedId
-  );
-
-  if (!recommendedCourier) {
-    throw new Error("Recommended courier not found");
-  }
-
-  return {
-    shippingCharge: Number(recommendedCourier.rate),
-    courierId: recommendedCourier.courier_company_id, // 🔥 MUST
-    courierName: recommendedCourier.courier_name,
-    estimatedDelivery: recommendedCourier.etd,
-    deliveryDays: recommendedCourier.estimated_delivery_days,
-    courierRating: recommendedCourier.rating,
-  };
 }
 module.exports = {
   createShiprocketOrder,

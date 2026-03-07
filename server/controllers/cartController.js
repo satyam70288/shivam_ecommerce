@@ -1,10 +1,23 @@
+// controllers/cartController.js - FIXED VERSION
 var Cart = require("../models/Cart");
 var Product = require("../models/Product");
 
 // Add product to cart
 exports.addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity, color, size } = req.body;
+    // ✅ Get userId from token (set by auth middleware) - NOT FROM BODY
+    const userId = req.id || req.userId || req.user?.id; 
+    const { productId, quantity, color, size } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    console.log("Adding to cart - User:", userId, "Product:", productId);
+
     // 1️⃣ Validate product
     const product = await Product.findById(productId);
     if (!product || product.blacklisted) {
@@ -14,7 +27,7 @@ exports.addToCart = async (req, res) => {
       });
     }
 
-    // 2️⃣ Find cart
+    // 2️⃣ Find cart by userId (from token)
     let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
@@ -22,11 +35,11 @@ exports.addToCart = async (req, res) => {
         user: userId,
         products: [
           {
-            product: product._id, // ✅ ObjectId only
+            product: product._id,
             quantity,
             color,
             size,
-            price: product.price, // snapshot
+            price: product.price,
           },
         ],
       });
@@ -36,6 +49,7 @@ exports.addToCart = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Product added to cart",
+        data: cart
       });
     }
 
@@ -64,6 +78,7 @@ exports.addToCart = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Product added to cart",
+      data: cart
     });
   } catch (error) {
     console.error("addToCart error:", error);
@@ -74,10 +89,18 @@ exports.addToCart = async (req, res) => {
   }
 };
 
-// Get user's cart
+// Get user's cart - ✅ FIXED: Use token, not params
 exports.getCart = async function (req, res) {
   try {
-    const userId = req.params.userId;
+    // ✅ Get userId from token - NOT FROM PARAMS
+    const userId = req.id || req.userId || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
 
     const cart = await Cart.findOne({ user: userId }).populate({
       path: "products.product",
@@ -115,7 +138,7 @@ exports.getCart = async function (req, res) {
       discount = roundToTwo(discount + lineDiscount);
 
       items.push({
-        cartItemId: cartItem._id, // ✅ CORRECT
+        cartItemId: cartItem._id,
         productId: product._id,
         name: product.name,
         image: product.images?.[0]?.url,
@@ -142,7 +165,6 @@ exports.getCart = async function (req, res) {
       const requestedQuantity = cartItem.quantity;
       const availableStock = product.stock;
 
-      // If product is out of stock or insufficient stock
       if (availableStock === 0) {
         items.push({
           productId: product._id,
@@ -155,14 +177,11 @@ exports.getCart = async function (req, res) {
           availableStock: 0,
           outOfStock: true,
           message: "Out of stock",
-          // Don't add to totals
         });
         continue;
       }
 
-      // If requested quantity is more than available stock
       if (requestedQuantity > availableStock) {
-        // Add item with limited quantity (only available stock)
         const limitedQuantity = availableStock;
         processItem(cartItem, product, limitedQuantity, {
           requestedQuantity,
@@ -170,18 +189,13 @@ exports.getCart = async function (req, res) {
           message: `Only ${availableStock} available, reduced from ${requestedQuantity}`,
           stock: availableStock,
         });
-
-        // Also add an out of stock entry for the excess quantity?
-        // Or you can just show a warning in the item itself
       } else {
-        // Normal case: sufficient stock
         processItem(cartItem, product, requestedQuantity, {
           stock: availableStock,
         });
       }
     }
 
-    // Calculate totals - only from items that are in stock
     const total = roundToTwo(subtotal - discount);
     const grandTotal = roundToTwo(total);
 
@@ -193,7 +207,6 @@ exports.getCart = async function (req, res) {
         total: total.toFixed(2),
         grandTotal: grandTotal.toFixed(2),
         itemCount: items.reduce((sum, item) => {
-          // Only count items that are in stock and not out of stock
           if (item.outOfStock) return sum;
           return sum + (item.quantity || 0);
         }, 0),
@@ -213,20 +226,29 @@ exports.getCart = async function (req, res) {
   }
 };
 
-// Remove product from cart
-
+// Remove product from cart - ✅ FIXED: Use token
 exports.removeFromCart = async function (req, res) {
-  console.log("inside")
   try {
-    const { userId, cartItemId } = req.body; // cartItemId is the _id of the cart item
-    console.log(req.body, "Remove cart item payload");
+    // ✅ Get userId from token - NOT FROM BODY
+    const userId = req.id || req.userId || req.user?.id;
+    const { cartItemId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    console.log("Remove from cart - User:", userId, "Item:", cartItemId);
 
     // Find user's cart
     const cart = await Cart.findOne({ user: userId });
-    if (!cart)
+    if (!cart) {
       return res
         .status(404)
         .json({ success: false, message: "Cart not found" });
+    }
 
     // Remove the exact cart item
     const initialLength = cart.products.length;
@@ -244,15 +266,26 @@ exports.removeFromCart = async function (req, res) {
 
     res.status(200).json({ success: true, message: "Product removed", cart });
   } catch (error) {
-    console.error(error);
+    console.error("removeFromCart error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// Decrease quantity - ✅ FIXED: Use token
 exports.decreaseQuantity = async function (req, res) {
   try {
-    const { userId, cartItemId } = req.body; // cartItemId = product inside cart
-    console.log(req.body, "Decrease cart item payload");
+    // ✅ Get userId from token - NOT FROM BODY
+    const userId = req.id || req.userId || req.user?.id;
+    const { cartItemId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    console.log("Decrease quantity - User:", userId, "Item:", cartItemId);
 
     // Find user's cart
     const cart = await Cart.findOne({ user: userId });
@@ -280,8 +313,6 @@ exports.decreaseQuantity = async function (req, res) {
     }
 
     await cart.save();
-
-    // ✅ Populate product details (optional but useful for frontend)
     await cart.populate("products.product");
 
     res.status(200).json({
@@ -295,10 +326,21 @@ exports.decreaseQuantity = async function (req, res) {
   }
 };
 
+// Increase quantity - ✅ FIXED: Use token
 exports.increaseQuantity = async function (req, res) {
   try {
-    const { userId, cartItemId } = req.body; // cartItemId = product inside cart
-    console.log(req.body, "Increase cart item payload");
+    // ✅ Get userId from token - NOT FROM BODY
+    const userId = req.id || req.userId || req.user?.id;
+    const { cartItemId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    console.log("Increase quantity - User:", userId, "Item:", cartItemId);
 
     // Find user's cart
     const cart = await Cart.findOne({ user: userId });
@@ -316,8 +358,9 @@ exports.increaseQuantity = async function (req, res) {
         .json({ success: false, message: "Cart item not found" });
     }
 
-    // Optional: check stock
-    if (item.quantity >= item.product.stock) {
+    // Check stock
+    const product = await Product.findById(item.product);
+    if (item.quantity >= product.stock) {
       return res
         .status(400)
         .json({ success: false, message: "Maximum stock reached" });
@@ -327,8 +370,6 @@ exports.increaseQuantity = async function (req, res) {
     item.quantity += 1;
 
     await cart.save();
-
-    // ✅ Populate product details (optional)
     await cart.populate("products.product");
 
     res.status(200).json({
@@ -338,6 +379,39 @@ exports.increaseQuantity = async function (req, res) {
     });
   } catch (error) {
     console.error("Increase quantity error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Clear entire cart - ✅ FIXED: Use token
+exports.clearCart = async function (req, res) {
+  try {
+    // ✅ Get userId from token - NOT FROM PARAMS
+    const userId = req.id || req.userId || req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    const cart = await Cart.findOne({ user: userId });
+    if (!cart) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Cart not found" });
+    }
+
+    cart.products = [];
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Cart cleared successfully",
+    });
+  } catch (error) {
+    console.error("clearCart error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -1,6 +1,6 @@
 // redux/slices/cartSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axiosInstance from "@/api/axiosInterceptor"; // ✅ ONLY THIS LINE CHANGED
 
 // Base URL
 const API_URL = `${import.meta.env.VITE_API_URL}`;
@@ -13,7 +13,8 @@ export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
   async (userId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/cart/${userId}`);
+      console.log("userId",userId)
+      const response = await axiosInstance.get(`${API_URL}/cart`); // ✅ axios → axiosInstance
       return response.data.cart || {
         items: [],
         summary: {
@@ -53,7 +54,7 @@ export const addToCart = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.post(`${API_URL}/add`, {
+      const response = await axiosInstance.post(`${API_URL}/add`, { // ✅ axios → axiosInstance
         userId,
         productId,
         quantity,
@@ -64,7 +65,7 @@ export const addToCart = createAsyncThunk(
       
       // If API returns success, fetch updated cart
       if (response.data.success) {
-        const cartResponse = await axios.get(`${API_URL}/cart/${userId}`);
+        const cartResponse = await axiosInstance.get(`${API_URL}/cart`); // ✅ axios → axiosInstance
         return cartResponse.data.cart;
       } else {
         throw new Error(response.data.message || "Failed to add to cart");
@@ -82,13 +83,13 @@ export const removeFromCart = createAsyncThunk(
   "cart/removeFromCart",
   async ({ userId, cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/cart/remove`, {
+      const response = await axiosInstance.post(`${API_URL}/cart/remove`, { // ✅ axios → axiosInstance
         userId,
         cartItemId,
       });
       
       if (response.data.success) {
-        const cartResponse = await axios.get(`${API_URL}/cart/${userId}`);
+        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
         return cartResponse.data.cart;
       } else {
         throw new Error(response.data.message || "Failed to remove item");
@@ -106,13 +107,13 @@ export const increaseQuantity = createAsyncThunk(
   "cart/increaseQuantity",
   async ({ userId, cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/cart/increase`, {
+      const response = await axiosInstance.post(`${API_URL}/cart/increase`, { // ✅ axios → axiosInstance
         userId,
         cartItemId,
       });
       
       if (response.data.success) {
-        const cartResponse = await axios.get(`${API_URL}/cart/${userId}`);
+        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
         return cartResponse.data.cart;
       } else {
         throw new Error(response.data.message || "Failed to increase quantity");
@@ -130,13 +131,13 @@ export const decreaseQuantity = createAsyncThunk(
   "cart/decreaseQuantity",
   async ({ userId, cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${API_URL}/cart/decrease`, {
+      const response = await axiosInstance.post(`${API_URL}/cart/decrease`, { // ✅ axios → axiosInstance
         userId,
         cartItemId,
       });
       
       if (response.data.success) {
-        const cartResponse = await axios.get(`${API_URL}/cart/${userId}`);
+        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
         return cartResponse.data.cart;
       } else {
         throw new Error(response.data.message || "Failed to decrease quantity");
@@ -154,7 +155,7 @@ export const clearCart = createAsyncThunk(
   "cart/clearCart",
   async (userId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${API_URL}/cart/clear/${userId}`);
+      const response = await axiosInstance.delete(`${API_URL}/cart/clear/${userId}`); // ✅ axios → axiosInstance
       
       if (response.data.success) {
         return {
@@ -367,4 +368,4 @@ export const {
 } = cartSlice.actions;
 
 // Export reducer
-export default cartSlice.reducer;  
+export default cartSlice.reducer;

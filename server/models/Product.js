@@ -180,7 +180,7 @@ productSchema.methods.isOfferActive = function () {
 productSchema.methods.getDiscountedPrice = function () {
   if (typeof this.price !== "number" || this.price <= 0) return this.price || 0;
 
-  if (this.discount > 0 && this.isOfferActive()) {
+  if (this.discount > 0) {
     const discounted = this.price - (this.price * this.discount) / 100;
     return Math.round(discounted * 100) / 100; // Round to 2 decimal places
   }

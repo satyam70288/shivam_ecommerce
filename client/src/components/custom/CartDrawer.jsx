@@ -92,7 +92,7 @@ const CartDrawer = ({ iconSize = 20, className = "" }) => {
       >
         {/* Header with Close Button */}
         <div className="px-6 py-5 border-b bg-gradient-to-r from-emerald-50 to-white flex-shrink-0 relative">
-          <h2 className="text-2xl font-bold text-gray-900">SHOPPING CART</h2>
+          <h2 className="text-2xl font-bold text-gray-900">SHOPPING CART111</h2>
           <p className="text-gray-500 text-sm mt-1">
             {totalQuantity} {totalQuantity === 1 ? "item" : "items"}
           </p>

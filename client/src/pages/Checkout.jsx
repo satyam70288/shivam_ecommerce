@@ -251,7 +251,7 @@ useEffect(() => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Price Details
+                    Price Details11111
                   </h3>
                 </div>
 

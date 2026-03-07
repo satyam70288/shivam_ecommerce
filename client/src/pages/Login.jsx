@@ -105,20 +105,37 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (validateForm()) {
-      // Save email if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem('rememberedEmail', formData.email);
-      } else {
-        localStorage.removeItem('rememberedEmail');
-      }
-      
-      dispatch(loginUser(formData));
+  // Login.jsx - Add debug lines
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (validateForm()) {
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', formData.email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
     }
-  };
+    
+    // ✅ Debug before dispatch
+    console.log("Dispatching login with:", formData);
+    
+    const result = await dispatch(loginUser(formData));
+    
+    // ✅ Debug after dispatch
+    console.log("Login result:", result);
+    console.log("Token in localStorage:", localStorage.getItem('token'));
+    console.log("User in localStorage:", localStorage.getItem('user'));
+    
+    // Check if token exists
+    if (result.payload?.token) {
+      console.log("✅ Token received:", result.payload.token);
+    } else if (result.payload?.data?.token) {
+      console.log("✅ Token in data:", result.payload.data.token);
+    } else {
+      console.log("❌ No token in response:", result.payload);
+    }
+  }
+};
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -321,7 +338,7 @@ const Login = () => {
                 </>
               ) : (
                 <>
-                  Sign In
+                  Sign In 4444
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </>
               )}
