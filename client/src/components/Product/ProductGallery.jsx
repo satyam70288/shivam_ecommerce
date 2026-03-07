@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MobileImageZoom from "./MobileImageZoom";
 
 const ProductGallery = ({
@@ -7,37 +7,74 @@ const ProductGallery = ({
   onSelect,
   isZoomed,
   setIsZoomed,
+  onMobileZoomChange,  // ✅ Parent ko batane ke liye
+  onZoomStateChange     // ✅ NEW - Buttons hide karne ke liye
 }) => {
-  const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(null);
+  const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(false); // ✅ false se initialize karo
   const [showZoom, setShowZoom] = useState(false);
   const [bgPos, setBgPos] = useState("50% 50%");
 
   const activeImage = images[selectedImage]?.url;
+  
+  // Agar image nahi hai to return
   if (!activeImage) return null;
 
   const handleMouseMove = (e) => {
+    if (!isZoomed && !showZoom) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setBgPos(`${x}% ${y}%`);
   };
 
+  // ✅ Mobile Zoom Open Handler
+  const handleMobileZoomOpen = () => {
+    setIsMobileZoomOpen(true);
+    if (onMobileZoomChange) onMobileZoomChange(true);
+    if (onZoomStateChange) onZoomStateChange(true); // ✅ Parent ko bataye ki zoom open hai
+  };
+
+  // ✅ Mobile Zoom Close Handler
+  const handleMobileZoomClose = () => {
+    setIsMobileZoomOpen(false);
+    setIsZoomed(false);
+    setShowZoom(false);
+    if (onMobileZoomChange) onMobileZoomChange(false);
+    if (onZoomStateChange) onZoomStateChange(false); // ✅ Parent ko bataye ki zoom close hai
+  };
+
+  // ✅ Keyboard events handle karo
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && (isZoomed || isMobileZoomOpen)) {
+        handleMobileZoomClose();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isZoomed, isMobileZoomOpen]);
+
   return (
     <>
       {/* DESKTOP VIEW */}
       <div className="hidden lg:flex gap-4">
-        {/* THUMBNAILS — FIXED WIDTH */}
+        {/* THUMBNAILS */}
         {images.length > 1 && (
           <div className="flex flex-col gap-2 shrink-0">
             {images.map((img, i) => (
               <button
                 key={i}
-                onClick={() => onSelect(i)}
-                className={`w-14 h-14 rounded-md border
+                onClick={() => {
+                  onSelect(i);
+                  if (isZoomed) setIsZoomed(false);
+                  setShowZoom(false);
+                }}
+                className={`w-14 h-14 rounded-md border transition-all
                   ${
                     selectedImage === i
-                      ? "border-orange-500"
-                      : "border-gray-300 dark:border-white/10"
+                      ? "border-orange-500 border-2 scale-105"
+                      : "border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/30"
                   }`}
               >
                 <img
@@ -50,7 +87,7 @@ const ProductGallery = ({
           </div>
         )}
 
-        {/* IMAGE CONTAINER — WIDTH CHANGES SAFELY */}
+        {/* MAIN IMAGE CONTAINER */}
         <div
           className={`
             relative
@@ -64,7 +101,11 @@ const ProductGallery = ({
             ${isZoomed ? "w-[520px]" : "w-[400px]"}
           `}
           onMouseEnter={() => setShowZoom(true)}
-          onMouseLeave={() => setShowZoom(false)}
+          onMouseLeave={() => {
+            if (!isZoomed) {
+              setShowZoom(false);
+            }
+          }}
           onMouseMove={handleMouseMove}
         >
           {!showZoom && (
@@ -104,14 +145,21 @@ const ProductGallery = ({
             bg-gray-100 dark:bg-neutral-900
             flex items-center justify-center
             mb-4
+            relative
+            cursor-pointer
           "
-          onClick={() => setIsMobileZoomOpen(true)}
+          onClick={handleMobileZoomOpen} // ✅ Updated handler
         >
           <img
             src={activeImage}
             alt="product"
             className="max-h-full w-auto object-contain"
           />
+
+          {/* TAP TO ZOOM HINT */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 text-white text-sm rounded-full backdrop-blur-sm pointer-events-none">
+            Tap to zoom
+          </div>
         </div>
 
         {/* THUMBNAILS BELOW */}
@@ -120,8 +168,11 @@ const ProductGallery = ({
             {images.map((img, i) => (
               <button
                 key={i}
-                onClick={() => onSelect(i)}
-                className={`shrink-0 w-16 h-16 rounded-md border
+                onClick={() => {
+                  onSelect(i);
+                  setShowZoom(false);
+                }}
+                className={`shrink-0 w-16 h-16 rounded-md border transition-all
                   ${
                     selectedImage === i
                       ? "border-orange-500 border-2"
@@ -144,9 +195,18 @@ const ProductGallery = ({
         <MobileImageZoom
           images={images}
           activeIndex={selectedImage}
-          onClose={() => {
-            setIsMobileZoomOpen(false);
-            setIsZoomed(false);
+          onClose={handleMobileZoomClose} // ✅ Updated handler
+          onPrev={() => {
+            const newIndex = (selectedImage - 1 + images.length) % images.length;
+            onSelect(newIndex);
+          }}
+          onNext={() => {
+            const newIndex = (selectedImage + 1) % images.length;
+            onSelect(newIndex);
+          }}
+          onSelect={(index) => {
+            onSelect(index);
+            handleMobileZoomClose();
           }}
         />
       )}

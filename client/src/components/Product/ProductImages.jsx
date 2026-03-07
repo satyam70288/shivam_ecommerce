@@ -11,8 +11,8 @@ const ProductImages = ({
   selectedImage,
   onSelect,
   productName,
-  onZoomChange,
   id,
+  onMobileZoomChange
 }) => {
   const [isZoomed, setIsZoomed] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
@@ -106,6 +106,7 @@ const ProductImages = ({
           onSelect={onSelect}
           isZoomed={isZoomed}
           setIsZoomed={setIsZoomed}
+           onMobileZoomChange={onMobileZoomChange}
         />
 
         {/* Quick Actions */}

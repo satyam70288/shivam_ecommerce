@@ -56,14 +56,7 @@ const PriceSection = ({ price, displayPrice, discount, isOfferActive }) => {
         Inclusive of all taxes
       </p>
 
-      {/* DELIVERY INFO */}
-      <p className="
-        mt-2 text-sm
-        text-gray-700
-        dark:text-gray-300
-      ">
-        🚚 Free delivery by <span className="font-semibold">Tomorrow</span>
-      </p>
+    
 
       {/* TRUST BADGES */}
       <p className="

@@ -23,10 +23,14 @@ const Product = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated } = useSelector((state) => state.auth);
-  
+   const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(false);
+   console.log(isMobileZoomOpen)
   // ✅ Use cart actions hook
   const { addToCart } = useCartActions();
+ const handleMobileZoomChange = (isOpen) => {
 
+    setIsMobileZoomOpen(isOpen);
+  };
   const {
     product,
     quantity,
@@ -185,6 +189,7 @@ const Product = () => {
               onSelect={setSelectedImage}
               productName={product.name}
               id={id}
+               onMobileZoomChange={handleMobileZoomChange}
             />
 
             {/* Right Column - Product Info */}
@@ -251,6 +256,7 @@ const Product = () => {
       </main>
 
       {/* Mobile Sticky CTA */}
+      {!isMobileZoomOpen &&
       <MobileStickyCTA
         product={product}
         displayPrice={displayPrice}
@@ -258,7 +264,8 @@ const Product = () => {
         onAddToCart={handleAddToCartClick}
         onBuyNow={handleBuyNowClick}
         loading={addingToCart}
-      />
+        
+      />}
 
       <SimilarProducts productId={id} />
     </div>
