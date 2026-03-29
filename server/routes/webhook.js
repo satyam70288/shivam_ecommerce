@@ -33,7 +33,7 @@ router.post("/shiprocket", async (req, res) => {
 
     res.status(200).send("OK");
   } catch (err) {
-    console.error("Webhook Error:", err);
+    console.error("Shiprocket webhook (signed):", err.message);
     res.status(500).send("Error");
   }
 });
