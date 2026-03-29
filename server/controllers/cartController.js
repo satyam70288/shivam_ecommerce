@@ -2,12 +2,60 @@
 var Cart = require("../models/Cart");
 var Product = require("../models/Product");
 
+function normalizeStr(s) {
+  return String(s ?? "").trim();
+}
+
+function findVariantForCartLine(product, { color, size, variantId } = {}) {
+  const variants = product.variants;
+  if (!Array.isArray(variants) || !variants.length) return null;
+
+  if (variantId) {
+    let v = null;
+    try {
+      v = variants.id(variantId);
+    } catch (_) {
+      v = null;
+    }
+    if (!v) {
+      v = variants.find((x) => x._id && x._id.toString() === String(variantId));
+    }
+    if (v) return v;
+  }
+
+  const c = normalizeStr(color);
+  const s = normalizeStr(size);
+  return (
+    variants.find(
+      (variant) =>
+        normalizeStr(variant.color) === c && normalizeStr(variant.size) === s
+    ) || null
+  );
+}
+
+/** Root stock for simple products; matching variant.stock for variant products */
+function getAvailableStock(product, opts = {}) {
+  if (!product) return 0;
+
+  const hasVariants =
+    product.productType === "variant" ||
+    (Array.isArray(product.variants) && product.variants.length > 0);
+
+  if (hasVariants && product.variants?.length) {
+    const v = findVariantForCartLine(product, opts);
+    if (!v) return 0;
+    return Number(v.stock) || 0;
+  }
+
+  return Number(product.stock) || 0;
+}
+
 // Add product to cart
 exports.addToCart = async (req, res) => {
   try {
     // ✅ Get userId from token (set by auth middleware) - NOT FROM BODY
     const userId = req.id || req.userId || req.user?.id; 
-    const { productId, quantity, color, size } = req.body;
+    const { productId, quantity, color, size, variantId } = req.body;
 
     if (!userId) {
       return res.status(401).json({
@@ -35,11 +83,26 @@ exports.addToCart = async (req, res) => {
       });
     }
 
+    const variantOpts = { color, size, variantId };
+    const hasVariants =
+      product.productType === "variant" ||
+      (Array.isArray(product.variants) && product.variants.length > 0);
+
+    if (hasVariants && !findVariantForCartLine(product, variantOpts)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid or missing variant — select a valid color/size (or variant) for this product",
+      });
+    }
+
+    const available = getAvailableStock(product, variantOpts);
+
     // 2️⃣ Find cart by userId (from token)
     let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
-      if (qty > product.stock) {
+      if (qty > available) {
         return res.status(400).json({
           success: false,
           message: "Not enough stock available",
@@ -54,6 +117,7 @@ exports.addToCart = async (req, res) => {
             quantity: qty,
             color,
             size,
+            variantId: variantId || undefined,
             price: product.price,
           },
         ],
@@ -77,8 +141,14 @@ exports.addToCart = async (req, res) => {
     );
 
     if (index > -1) {
+      const lineOpts = {
+        color: cart.products[index].color,
+        size: cart.products[index].size,
+        variantId: cart.products[index].variantId,
+      };
+      const lineAvailable = getAvailableStock(product, lineOpts);
       const newQty = cart.products[index].quantity + qty;
-      if (newQty > product.stock) {
+      if (newQty > lineAvailable) {
         return res.status(400).json({
           success: false,
           message: "Not enough stock available",
@@ -86,7 +156,7 @@ exports.addToCart = async (req, res) => {
       }
       cart.products[index].quantity = newQty;
     } else {
-      if (qty > product.stock) {
+      if (qty > available) {
         return res.status(400).json({
           success: false,
           message: "Not enough stock available",
@@ -97,6 +167,7 @@ exports.addToCart = async (req, res) => {
         quantity: qty,
         color,
         size,
+        variantId: variantId || undefined,
         price: product.price,
       });
     }
@@ -132,7 +203,8 @@ exports.getCart = async function (req, res) {
 
     const cart = await Cart.findOne({ user: userId }).populate({
       path: "products.product",
-      select: "name price discount images stock isOfferActive offerValidTill",
+      select:
+        "name price discount images stock variants productType isOfferActive offerValidTill",
     });
 
     if (!cart) {
@@ -321,8 +393,6 @@ exports.increaseQuantity = async function (req, res) {
       });
     }
 
-    console.log("Increase quantity - User:", userId, "Item:", cartItemId);
-
     // Find user's cart
     const cart = await Cart.findOne({ user: userId });
     if (!cart) {
@@ -339,9 +409,13 @@ exports.increaseQuantity = async function (req, res) {
         .json({ success: false, message: "Cart item not found" });
     }
 
-    // Check stock
     const product = await Product.findById(item.product);
-    if (item.quantity >= product.stock) {
+    const lineAvailable = getAvailableStock(product, {
+      color: item.color,
+      size: item.size,
+      variantId: item.variantId,
+    });
+    if (item.quantity >= lineAvailable) {
       return res
         .status(400)
         .json({ success: false, message: "Maximum stock reached" });
