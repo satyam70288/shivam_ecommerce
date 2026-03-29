@@ -2,6 +2,7 @@
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const User = require("../models/User");
+const Address = require("../models/address");
 const { calculateShippingCharge } = require("../service/shiprocketService");
 
 exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => {
@@ -340,8 +341,6 @@ exports.calculateOrderBase = async (userId, { productId, quantity }) => {
     subtotal += price * q;
     discount += (price - finalPrice) * q;
     totalWeight += (product.dimensions?.weight || 0) * q;
-    const discountAmountPerUnit = price - finalPrice;
-    discount += discountAmountPerUnit * quantity;
     items.push({
       productId: product._id,
       name: product.name,
@@ -418,12 +417,11 @@ exports.calculateOrderWithShipping = async (userId, params, addressDoc) => {
     summary: {
       subtotal: base.subtotal,
       discount: base.discount,
+      payable: base.payable,
       shipping,
       total: base.payable + shipping,
       totalWeight: base.totalWeight,
       shippingInfo,
-      discountPercent: product.discount || 0,
-      discountAmount: discountAmountPerUnit,
     },
     checkoutType: base.checkoutType,
   };

@@ -13,7 +13,6 @@ router.post("/shiprocket", async (req, res) => {
     }
 
     const data = req.body;
-    console.log("Shiprocket Webhook:", data);
 
     await shipmentSchema.findOneAndUpdate(
       { shiprocketOrderId: data.order_id },
@@ -44,8 +43,19 @@ router.post("/shiprocket", async (req, res) => {
 router.post("/shiprocket-webhook", async (req, res) => {
   try {
     const { order_id, shipment_status } = req.body;
-    const order = await Order.findOne({ shiprocketId: order_id });
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    const shipment = await shipmentSchema.findOne({
+      shiprocketOrderId: String(order_id),
+    });
+    if (!shipment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Shipment not found" });
+    }
+
+    const order = await Order.findById(shipment.orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
 
     const statusMap = {
       Created: "pending",
@@ -55,14 +65,25 @@ router.post("/shiprocket-webhook", async (req, res) => {
       Cancelled: "cancelled",
     };
 
-    if (statusMap[shipment_status]) {
-      order.status = statusMap[shipment_status];
+    const shippingLabel = statusMap[shipment_status];
+
+    if (shippingLabel) {
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        orderStatus: order.status,
+        shippingStatus: shippingLabel,
+        changedAt: new Date(),
+        reason: `Shiprocket webhook: ${shipment_status}`,
+      });
+      if (shipment_status === "Delivered") {
+        order.deliveredAt = new Date();
+      }
       await order.save();
     }
 
     return res.status(200).json({ success: true, message: "Order status updated" });
   } catch (err) {
-    console.error(err);
+    console.error("Shiprocket webhook handler:", err.message);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });

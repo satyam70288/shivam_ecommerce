@@ -16,7 +16,15 @@ exports.addToCart = async (req, res) => {
       });
     }
 
-    console.log("Adding to cart - User:", userId, "Product:", productId);
+    const rawQty = Number(quantity);
+    const qty =
+      Number.isFinite(rawQty) && rawQty >= 1 ? Math.floor(rawQty) : null;
+    if (qty === null) {
+      return res.status(400).json({
+        success: false,
+        message: "Quantity must be a positive number",
+      });
+    }
 
     // 1️⃣ Validate product
     const product = await Product.findById(productId);
@@ -31,12 +39,19 @@ exports.addToCart = async (req, res) => {
     let cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
+      if (qty > product.stock) {
+        return res.status(400).json({
+          success: false,
+          message: "Not enough stock available",
+        });
+      }
+
       cart = new Cart({
         user: userId,
         products: [
           {
             product: product._id,
-            quantity,
+            quantity: qty,
             color,
             size,
             price: product.price,
@@ -62,11 +77,24 @@ exports.addToCart = async (req, res) => {
     );
 
     if (index > -1) {
-      cart.products[index].quantity += quantity;
+      const newQty = cart.products[index].quantity + qty;
+      if (newQty > product.stock) {
+        return res.status(400).json({
+          success: false,
+          message: "Not enough stock available",
+        });
+      }
+      cart.products[index].quantity = newQty;
     } else {
+      if (qty > product.stock) {
+        return res.status(400).json({
+          success: false,
+          message: "Not enough stock available",
+        });
+      }
       cart.products.push({
         product: product._id,
-        quantity,
+        quantity: qty,
         color,
         size,
         price: product.price,

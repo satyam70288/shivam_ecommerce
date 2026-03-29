@@ -853,6 +853,7 @@ const trackShipment = async (req, res) => {
 const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  let orderId;
 
   try {
     const userId = req.id;
@@ -867,6 +868,9 @@ const createOrder = async (req, res) => {
     /* 1️⃣ ADDRESS SNAPSHOT */
     const addressDoc = await address.findById(addressId).session(session);
     if (!addressDoc) throw new Error("Invalid address");
+    if (String(addressDoc.userId) !== String(userId)) {
+      throw new Error("Address does not belong to you");
+    }
 
     const shippingAddress = {
       name: addressDoc.name,
@@ -932,7 +936,7 @@ const createOrder = async (req, res) => {
       { session }
     );
 
-    const orderId = order[0]._id;
+    orderId = order[0]._id;
 
     /* 5️⃣ REDUCE STOCK */
     for (const item of orderData.items) {
@@ -951,20 +955,34 @@ const createOrder = async (req, res) => {
     }
 
     await session.commitTransaction();
-    session.endSession();
-
-    return res.status(201).json({
-      success: true,
-      message: "COD order placed successfully",
-      orderId,
-    });
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
-
     console.error("❌ Create COD Order Error:", err);
     return res.status(400).json({ message: err.message });
   }
+
+  session.endSession();
+
+  let shiprocketCreated = false;
+  try {
+    const orderDoc = await Order.findById(orderId);
+    if (orderDoc) {
+      await createShiprocketOrder(orderDoc);
+      shiprocketCreated = true;
+    }
+  } catch (srErr) {
+    console.error("⚠️ Shiprocket (COD) failed:", srErr);
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: "COD order placed successfully",
+    orderId,
+    shiprocketCreated,
+  });
 };
 
 const assignCourierController = async (req, res) => {
