@@ -90,7 +90,15 @@ const orderSchema = new mongoose.Schema(
     /* 🧾 BUSINESS STATUS */
     status: {
       type: String,
-      enum: ["PLACED", "CONFIRMED", "CANCELLED", "REFUNDED"],
+      enum: [
+        "PLACED",
+        "CONFIRMED",
+        "PACKED",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "REFUNDED",
+      ],
       default: "PLACED",
     },
 

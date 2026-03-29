@@ -8,14 +8,15 @@ export const orderApi = {
   trackOrder: async (orderId, token) => {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/orders/track/${orderId}`,
+        `${API_BASE_URL}/track/${orderId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      return response.data.tracking || [];
+      const shipment = response.data?.shipment;
+      return shipment?.history || shipment || [];
     } catch (error) {
       console.error("Error fetching tracking data:", error);
       throw new Error("Failed to fetch tracking data");

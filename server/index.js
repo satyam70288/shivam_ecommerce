@@ -157,11 +157,6 @@ connectDb();
 app.get("/", (req, res) => {
   res.send(`<center><h1>✅ Server Running on PORT: ${port}</h1></center>`);
 });
-app.post("/api/webhook/shiprocket", (req, res) => {
-  console.log("Shiprocket webhook:", req.body);
-  res.send("OK");
-});
-
 app.use("/api/webhook", webhookRoutes);
 // load routes
 readdirSync("./routes").forEach((route) => {

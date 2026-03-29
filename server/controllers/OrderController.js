@@ -22,6 +22,19 @@ const {
 } = require("../service/shiprocketService");
 const { default: mongoose } = require("mongoose");
 const { validateStatusTransition } = require("../utils/orderStatusValidator");
+
+/** Inventory was decremented when order was placed; restore only for these pre-shipment states */
+const STATUSES_RESTORE_STOCK_ON_CANCEL = ["PLACED", "CONFIRMED", "PACKED"];
+
+async function restoreStockForOrderItems(order, session) {
+  const opts = session ? { session } : {};
+  for (const item of order.items || []) {
+    const pid = item.productId;
+    const qty = Number(item.quantity) || 0;
+    if (!pid || qty <= 0) continue;
+    await Product.findByIdAndUpdate(pid, { $inc: { stock: qty } }, opts);
+  }
+}
 var razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_RW5A57UKh8Dv3F",
   key_secret:
@@ -353,7 +366,6 @@ const getAllOrders = async (req, res) => {
 
 // controllers/admin/orderController.js
 const updateOrderStatus = async (req, res) => {
-  // Admin check
   if (req.role !== ROLES.admin) {
     return res.status(403).json({
       success: false,
@@ -364,7 +376,6 @@ const updateOrderStatus = async (req, res) => {
   const { orderId } = req.params;
   const { status, reason } = req.body;
 
-  // Validate status
   const validStatuses = [
     "PLACED",
     "CONFIRMED",
@@ -380,41 +391,49 @@ const updateOrderStatus = async (req, res) => {
     });
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    // Find order
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).session(session);
 
     if (!order) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
 
-    // Store old status
     const oldStatus = order.status;
 
-    // Simple validation
     if (oldStatus === status) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Order is already in this status",
       });
     }
 
-    // ✅ Update status
+    if (status === "CANCELLED") {
+      if (STATUSES_RESTORE_STOCK_ON_CANCEL.includes(oldStatus)) {
+        await restoreStockForOrderItems(order, session);
+      }
+      order.cancelReason = reason;
+    }
+
     order.status = status;
 
-    // ✅ Add to statusHistory array (embedded - aapka existing structure)
     order.statusHistory.push({
-      status: status,
+      orderStatus: status,
       changedAt: new Date(),
-      changedBy: req.userId,
+      changedBy: req.id,
       reason:
         reason || `Status changed from ${oldStatus} to ${status} by admin`,
     });
 
-    // Handle delivery
     if (status === "DELIVERED") {
       order.deliveredAt = new Date();
       if (order.paymentMethod === "COD") {
@@ -422,13 +441,9 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
-    // Handle cancellation
-    if (status === "CANCELLED") {
-      order.cancelReason = reason;
-    }
-
-    // Save the order (statusHistory automatically saved with it)
-    await order.save();
+    await order.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     return res.status(200).json({
       success: true,
@@ -436,11 +451,18 @@ const updateOrderStatus = async (req, res) => {
         orderId: order._id,
         oldStatus: oldStatus,
         newStatus: status,
-        statusHistory: order.statusHistory, // ✅ Embedded history automatically included
+        statusHistory: order.statusHistory,
+        stockRestored:
+          status === "CANCELLED" &&
+          STATUSES_RESTORE_STOCK_ON_CANCEL.includes(oldStatus),
       },
       message: `Order status updated from ${oldStatus} to ${status}`,
     });
   } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
     return res.status(500).json({
       success: false,
       message: error.message || "Something went wrong",
@@ -673,90 +695,68 @@ const getMetrics = async (req, res) => {
   }
 };
 
-// Cancel COD orders within 24 hours
 const cancelOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { orderId, reason } = req.body;
-    const userId = req.id; // assuming auth middleware sets this
-
-    /* ================= VALIDATION ================= */
-    // if (!orderId || !reason) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Order ID and cancellation reason are required",
-    //   });
-    // }
+    const userId = req.id;
 
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         message: "Invalid Order ID",
       });
     }
 
-    /* ================= FETCH ORDER ================= */
-    const order = await Order.findById(orderId);
-    console.log(order);
+    const order = await Order.findById(orderId).session(session);
     if (!order) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
     }
 
-    /* ================= OWNERSHIP CHECK ================= */
     if (order.userId.toString() !== userId.toString()) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(403).json({
         success: false,
         message: "You are not allowed to cancel this order",
       });
     }
 
-    /* ================= BUSINESS RULES ================= */
-
-    // Only COD orders
-    // if (order.paymentMethod !== "COD") {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Only COD orders can be cancelled by user",
-    //   });
-    // }
-
-    // Status validation
     const cancellableStatuses = ["PLACED", "CONFIRMED", "PACKED"];
     if (!cancellableStatuses.includes(order.status)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         message: `Order cannot be cancelled in '${order.status}' state`,
       });
     }
 
-    // 24 hour window
-    const hoursPassed =
-      (Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60);
-
-    // if (hoursPassed > 24) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Order can only be cancelled within 24 hours",
-    //   });
-    // }
-
-    /* ================= UPDATE ORDER ================= */
+    await restoreStockForOrderItems(order, session);
 
     order.status = "CANCELLED";
     order.cancelReason = reason;
 
     order.statusHistory.push({
-      status: "CANCELLED",
-      note: reason,
-      updatedBy: "USER",
-      updatedAt: new Date(),
+      orderStatus: "CANCELLED",
+      changedAt: new Date(),
+      changedBy: userId,
+      reason: reason || "Cancelled by customer",
     });
 
-    await order.save();
+    await order.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
-    /* ================= RESPONSE ================= */
     return res.status(200).json({
       success: true,
       message: "Order cancelled successfully",
@@ -764,10 +764,15 @@ const cancelOrder = async (req, res) => {
         orderId: order._id,
         status: order.status,
         cancelReason: order.cancelReason,
+        stockRestored: true,
       },
     });
   } catch (error) {
-    console.error("Cancel order error:", error);
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+    console.error("Cancel order error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Server error while cancelling order",
