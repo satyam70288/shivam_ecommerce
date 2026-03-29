@@ -25,7 +25,7 @@ router.put("/update-order-status/:orderId", verifyToken, updateOrderStatus);
 
 router.post("/orders/create", verifyToken, createOrder);
 
-router.get("/track/:id", trackShipment);
+router.get("/track/:id", verifyToken, trackShipment);
 
 router.post("/cancel-order", verifyToken, cancelOrder);
 router.post("/admin/orders/:id/assign-courier", verifyToken, assignCourierController);

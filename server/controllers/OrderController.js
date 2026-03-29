@@ -809,7 +809,25 @@ const trackShipment = async (req, res) => {
       "currentShipmentId"
     );
 
-    if (!order || !order.currentShipmentId) {
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    const isAdmin = req.role === ROLES.admin;
+    if (
+      !isAdmin &&
+      order.userId.toString() !== req.id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot track this order",
+      });
+    }
+
+    if (!order.currentShipmentId) {
       return res.status(404).json({
         success: false,
         message: "Shipment not created for this order",
