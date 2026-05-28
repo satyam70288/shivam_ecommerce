@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,7 +10,10 @@ import {
   toggleWishlist,
 } from "@/redux/slices/wishlistSlice";
 import { addToCart } from "@/redux/slices/cartSlice"; // ✅ Correct import
-import useCartActions from "@/hooks/useCartActions"; // ✅ Use hook instead
+import useCartActions from "@/hooks/useCartActions";
+
+// Cache loaded image URLs so re-renders (wishlist/cart) don't flash skeleton again
+const loadedImageUrls = new Set();
 
 const ProductCard = ({
   _id,
@@ -31,17 +34,29 @@ const ProductCard = ({
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
-  const { wishlistStatus } = useSelector((state) => state.wishlist);
-  
-  // ✅ CORRECT: Use cart actions hook
+  const isWishlisted = useSelector(
+    (state) => Boolean(state.wishlist.wishlistStatus[_id])
+  );
+
   const { addToCart: addToCartHandler } = useCartActions();
 
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const displayImage = getImageUrl({ image, variants });
+  const [imageLoaded, setImageLoaded] = useState(() =>
+    loadedImageUrls.has(displayImage)
+  );
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+    if (loadedImageUrls.has(displayImage)) {
+      setImageLoaded(true);
+    } else {
+      setImageLoaded(false);
+    }
+  }, [displayImage]);
   const [isAdding, setIsAdding] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
-  const isWishlisted = wishlistStatus[_id] || false;
-  
   // Calculate final price
   const finalPrice = isOfferActive && discountedPrice > 0
     ? discountedPrice
@@ -49,8 +64,10 @@ const ProductCard = ({
 
   const savings = price - finalPrice;
   const discountPercentage = isOfferActive && discount > 0 ? discount : 0;
-  const displayImage = getImageUrl({ image, variants });
   const stockStatus = getStockStatus(stock);
+  const imageSrc = imageError
+    ? getImageUrl({ image, variants, imageError: true })
+    : displayImage;
 
   // ✅ CORRECT: Add to cart function
   const handleAddToCart = async (e) => {
@@ -208,19 +225,29 @@ const ProductCard = ({
         <Link to={productLink} className="block flex-grow">
           {/* IMAGE SECTION */}
           <div className="pt-8 pb-3 px-4">
-            <div className="w-full aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-              {/* Image loading skeleton */}
+            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted">
               {!imageLoaded && (
-                <div className="absolute inset-0 animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg" />
+                <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" aria-hidden />
               )}
 
-              {/* Product image */}
               <img
                 loading="lazy"
-                src={displayImage}
+                decoding="async"
+                src={imageSrc}
                 alt={name}
-                onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 ${
+                onLoad={() => {
+                  loadedImageUrls.add(imageSrc);
+                  setImageLoaded(true);
+                }}
+                onError={() => {
+                  if (!imageError) {
+                    setImageError(true);
+                    setImageLoaded(false);
+                  } else {
+                    setImageLoaded(true);
+                  }
+                }}
+                className={`w-full h-full object-contain transition-transform duration-300 group-hover:scale-105 ${
                   imageLoaded ? "opacity-100" : "opacity-0"
                 }`}
               />
@@ -304,4 +331,4 @@ const ProductCard = ({
   );
 };
 
-export default ProductCard;
+export default memo(ProductCard);

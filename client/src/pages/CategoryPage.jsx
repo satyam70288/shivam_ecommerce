@@ -36,8 +36,7 @@ const [selectedFilters, setSelectedFilters] = useState({
 };
 
   const { slug } = useParams();
-  const { products, loading, error } = useCategory(slug,selectedFilters);
-  console.log(products,"hhhh")
+  const { products, loading, error } = useCategory(slug, selectedFilters);
   if (error?.response?.status === 404) {
     return (
       <NotFound

@@ -1,8 +1,12 @@
 import { useState } from "react";
-import { Share2, Heart, Maximize2, Minimize2 } from "lucide-react";
+import { Share2, Heart, Maximize2 } from "lucide-react";
 import ProductGallery from "@/components/Product/ProductGallery";
 import { useDispatch, useSelector } from "react-redux";
-import { optimisticToggle, revertOptimisticToggle, toggleWishlist } from "@/redux/slices/wishlistSlice";
+import {
+  optimisticToggle,
+  revertOptimisticToggle,
+  toggleWishlist,
+} from "@/redux/slices/wishlistSlice";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -12,17 +16,24 @@ const ProductImages = ({
   onSelect,
   productName,
   id,
-  onMobileZoomChange
+  onMobileZoomChange,
 }) => {
-  const [isZoomed, setIsZoomed] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
-  
+
   const dispatch = useDispatch();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const { isAuthenticated } = useSelector((state) => state.auth);
-  const isWishlisted = useSelector((state) => state.wishlist.wishlistStatus[id]);
+  const isWishlisted = useSelector((state) =>
+    Boolean(state.wishlist.wishlistStatus[id])
+  );
+
+  const handleLightboxChange = (open) => {
+    setLightboxOpen(open);
+    onMobileZoomChange?.(open);
+  };
 
   const handleWishlistToggle = async (e) => {
     e.preventDefault();
@@ -45,12 +56,11 @@ const ProductImages = ({
 
     try {
       const result = await dispatch(toggleWishlist(id)).unwrap();
-
       toast({
-        title: result.action === "added"
-          ? "Added to wishlist ❤️"
-          : "Removed from wishlist",
-        variant: "default",
+        title:
+          result.action === "added"
+            ? "Added to wishlist ❤️"
+            : "Removed from wishlist",
       });
     } catch (error) {
       dispatch(revertOptimisticToggle(id));
@@ -73,51 +83,47 @@ const ProductImages = ({
         });
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Link copied to clipboard!",
-          variant: "default",
-        });
+        toast({ title: "Link copied to clipboard!" });
       }
     } catch (error) {
       console.error("Error sharing:", error);
     }
   };
 
-  const toggleZoom = () => {
-    setIsZoomed(!isZoomed);
+  const openLightbox = () => {
+    handleLightboxChange(true);
   };
 
   return (
     <div className="space-y-4">
       <div className="sticky top-6">
-        {/* Zoom button */}
         <button
-          onClick={toggleZoom}
-          className="absolute top-4 right-4 z-10 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-colors"
-          aria-label={isZoomed ? "Minimize image" : "Zoom image"}
+          type="button"
+          onClick={openLightbox}
+          className="absolute top-4 right-4 z-10 p-2 bg-card/95 backdrop-blur-sm rounded-lg shadow-lg border border-border hover:bg-muted transition-colors"
+          aria-label="Enlarge image"
         >
-          {isZoomed ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          <Maximize2 size={20} />
         </button>
 
-        {/* Product Gallery */}
         <ProductGallery
           images={images}
           selectedImage={selectedImage}
           onSelect={onSelect}
-          isZoomed={isZoomed}
-          setIsZoomed={setIsZoomed}
-           onMobileZoomChange={onMobileZoomChange}
+          lightboxOpen={lightboxOpen}
+          setLightboxOpen={setLightboxOpen}
+          onLightboxChange={handleLightboxChange}
         />
 
-        {/* Quick Actions */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mt-6 pt-6 border-t border-border">
           <button
+            type="button"
             onClick={handleWishlistToggle}
             disabled={isToggling}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               isWishlisted
                 ? "text-red-600 bg-red-50 dark:bg-red-900/20"
-                : "text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                : "text-muted-foreground hover:text-red-600 hover:bg-muted"
             } ${isToggling ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {isToggling ? (
@@ -126,13 +132,18 @@ const ProductImages = ({
               <Heart size={20} fill={isWishlisted ? "currentColor" : "none"} />
             )}
             <span className="text-sm font-medium">
-              {isToggling ? "Updating..." : (isWishlisted ? "Wishlisted" : "Wishlist")}
+              {isToggling
+                ? "Updating..."
+                : isWishlisted
+                  ? "Wishlisted"
+                  : "Wishlist"}
             </span>
           </button>
 
           <button
+            type="button"
             onClick={handleShare}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
           >
             <Share2 size={20} />
             <span className="text-sm font-medium">Share</span>

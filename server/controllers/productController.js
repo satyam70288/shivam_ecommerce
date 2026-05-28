@@ -374,7 +374,7 @@ const getProducts = async (req, res) => {
 
     // Get products
     const products = await Product.find(query)
-      .select("_id name price rating discount offerValidFrom offerValidTill variants images colors brand stock reviewCount description")
+      .select("_id slug name price rating discount offerValidFrom offerValidTill variants images colors brand stock reviewCount description isFeatured isBestSeller")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -694,8 +694,8 @@ const getSimilarProducts = async (req, res) => {
       });
     }
 
-    // Find current product
-    const currentProduct = await Product.findById(productId);
+    const { findProductByIdOrSlug } = require("../service/productDService");
+    const currentProduct = await findProductByIdOrSlug(productId);
     if (!currentProduct) {
       return res.status(404).json({ 
         success: false, 

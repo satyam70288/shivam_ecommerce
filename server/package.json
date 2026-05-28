@@ -5,7 +5,9 @@
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "seed:products": "node seed/seedAllCategoryProducts.js",
+    "seed:banners": "node seed/banner.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

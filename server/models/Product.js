@@ -212,6 +212,7 @@ const discountedPrice = isOfferActive
 
   return {
     _id: this._id,
+    slug: this.slug,
     name: this.name,
     price: this.price,
     rating: this.rating || 0,

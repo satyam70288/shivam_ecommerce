@@ -23,13 +23,11 @@ const Product = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated } = useSelector((state) => state.auth);
-   const [isMobileZoomOpen, setIsMobileZoomOpen] = useState(false);
-   console.log(isMobileZoomOpen)
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   // ✅ Use cart actions hook
   const { addToCart } = useCartActions();
- const handleMobileZoomChange = (isOpen) => {
-
-    setIsMobileZoomOpen(isOpen);
+  const handleLightboxChange = (isOpen) => {
+    setIsLightboxOpen(isOpen);
   };
   const {
     product,
@@ -53,22 +51,23 @@ const Product = () => {
 
   if (productLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300">
-            Product not found
-          </h2>
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-foreground">Product not found</h2>
+          <p className="mt-2 text-muted-foreground text-sm">
+            This item may have been removed or the link is incorrect.
+          </p>
           <button
             onClick={() => navigate("/")}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="mt-6 px-6 py-2 brand-gradient-bg text-primary-foreground rounded-lg font-medium"
           >
             Back to Home
           </button>
@@ -189,7 +188,7 @@ const Product = () => {
               onSelect={setSelectedImage}
               productName={product.name}
               id={id}
-               onMobileZoomChange={handleMobileZoomChange}
+               onMobileZoomChange={handleLightboxChange}
             />
 
             {/* Right Column - Product Info */}
@@ -256,7 +255,7 @@ const Product = () => {
       </main>
 
       {/* Mobile Sticky CTA */}
-      {!isMobileZoomOpen &&
+      {!isLightboxOpen &&
       <MobileStickyCTA
         product={product}
         displayPrice={displayPrice}

@@ -1,11 +1,28 @@
 // services/product.service.js
+const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const ProductCapabilities = require("../models/ProductCapabilities");
 const PromiseMaster = require("../models/PromiseMaster");
 
-exports.getProductByIdService = async (productId) => {
-  // 1. Product fetch
-  const product = await Product.findById(productId);
+const isMongoId = (value) =>
+  mongoose.Types.ObjectId.isValid(value) &&
+  /^[a-fA-F0-9]{24}$/.test(String(value));
+
+async function findProductByIdOrSlug(idOrSlug) {
+  if (!idOrSlug) return null;
+
+  if (isMongoId(idOrSlug)) {
+    const byId = await Product.findById(idOrSlug);
+    if (byId) return byId;
+  }
+
+  return Product.findOne({ slug: idOrSlug });
+}
+
+exports.findProductByIdOrSlug = findProductByIdOrSlug;
+
+exports.getProductByIdService = async (productIdOrSlug) => {
+  const product = await findProductByIdOrSlug(productIdOrSlug);
 
   if (!product) return null;
 

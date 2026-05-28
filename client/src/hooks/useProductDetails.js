@@ -3,34 +3,57 @@ import axios from "axios";
 
 const useProductDetails = (productId) => {
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [color, setColor] = useState("");
   const [size, setSize] = useState("");
-  const [promise,setPromise]=useState([])
+  const [promise, setPromise] = useState([]);
 
-  /* ================= FETCH PRODUCT ================= */
   useEffect(() => {
-  if (!productId) return;
+    if (!productId) {
+      setLoading(false);
+      setProduct(null);
+      return;
+    }
 
-  const fetchProduct = async () => {
-    const res = await axios.get(
-      `${import.meta.env.VITE_API_URL}/product/${productId}`
-    );
+    let cancelled = false;
 
-    const data = res.data.data;
-    setProduct(data);
-    setPromise(res.data.promises)
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/product/${productId}`
+        );
 
-    if (data.colors?.length) setColor(data.colors[0]);
-    if (data.sizes?.length) setSize(data.sizes[0]);
-  };
+        if (cancelled) return;
 
-  fetchProduct();
-}, [productId]);
+        const data = res.data.data;
+        setProduct(data);
+        setPromise(res.data.promises || []);
 
+        if (data.colors?.length) setColor(data.colors[0]);
+        else setColor("");
+        if (data.sizes?.length) setSize(data.sizes[0]);
+        else setSize("");
+        setSelectedImage(0);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Product fetch error:", err);
+          setProduct(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
-  /* ================= DERIVED FLAGS ================= */
+    fetchProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
   const isVariant = product?.productType === "variant";
 
   const hasColors = useMemo(
@@ -46,9 +69,7 @@ const useProductDetails = (productId) => {
   const images = useMemo(() => {
     if (!product) return [];
     if (isVariant) {
-      return (
-        product.variants?.find((v) => v.color === color)?.images || []
-      );
+      return product.variants?.find((v) => v.color === color)?.images || [];
     }
     return product.images || [];
   }, [product, isVariant, color]);
@@ -57,7 +78,6 @@ const useProductDetails = (productId) => {
     setSelectedImage(0);
   }, [color]);
 
-  /* ================= PRICE ================= */
   const isOfferActive =
     product?.discount > 0 &&
     product?.offerValidTill &&
@@ -67,7 +87,6 @@ const useProductDetails = (productId) => {
     ? product?.discountedPrice
     : product?.price;
 
-  /* ================= VALIDATION ================= */
   const validateSelection = () => {
     if ((hasColors || isVariant) && !color) return false;
     if (hasSizes && !size) return false;
@@ -76,6 +95,7 @@ const useProductDetails = (productId) => {
 
   return {
     product,
+    loading,
     quantity,
     setQuantity,
     selectedImage,
@@ -91,8 +111,7 @@ const useProductDetails = (productId) => {
     isOfferActive,
     displayPrice,
     validateSelection,
-    promise
-
+    promise,
   };
 };
 

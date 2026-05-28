@@ -46,7 +46,7 @@ const seedBanners = async () => {
       subtitle: "Latest Designs",
       image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200&auto=format&fit=crop",
       tag: "TRENDING",
-      link: "/category/jewellery",
+      link: "/category/imitation-jewellery",
       priority: 6,
       isActive: true
     }
