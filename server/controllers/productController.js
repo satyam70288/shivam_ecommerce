@@ -38,6 +38,8 @@ const createProduct = async (req, res) => {
       freeShipping,
 
       ageGroup,
+      colors,
+      sizes,
       tags,
       keywords,
 
@@ -124,6 +126,8 @@ const createProduct = async (req, res) => {
       freeShipping: toBool(freeShipping),
 
       ageGroup: parseJSON(ageGroup, []),
+      colors: parseJSON(colors, []),
+      sizes: parseJSON(sizes, []),
       tags: parseJSON(tags, []),
       keywords: parseJSON(keywords, []),
 
@@ -296,11 +300,14 @@ const updateProduct = async (req, res) => {
     const { id } = req.params;
     const data = { ...req.body };
 
-    if (data.sizes && typeof data.sizes === "string") {
-      try {
-        data.sizes = JSON.parse(data.sizes);
-      } catch {
-        // keep as is if parsing fails
+    const jsonFields = ["sizes", "colors", "materials", "ageGroup", "tags", "keywords", "features", "specifications", "dimensions"];
+    for (const field of jsonFields) {
+      if (data[field] && typeof data[field] === "string") {
+        try {
+          data[field] = JSON.parse(data[field]);
+        } catch {
+          // keep as-is if parsing fails
+        }
       }
     }
 

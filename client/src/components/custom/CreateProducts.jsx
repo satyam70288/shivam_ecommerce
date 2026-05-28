@@ -24,23 +24,13 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { useProductForm } from "@/hooks/useProductForm";
 import ReactQuill from "react-quill";
+import {
+  MATERIAL_OPTIONS,
+  AGE_GROUP_OPTIONS,
+  COLOR_OPTIONS,
+} from "@/constants/filtersConfig";
 
 const MAX_GENERAL_IMAGES = 8;
-
-/* Static Options */
-const MATERIAL_OPTIONS = [
-  "Plastic",
-  "Wood",
-  "Metal",
-  "Cotton",
-  "Synthetic",
-  "Alloy",
-  "Paper",
-  "Other",
-];
-const AGE_GROUPS = ["0-3", "3-6", "6-9", "9-12", "12+"];
-const COLORS = ["Red", "Blue", "Black", "White", "Pink", "Gold", "Silver"];
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
 
 const CreateProducts = ({ productId }) => {
   const f = useProductForm(productId);
@@ -113,14 +103,17 @@ const CreateProducts = ({ productId }) => {
 
             <div>
               <Label>Materials</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                Used in sidebar → Material filter
+              </p>
+              <div className="grid grid-cols-2 gap-2">
                 {MATERIAL_OPTIONS.map((m) => (
-                  <label key={m} className="flex items-center gap-2">
+                  <label key={m.value} className="flex items-center gap-2 text-sm">
                     <Checkbox
-                      checked={f.materials.includes(m)}
-                      onCheckedChange={() => f.toggleMaterial(m)}
+                      checked={f.materials.includes(m.value)}
+                      onCheckedChange={() => f.toggleMaterial(m.value)}
                     />
-                    {m}
+                    {m.label}
                   </label>
                 ))}
               </div>
@@ -158,15 +151,45 @@ const CreateProducts = ({ productId }) => {
             {/* Age Group */}
             <div>
               <Label>Age Group</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {AGE_GROUPS.map((ag) => (
-                  <label key={ag} className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                Used in sidebar → Age group filter (mainly Toys)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {AGE_GROUP_OPTIONS.map((ag) => (
+                  <label key={ag.value} className="flex items-center gap-2 text-sm">
                     <Checkbox
-                      checked={f.ageGroup.includes(ag)}
-                      onCheckedChange={() => f.toggleAgeGroup(ag)}
+                      checked={f.ageGroup.includes(ag.value)}
+                      onCheckedChange={() => f.toggleAgeGroup(ag.value)}
                     />
-                    {ag} years
+                    {ag.label}
                   </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Colors */}
+            <div>
+              <Label>Colors</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                Used in sidebar → Color filter
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_OPTIONS.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => f.toggleColor(c.value)}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-sm transition-all ${
+                      f.colors.includes(c.value)
+                        ? "border-primary bg-primary/10 font-medium"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded-full shrink-0 ${c.swatch}`}
+                    />
+                    {c.label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -200,6 +223,9 @@ const CreateProducts = ({ productId }) => {
 
             {/* Feature Flags */}
             <div className="space-y-2">
+              <p className="text-xs text-muted-foreground mb-1">
+                Used in sidebar → Highlights filter
+              </p>
               <label className="flex items-center gap-2">
                 <Checkbox
                   checked={f.isFeatured}
@@ -276,6 +302,9 @@ Lightweight design"
           />
         </div>
         <div className="space-y-4 pt-4 border-t">
+          <p className="text-xs text-muted-foreground">
+            Used in sidebar → Free shipping (Offers filter)
+          </p>
           <label className="flex items-center gap-2">
             <Checkbox
               checked={f.freeShipping}
@@ -392,6 +421,10 @@ Lightweight design"
         </CardHeader>
 
         <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Discount % + dates → sidebar &quot;Discount&quot; and &quot;On sale&quot; filters.
+            Price & stock → price range and availability filters.
+          </p>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Discount (%)</Label>
