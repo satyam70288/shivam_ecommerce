@@ -5,6 +5,7 @@ const cors = require("cors");
 const { readdirSync } = require("fs");
 const morgan = require("morgan");
 const helmet = require("helmet");
+const { getHelmetConfig, getHealthPageCspDirectives } = require("./config/csp");
 const xss = require("xss-clean");
 const mongoSanitize = require("express-mongo-sanitize");
 const hpp = require("hpp");
@@ -31,38 +32,9 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 // Logging (dev)
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
-/* ========== SECURITY HEADERS ========== */
-// app.use(
-//   helmet({
-//     contentSecurityPolicy: {
-//       directives: {
-//         defaultSrc: ["'self'"],
-//         scriptSrc: [
-//           "'self'",
-//            "http://localhost:5173",
-//           "https://checkout.razorpay.com", // Razorpay script
-//         ],
-//         connectSrc: [
-//           "'self'",
-//           "https://api.razorpay.com",      // Razorpay API
-//           "https://checkout.razorpay.com", // Razorpay checkout
-//         ],
-//         frameSrc: [
-//           "'self'",
-//           "https://checkout.razorpay.com", // Razorpay iframe
-//         ],
-//         imgSrc: [
-//           "'self'",
-//           "data:",
-//           "https://*.razorpay.com",        // Razorpay images/logos
-//         ],
-//         styleSrc: ["'self'", "'unsafe-inline'"], // keep inline if frontend injects styles
-//       },
-//     },
-//     crossOriginEmbedderPolicy: false,
-//   })
-// );
-
+/* ========== SECURITY HEADERS (CSP + Helmet) ========== */
+const isProduction = process.env.NODE_ENV === "production";
+app.use(helmet(getHelmetConfig(isProduction)));
 
 /* ========== SANITIZATION ========== */
 // Prevent NoSQL injection (Mongo specific)
@@ -138,23 +110,20 @@ app.use(globalLimiter);
 //   });
 // }
 
-/* ========== Security: HSTS (strict transport security) ========== */
-if (process.env.NODE_ENV === "production") {
-  // tell browsers to only use HTTPS for this domain
-  app.use(
-    helmet.hsts({
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    })
-  );
-}
-
 /* ========== Connect DB & Routes ========== */
 connectDb();
 
-// Health check
+// Health check (stricter CSP than API JSON routes)
 app.get("/", (req, res) => {
+  const csp = Object.entries(getHealthPageCspDirectives())
+    .filter(([, values]) => Array.isArray(values) && values.length > 0)
+    .map(([key, values]) => {
+      const kebab = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      return `${kebab} ${values.join(" ")}`;
+    })
+    .join("; ");
+
+  res.setHeader("Content-Security-Policy", csp);
   res.send(`<center><h1>✅ Server Running on PORT: ${port}</h1></center>`);
 });
 app.use("/api/webhook", webhookRoutes);
