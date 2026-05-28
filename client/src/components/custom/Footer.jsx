@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="bg-muted/60 dark:bg-card border-t border-border text-foreground/80">
-      <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
+    <footer className="bg-muted/60 dark:bg-card border-t border-border text-foreground/80 mt-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-14 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
 
         {/* SHOP INFO */}
         <div>
@@ -93,7 +93,7 @@ const Footer = () => {
       </div>
 
       {/* COPYRIGHT */}
-      <div className="border-t border-border py-4 text-center text-sm text-muted-foreground">
+      <div className="border-t border-border py-5 px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} Shree Laxmi Shop. All rights reserved.
       </div>
     </footer>

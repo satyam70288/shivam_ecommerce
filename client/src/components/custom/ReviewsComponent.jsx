@@ -47,7 +47,7 @@ const ReviewsComponent = ({ productId }) => {
   };
 
   return (
-    <div className="my-10 sm:my-20 max-w-4xl mx-auto px-4">
+    <div className="w-full">
       {/* Write Review Section */}
       <div>
         <button

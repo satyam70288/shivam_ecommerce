@@ -1,8 +1,12 @@
-// SimilarProducts.jsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import ProductCard from '../custom/ProductCard';
-// import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import ProductCard from "../custom/ProductCard";
+
+const SECTION_WRAP =
+  "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 sm:pt-12 lg:pt-16 pb-14 sm:pb-16 lg:pb-20";
+
+const PRODUCT_GRID =
+  "grid gap-4 sm:gap-5 md:gap-6 grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] md:grid-cols-[repeat(auto-fill,minmax(12.5rem,1fr))]";
 
 const SimilarProducts = ({ productId }) => {
   const [similarProducts, setSimilarProducts] = useState([]);
@@ -44,14 +48,14 @@ const SimilarProducts = ({ productId }) => {
   // Loading skeleton with shimmer effect
   if (loading) {
     return (
-      <div className="mt-12 ">
-        <div className="flex items-center justify-between mb-6 ">
+      <section className={SECTION_WRAP}>
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <div className="h-8 w-48 bg-gray-200 dark:bg-gray-800 rounded-lg mb-2 animate-pulse"></div>
-            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+            <div className="h-8 w-48 bg-muted rounded-lg mb-2 animate-pulse" />
+            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
           </div>
         </div>
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5">
+        <div className={PRODUCT_GRID}>
           {[...Array(6)].map((_, i) => (
             <div 
               key={i} 
@@ -71,18 +75,17 @@ const SimilarProducts = ({ productId }) => {
             </div>
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 
-  // Error state with retry option
   if (error) {
     return (
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+      <section className={SECTION_WRAP}>
+        <h2 className="text-2xl font-bold text-foreground mb-6">
           Similar Products
         </h2>
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 border border-red-100 dark:border-red-800/30 p-8">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/10 dark:to-orange-900/10 border border-red-100 dark:border-red-800/30 p-6 sm:p-8">
           <div className="absolute top-4 right-4 opacity-10">
             {/* <ExclamationTriangleIcon className="w-24 h-24 text-red-500" /> */}
           </div>
@@ -110,18 +113,17 @@ const SimilarProducts = ({ productId }) => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
-  // No similar products
   if (similarProducts.length === 0) {
     return (
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">
+      <section className={SECTION_WRAP}>
+        <h2 className="text-2xl font-bold text-foreground mb-6">
           Similar Products
         </h2>
-        <div className="text-center py-12 px-4 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 bg-gradient-to-b from-gray-50 to-transparent dark:from-gray-900/50">
+        <div className="text-center py-12 px-4 sm:px-6 rounded-2xl border-2 border-dashed border-border bg-muted/30">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl mb-4">
             <span className="text-2xl">🎯</span>
           </div>
@@ -132,72 +134,32 @@ const SimilarProducts = ({ productId }) => {
             This product is one of a kind! We couldn't find similar items, but you might discover more unique finds in our collection.
           </p>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <section className="mt-12 lg:px-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className='px-2'>
-          <h2 className=" text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text">
+    <section className={SECTION_WRAP}>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-8 sm:mb-10">
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">
             Similar Products
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-muted-foreground mt-1.5 text-sm sm:text-base">
             Discover more items you might love
           </p>
         </div>
-        <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-          <span className="inline-flex items-center">
-            <span className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mr-2"></span>
-            {similarProducts.length} products found
-          </span>
-        </div>
+        <p className="text-sm text-muted-foreground shrink-0">
+          {similarProducts.length} product{similarProducts.length !== 1 ? "s" : ""}{" "}
+          found
+        </p>
       </div>
 
-      <div className="relative">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5">
-          {similarProducts.map((product) => (
-            <ProductCard key={product._id} {...product} />
-          ))}
-        </div>
-
-        {/* View more button (optional) */}
-        {similarProducts.length >= 6 && (
-          <div className="text-center mt-10">
-            <button className="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-800 dark:to-gray-900 hover:from-gray-800 hover:to-gray-700 dark:hover:from-gray-700 dark:hover:to-gray-800 text-white font-medium rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl">
-              View All Similar Products
-              <svg 
-                className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </button>
-          </div>
-        )}
+      <div className={PRODUCT_GRID}>
+        {similarProducts.map((product) => (
+          <ProductCard key={product._id} {...product} />
+        ))}
       </div>
-
-      {/* Add CSS animations */}
-      <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
-        }
-      `}</style>
     </section>
   );
 };

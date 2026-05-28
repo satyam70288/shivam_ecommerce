@@ -248,25 +248,31 @@ const Product = () => {
         </div>
 
         {/* Tabs Section */}
-        <ProductTabs product={product} />
+        <div className="mt-8 lg:mt-10">
+          <ProductTabs product={product} />
+        </div>
 
         {/* Reviews Section */}
-        <ReviewsComponent productId={product._id} product={product} />
+        <div className="mt-8 lg:mt-10">
+          <ReviewsComponent productId={product._id} product={product} />
+        </div>
       </main>
 
       {/* Mobile Sticky CTA */}
-      {!isLightboxOpen &&
-      <MobileStickyCTA
-        product={product}
-        displayPrice={displayPrice}
-        isOfferActive={isOfferActive}
-        onAddToCart={handleAddToCartClick}
-        onBuyNow={handleBuyNowClick}
-        loading={addingToCart}
-        
-      />}
+      {!isLightboxOpen && (
+        <MobileStickyCTA
+          product={product}
+          displayPrice={displayPrice}
+          isOfferActive={isOfferActive}
+          onAddToCart={handleAddToCartClick}
+          onBuyNow={handleBuyNowClick}
+          loading={addingToCart}
+        />
+      )}
 
-      <SimilarProducts productId={product._id} />
+      <div className="border-t border-border/60 bg-background">
+        <SimilarProducts productId={product._id} />
+      </div>
     </div>
   );
 };
