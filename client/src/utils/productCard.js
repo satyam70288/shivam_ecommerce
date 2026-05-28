@@ -77,13 +77,22 @@ export const getStockStatus = (stock) => {
   };
 };
 
-export const getImageUrl = ({ image, variants, imageError }) => {
-  if (imageError) {
-    return "https://images.pexels.com/photos/3801990/pexels-photo-3801990.jpeg";
-  }
-  if (image?.url) return image.url;
-  if (variants?.[0]?.images?.[0]?.url)
-    return variants[0].images[0].url;
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&auto=format&fit=crop";
 
-  return "https://images.pexels.com/photos/3801990/pexels-photo-3801990.jpeg";
+export const getImageUrl = ({ image, images, variants, imageError }) => {
+  if (imageError) return FALLBACK_IMAGE;
+
+  if (typeof image === "string" && image.trim()) return image.trim();
+  if (image?.url) return image.url;
+
+  if (Array.isArray(images) && images.length > 0) {
+    const first = images[0];
+    if (typeof first === "string" && first.trim()) return first.trim();
+    if (first?.url) return first.url;
+  }
+
+  if (variants?.[0]?.images?.[0]?.url) return variants[0].images[0].url;
+
+  return FALLBACK_IMAGE;
 };

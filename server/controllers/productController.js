@@ -605,7 +605,7 @@ const getProductsByCategory = async (req, res) => {
     /* ------------------------------
        STEP 1: Prepare Filters
     ------------------------------ */
-    const query = { category: categoryDoc._id };
+    const query = { category: categoryDoc._id, blacklisted: false };
 
     // PRICE RANGE FILTER
     if (req.query.priceRange) {
@@ -655,23 +655,15 @@ const getProductsByCategory = async (req, res) => {
       }
     }
 
-    /* ------------------------------
-       STEP 2: Run Query
-    ------------------------------ */
-    const products = await Product.aggregate([
-      { $match: query },
-      {
-        $addFields: {
-          image: { $arrayElemAt: ["$images", 0] },
-        },
-      },
-    ]);
+    const products = await Product.find(query).sort({ createdAt: -1 });
+
+    const data = products.map((product) => product.getProductCardData());
 
     return res.status(200).json({
       success: true,
       category: categoryDoc.name,
-      total: products.length,
-      data: products,
+      total: data.length,
+      data,
     });
   } catch (error) {
     console.error("GetProductsByCategory Error:", error);

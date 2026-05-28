@@ -9,11 +9,7 @@ import {
   revertOptimisticToggle,
   toggleWishlist,
 } from "@/redux/slices/wishlistSlice";
-import { addToCart } from "@/redux/slices/cartSlice"; // ✅ Correct import
 import useCartActions from "@/hooks/useCartActions";
-
-// Cache loaded image URLs so re-renders (wishlist/cart) don't flash skeleton again
-const loadedImageUrls = new Set();
 
 const ProductCard = ({
   _id,
@@ -22,6 +18,7 @@ const ProductCard = ({
   rating = 0,
   reviewCount = 0,
   image = null,
+  images = [],
   isOfferActive = false,
   discountedPrice = 0,
   discount = 0,
@@ -29,47 +26,45 @@ const ProductCard = ({
   stock = 0,
   isFeatured = false,
   isBestSeller = false,
-  slug, // Add slug for product link
+  slug,
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.auth);
-  const isWishlisted = useSelector(
-    (state) => Boolean(state.wishlist.wishlistStatus[_id])
+  const isWishlisted = useSelector((state) =>
+    Boolean(state.wishlist.wishlistStatus[_id])
   );
 
   const { addToCart: addToCartHandler } = useCartActions();
 
-  const displayImage = getImageUrl({ image, variants });
-  const [imageLoaded, setImageLoaded] = useState(() =>
-    loadedImageUrls.has(displayImage)
-  );
+  const displayImage = getImageUrl({ image, images, variants });
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    setImageError(false);
-    if (loadedImageUrls.has(displayImage)) {
-      setImageLoaded(true);
-    } else {
-      setImageLoaded(false);
-    }
-  }, [displayImage]);
   const [isAdding, setIsAdding] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
-  // Calculate final price
-  const finalPrice = isOfferActive && discountedPrice > 0
-    ? discountedPrice
-    : price;
+  const imageSrc = imageError
+    ? getImageUrl({ image, images, variants, imageError: true })
+    : displayImage;
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [displayImage]);
+
+  useEffect(() => {
+    const probe = new Image();
+    probe.src = imageSrc;
+    if (probe.complete) setImageLoaded(true);
+  }, [imageSrc]);
+
+  const finalPrice =
+    isOfferActive && discountedPrice > 0 ? discountedPrice : price;
 
   const savings = price - finalPrice;
   const discountPercentage = isOfferActive && discount > 0 ? discount : 0;
   const stockStatus = getStockStatus(stock);
-  const imageSrc = imageError
-    ? getImageUrl({ image, variants, imageError: true })
-    : displayImage;
 
-  // ✅ CORRECT: Add to cart function
   const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -82,13 +77,11 @@ const ProductCard = ({
     setIsAdding(true);
 
     try {
-      // Get first available variant or default
       const firstVariant = variants?.[0];
       const color = firstVariant?.color || "Default";
       const size = firstVariant?.size || "M";
       const variantId = firstVariant?._id;
 
-      // Prepare product data for optimistic update
       const productData = {
         _id,
         name,
@@ -97,30 +90,24 @@ const ProductCard = ({
         variants: variants,
       };
 
-      // ✅ Use hook instead of direct dispatch
       await addToCartHandler({
         productId: _id,
-        productData, // For optimistic update
+        productData,
         quantity: 1,
         color,
         size,
         variantId,
       });
 
-      // Show success toast
       toast({
-        title: "✅ Added to cart!",
+        title: "Added to cart",
         description: `${name} added to cart successfully`,
         duration: 3000,
       });
-
-      // Optional: Trigger cart drawer to open
-      // window.dispatchEvent(new CustomEvent("openCartDrawer"));
-
     } catch (error) {
       console.error("Add to cart error:", error);
       toast({
-        title: "❌ Failed to add to cart",
+        title: "Failed to add to cart",
         description: error.message || "Please try again",
         variant: "destructive",
         duration: 3000,
@@ -154,7 +141,7 @@ const ProductCard = ({
       toast({
         title:
           result.action === "added"
-            ? "Added to wishlist ❤️"
+            ? "Added to wishlist"
             : "Removed from wishlist",
         variant: "default",
       });
@@ -170,164 +157,149 @@ const ProductCard = ({
     }
   };
 
-  // Product link - use slug if available, otherwise ID
   const productLink = slug ? `/product/${slug}` : `/product/${_id}`;
 
   return (
-    <div className="group relative font-sans">
-      {/* SUBTLE HOVER EFFECT */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-100/0 group-hover:from-gray-50/50 group-hover:to-gray-100/50 dark:group-hover:from-gray-800/30 dark:group-hover:to-gray-900/30 rounded-xl transition-all duration-300 font-sans" />
+    <article className="group relative h-full flex flex-col bg-card rounded-xl border border-border/80 shadow-sm hover:shadow-md hover:border-primary/25 transition-all duration-300 overflow-hidden">
+      <Link to={productLink} className="flex flex-col flex-1 min-h-0">
+        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+          {!imageLoaded && (
+            <div
+              className="absolute inset-0 z-10 bg-muted animate-pulse"
+              aria-hidden
+            />
+          )}
 
-      <div className="relative bg-card rounded-xl border border-border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden h-full flex flex-col">
-        {/* ========== ABSOLUTE POSITIONED BADGES ========== */}
-        {/* HEART BUTTON - Top Right */}
-        <button
-          onClick={handleWishlistToggle}
-          className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-md flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 transition-all duration-300 hover:scale-110"
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          disabled={isToggling}
-        >
-          <Heart
-            size={16}
-            className={`transition-all duration-300 ${
-              isWishlisted
-                ? "fill-red-500 text-red-500"
-                : "text-gray-500 dark:text-gray-400 hover:text-red-500"
-            } ${isToggling ? "opacity-50" : ""}`}
+          <img
+            key={imageSrc}
+            loading="lazy"
+            decoding="async"
+            src={imageSrc}
+            alt={name}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              if (!imageError) setImageError(true);
+              else setImageLoaded(true);
+            }}
+            className="block w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
           />
-        </button>
 
-        {/* OFFER BADGES - Top Left */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
-          {/* Discount Badge */}
-          {discountPercentage > 0 && (
-            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white text-[11px] font-bold shadow-md">
-              {discountPercentage}% OFF
-            </div>
-          )}
-
-          {/* Featured/Bestseller */}
-          {isFeatured && (
-            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-600 to-primary text-primary-foreground text-[11px] font-bold shadow-md flex items-center gap-1">
-              <Sparkles size={10} />
-              Featured
-            </div>
-          )}
-
-          {isBestSeller && !isFeatured && (
-            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-primary to-amber-600 text-primary-foreground text-[11px] font-bold shadow-md">
-              Bestseller
-            </div>
-          )}
-        </div>
-        {/* ========== END ABSOLUTE BADGES ========== */}
-
-        <Link to={productLink} className="block flex-grow">
-          {/* IMAGE SECTION */}
-          <div className="pt-8 pb-3 px-4">
-            <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted">
-              {!imageLoaded && (
-                <div className="absolute inset-0 bg-muted animate-pulse rounded-lg" aria-hidden />
-              )}
-
-              <img
-                loading="lazy"
-                decoding="async"
-                src={imageSrc}
-                alt={name}
-                onLoad={() => {
-                  loadedImageUrls.add(imageSrc);
-                  setImageLoaded(true);
-                }}
-                onError={() => {
-                  if (!imageError) {
-                    setImageError(true);
-                    setImageLoaded(false);
-                  } else {
-                    setImageLoaded(true);
-                  }
-                }}
-                className={`w-full h-full object-contain transition-transform duration-300 group-hover:scale-105 ${
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            </div>
-          </div>
-
-          {/* CONTENT SECTION */}
-          <div className="px-4 pb-3 space-y-1 flex-grow">
-            {/* PRODUCT NAME */}
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate leading-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors pb-1">
-              {name}
-            </h3>
-
-            {/* RATING */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-2 py-1 rounded-lg">
-                <Star size={12} className="fill-white" />
-                <span className="text-xs font-bold">{rating.toFixed(1)}</span>
-              </div>
-
-              {reviewCount > 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  ({reviewCount})
-                </span>
-              )}
-            </div>
-
-            {/* PRICE SECTION */}
-            <div className="space-y-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">
-                  {formatPrice(finalPrice)}
-                </span>
-
-                {discountedPrice > 0 && price > discountedPrice && (
-                  <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
-                    {formatPrice(price)}
-                  </span>
-                )}
-
-                {savings > 0 && (
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full ml-auto">
-                    Save {formatPrice(savings)}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </Link>
-
-        {/* ADD TO CART BUTTON */}
-        <div className="px-4 pb-4">
-          <button
-            onClick={handleAddToCart}
-            disabled={isAdding || stock <= 0}
-            className={`w-full py-2.5 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-              stock <= 0
-                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                : isAdding
-                ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 cursor-wait"
-                : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow hover:shadow-md active:scale-[0.98]"
-            }`}
-          >
-            {isAdding ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Adding...
-              </>
-            ) : stock <= 0 ? (
-              "Out of Stock"
-            ) : (
-              <>
-                <ShoppingBag size={14} />
-                Add to Cart
-              </>
+          {/* Badges on image */}
+          <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1">
+            {discountPercentage > 0 && (
+              <span className="px-2 py-0.5 rounded-md bg-red-500 text-white text-[10px] font-bold shadow-sm">
+                {discountPercentage}% OFF
+              </span>
             )}
-          </button>
+            {isFeatured && (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md brand-gradient-bg text-primary-foreground text-[10px] font-bold shadow-sm">
+                <Sparkles size={9} />
+                Featured
+              </span>
+            )}
+            {isBestSeller && !isFeatured && (
+              <span className="px-2 py-0.5 rounded-md brand-gradient-bg text-primary-foreground text-[10px] font-bold shadow-sm">
+                Bestseller
+              </span>
+            )}
+          </div>
+
+          {stock <= 0 && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/45 backdrop-blur-[1px]">
+              <span className="px-3 py-1 rounded-full bg-white/95 text-xs font-semibold text-gray-800">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
+
+        <div className="flex flex-col p-2.5 gap-1">
+          <h3 className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors" title={name}>
+            {name}
+          </h3>
+
+          <div className="flex items-center gap-1.5 min-h-[22px]">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[11px] font-semibold shrink-0">
+              <Star size={10} className="fill-white shrink-0" />
+              {rating.toFixed(1)}
+            </span>
+            {reviewCount > 0 && (
+              <span className="text-[11px] text-muted-foreground shrink-0">
+                ({reviewCount})
+              </span>
+            )}
+            {stock > 0 && stock <= 5 && (
+              <span className={`text-[10px] font-medium truncate ml-auto ${stockStatus.color}`}>
+                {stockStatus.text}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="text-base font-bold text-foreground">
+              {formatPrice(finalPrice)}
+            </span>
+            {discountedPrice > 0 && price > discountedPrice && (
+              <span className="text-sm text-muted-foreground line-through">
+                {formatPrice(price)}
+              </span>
+            )}
+            {savings > 0 && (
+              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                Save {formatPrice(savings)}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {/* Wishlist — on image corner */}
+      <button
+        type="button"
+        onClick={handleWishlistToggle}
+        className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-white/95 dark:bg-gray-900/95 shadow-md flex items-center justify-center hover:scale-110 transition-transform"
+        aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+        disabled={isToggling}
+      >
+        <Heart
+          size={16}
+          className={`transition-colors ${
+            isWishlisted
+              ? "fill-red-500 text-red-500"
+              : "text-gray-500 hover:text-red-500"
+          } ${isToggling ? "opacity-50" : ""}`}
+        />
+      </button>
+
+      <div className="px-2.5 pb-2.5 pt-0">
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={isAdding || stock <= 0}
+          className={`w-full py-2 rounded-lg font-medium text-xs transition-all duration-200 flex items-center justify-center gap-1.5 ${
+            stock <= 0
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : isAdding
+                ? "bg-primary/15 text-primary cursor-wait"
+                : "brand-gradient-bg text-primary-foreground shadow-sm hover:opacity-95 active:scale-[0.98]"
+          }`}
+        >
+          {isAdding ? (
+            <>
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              Adding...
+            </>
+          ) : stock <= 0 ? (
+            "Out of Stock"
+          ) : (
+            <>
+              <ShoppingBag size={15} />
+              Add to Cart
+            </>
+          )}
+        </button>
       </div>
-    </div>
+    </article>
   );
 };
 

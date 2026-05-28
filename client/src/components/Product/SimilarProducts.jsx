@@ -156,27 +156,9 @@ const SimilarProducts = ({ productId }) => {
       </div>
 
       <div className="relative">
-        <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5">
-          {similarProducts.map((product, index) => (
-            <div
-              key={product._id}
-              className="transform transition-all duration-500 hover:-translate-y-2"
-              style={{
-                animationDelay: `${index * 100}ms`,
-                animation: 'fadeInUp 0.5s ease forwards',
-                opacity: 0
-              }}
-            >
-              <div className="relative group">
-                {/* Card glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
-                
-                {/* Product card */}
-                <div className="relative h-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300">
-                  <ProductCard {...product} />
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-5">
+          {similarProducts.map((product) => (
+            <ProductCard key={product._id} {...product} />
           ))}
         </div>
 
