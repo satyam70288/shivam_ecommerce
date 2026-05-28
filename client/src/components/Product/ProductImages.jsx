@@ -95,12 +95,13 @@ const ProductImages = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="sticky top-6">
+    <div className="space-y-4 w-full">
+      <div className="sticky top-6 w-full">
+        <div className="relative w-full">
         <button
           type="button"
           onClick={openLightbox}
-          className="absolute top-4 right-4 z-10 p-2 bg-card/95 backdrop-blur-sm rounded-lg shadow-lg border border-border hover:bg-muted transition-colors"
+          className="absolute top-3 right-3 z-10 p-2.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm rounded-lg shadow-md border border-border hover:bg-muted transition-colors"
           aria-label="Enlarge image"
         >
           <Maximize2 size={20} />
@@ -114,6 +115,7 @@ const ProductImages = ({
           setLightboxOpen={setLightboxOpen}
           onLightboxChange={handleLightboxChange}
         />
+        </div>
 
         <div className="flex items-center justify-between mt-6 pt-6 border-t border-border">
           <button

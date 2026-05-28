@@ -703,19 +703,17 @@ const getSimilarProducts = async (req, res) => {
       });
     }
 
-    // Build query
     const query = {
       blacklisted: false,
-      _id: { $ne: productId }
+      _id: { $ne: currentProduct._id },
     };
 
-    // Add category if available
     if (currentProduct.category) {
       query.category = currentProduct.category;
     }
 
-    // Get similar products
     const products = await Product.find(query)
+      .select("_id slug name price rating discount offerValidFrom offerValidTill variants images colors brand stock reviewCount description isFeatured isBestSeller")
       .limit(limit)
       .sort({ rating: -1, reviewCount: -1 });
 

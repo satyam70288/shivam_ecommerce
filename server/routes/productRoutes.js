@@ -16,13 +16,6 @@ const verifyToken = require("../middlewares/verifyToken");
 const upload = require("../middlewares/multer");
 console.log("📦 Product routes loaded");
 
-// Category — MUST BE BEFORE ANYTHING WITH :id
-router.get("/products/by-category/:category", (req, res) => {
-  console.log("🔥 CATEGORY ROUTE HIT:", req.params.category);
-  res.send("Category route working");
-});
-
-
 router.get("/get-products", getProducts);
 
 router.get("/get-products-admin", getProductsforadmin);

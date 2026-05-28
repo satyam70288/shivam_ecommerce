@@ -266,7 +266,7 @@ const Product = () => {
         
       />}
 
-      <SimilarProducts productId={id} />
+      <SimilarProducts productId={product._id} />
     </div>
   );
 };

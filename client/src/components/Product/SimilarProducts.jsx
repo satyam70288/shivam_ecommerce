@@ -9,32 +9,36 @@ const SimilarProducts = ({ productId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchSimilarProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/similar/${productId}?limit=12`
-        );
+  const fetchSimilarProducts = async () => {
+    if (!productId) return;
 
-        if (response.data.success) {
-          setSimilarProducts(response.data.data || []);
-        } else {
-          setError(response.data.message || 'Unable to load similar products');
-        }
-      } catch (err) {
-        console.error("Error fetching similar products:", err);
-        setError(err.response?.data?.message || "Failed to load similar products");
-      } finally {
-        setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/similar/${productId}?limit=12`
+      );
+
+      if (response.data.success) {
+        setSimilarProducts(response.data.data || []);
+      } else {
+        setError(response.data.message || "Unable to load similar products");
       }
-    };
-
-    if (productId) {
-      fetchSimilarProducts();
+    } catch (err) {
+      console.error("Error fetching similar products:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to load similar products"
+      );
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchSimilarProducts();
   }, [productId]);
 
   // Loading skeleton with shimmer effect
@@ -96,8 +100,9 @@ const SimilarProducts = ({ productId }) => {
                 {error}
               </p>
               <button
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium rounded-lg transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl"
+                type="button"
+                onClick={fetchSimilarProducts}
+                className="inline-flex items-center px-4 py-2 brand-gradient-bg text-primary-foreground font-medium rounded-lg transition-all duration-300 hover:opacity-90"
               >
                 {/* <ArrowPathIcon className="w-4 h-4 mr-2" /> */}
                 Try Again

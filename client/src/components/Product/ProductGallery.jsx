@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ImageLightbox from "./ImageLightbox";
+import { ZoomIn } from "lucide-react";
 
 const ProductGallery = ({
   images = [],
@@ -34,10 +35,41 @@ const ProductGallery = ({
     setBgPos(`${x}% ${y}%`);
   };
 
+  const mainFrameClass =
+    "group relative w-full overflow-hidden rounded-xl border border-border bg-white dark:bg-zinc-950 shadow-sm cursor-zoom-in";
+
+  const renderMainImage = (hintText) => (
+    <>
+      {!showZoom && (
+        <img
+          src={activeImage}
+          alt="product"
+          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+          draggable={false}
+        />
+      )}
+      {showZoom && (
+        <div
+          className="absolute inset-0 bg-no-repeat"
+          style={{
+            backgroundImage: `url(${activeImage})`,
+            backgroundSize: "180%",
+            backgroundPosition: bgPos,
+          }}
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+      <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs text-white bg-black/65 backdrop-blur-sm px-3 py-1.5 rounded-full pointer-events-none">
+        <ZoomIn size={14} />
+        {hintText}
+      </span>
+    </>
+  );
+
   return (
     <>
       {/* DESKTOP */}
-      <div className="hidden lg:flex gap-4">
+      <div className="hidden lg:flex gap-3 w-full items-start">
         {images.length > 1 && (
           <div className="flex flex-col gap-2 shrink-0">
             {images.map((img, i) => (
@@ -48,20 +80,24 @@ const ProductGallery = ({
                   onSelect(i);
                   setShowZoom(false);
                 }}
-                className={`w-14 h-14 rounded-md border transition-all ${
+                className={`w-[72px] h-[72px] rounded-lg border-2 overflow-hidden bg-white dark:bg-zinc-950 transition-all ${
                   selectedImage === i
-                    ? "border-primary border-2 scale-105"
-                    : "border-border hover:border-primary/40"
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50"
                 }`}
               >
-                <img src={img.url} alt="" className="h-full w-full object-contain" />
+                <img
+                  src={img.url}
+                  alt=""
+                  className="h-full w-full object-cover object-center"
+                />
               </button>
             ))}
           </div>
         )}
 
         <div
-          className="relative h-[400px] w-[400px] rounded-xl border border-border bg-muted overflow-hidden cursor-zoom-in"
+          className={`${mainFrameClass} flex-1 aspect-square max-h-[min(520px,50vw)]`}
           onMouseEnter={() => setShowZoom(true)}
           onMouseLeave={() => setShowZoom(false)}
           onMouseMove={handleMouseMove}
@@ -76,33 +112,14 @@ const ProductGallery = ({
           }}
           aria-label="View larger image"
         >
-          {!showZoom && (
-            <img
-              src={activeImage}
-              alt="product"
-              className="h-full w-full object-contain"
-            />
-          )}
-          {showZoom && (
-            <div
-              className="absolute inset-0 bg-no-repeat pointer-events-none"
-              style={{
-                backgroundImage: `url(${activeImage})`,
-                backgroundSize: "200%",
-                backgroundPosition: bgPos,
-              }}
-            />
-          )}
-          <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white bg-black/60 px-3 py-1 rounded-full pointer-events-none">
-            Click to enlarge
-          </span>
+          {renderMainImage("Click to enlarge")}
         </div>
       </div>
 
       {/* MOBILE */}
-      <div className="lg:hidden">
+      <div className="lg:hidden w-full">
         <div
-          className="w-full h-[320px] sm:h-[360px] rounded-xl border border-border bg-muted flex items-center justify-center mb-4 relative cursor-pointer"
+          className={`${mainFrameClass} aspect-[4/3] sm:aspect-square mb-3`}
           onClick={openLightbox}
           role="button"
           tabIndex={0}
@@ -114,30 +131,27 @@ const ProductGallery = ({
           }}
           aria-label="Tap to view larger image"
         >
-          <img
-            src={activeImage}
-            alt="product"
-            className="max-h-full w-auto object-contain"
-          />
-          <span className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 text-white text-sm rounded-full pointer-events-none">
-            Tap to enlarge
-          </span>
+          {renderMainImage("Tap to enlarge")}
         </div>
 
         {images.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
             {images.map((img, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => onSelect(i)}
-                className={`shrink-0 w-16 h-16 rounded-md border transition-all ${
+                className={`shrink-0 w-[68px] h-[68px] rounded-lg border-2 overflow-hidden bg-white dark:bg-zinc-950 ${
                   selectedImage === i
-                    ? "border-primary border-2"
+                    ? "border-primary ring-2 ring-primary/20"
                     : "border-border"
                 }`}
               >
-                <img src={img.url} alt="" className="h-full w-full object-contain" />
+                <img
+                  src={img.url}
+                  alt=""
+                  className="h-full w-full object-cover object-center"
+                />
               </button>
             ))}
           </div>
