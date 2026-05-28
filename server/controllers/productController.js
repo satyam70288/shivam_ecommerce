@@ -621,14 +621,36 @@ const getProductsByCategory = async (req, res) => {
       query.$or = priceConditions;
     }
 
-    // DISCOUNT FILTER
+    // DISCOUNT FILTER (multiple: match any threshold)
     if (req.query.discount) {
-      query.discount = { $gte: Number(req.query.discount) };
+      const discounts = req.query.discount
+        .split(",")
+        .map(Number)
+        .filter((n) => !Number.isNaN(n));
+      if (discounts.length === 1) {
+        query.discount = { $gte: discounts[0] };
+      } else if (discounts.length > 1) {
+        query.$and = query.$and || [];
+        query.$and.push({
+          $or: discounts.map((d) => ({ discount: { $gte: d } })),
+        });
+      }
     }
 
     // RATINGS FILTER
     if (req.query.rating) {
-      query.rating = { $gte: Number(req.query.rating) };
+      const ratings = req.query.rating
+        .split(",")
+        .map(Number)
+        .filter((n) => !Number.isNaN(n));
+      if (ratings.length === 1) {
+        query.rating = { $gte: ratings[0] };
+      } else if (ratings.length > 1) {
+        query.$and = query.$and || [];
+        query.$and.push({
+          $or: ratings.map((r) => ({ rating: { $gte: r } })),
+        });
+      }
     }
 
     // COLOR FILTER
@@ -643,19 +665,61 @@ const getProductsByCategory = async (req, res) => {
 
     // MATERIAL FILTER
     if (req.query.material) {
-      query.material = { $in: req.query.material.split(",") };
+      const materials = req.query.material.split(",");
+      query.materials = { $in: materials };
     }
 
     // AVAILABILITY FILTER
     if (req.query.availability) {
-      if (req.query.availability === "In Stock") {
-        query.stock = { $gt: 0 };
-      } else {
-        query.stock = 0;
+      const statuses = req.query.availability.split(",");
+      const orAvail = [];
+      if (statuses.includes("In Stock")) orAvail.push({ stock: { $gt: 0 } });
+      if (statuses.includes("Out of Stock")) orAvail.push({ stock: { $lte: 0 } });
+      if (orAvail.length === 1) Object.assign(query, orAvail[0]);
+      else if (orAvail.length > 1) {
+        query.$and = query.$and || [];
+        query.$and.push({ $or: orAvail });
       }
     }
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    // OFFERS: sale, freeShipping
+    if (req.query.offers) {
+      const offers = req.query.offers.split(",");
+      const offerOr = [];
+      if (offers.includes("sale")) offerOr.push({ discount: { $gt: 0 } });
+      if (offers.includes("freeShipping")) offerOr.push({ freeShipping: true });
+      if (offerOr.length === 1) Object.assign(query, offerOr[0]);
+      else if (offerOr.length > 1) {
+        query.$and = query.$and || [];
+        query.$and.push({ $or: offerOr });
+      }
+    }
+
+    // BADGES: featured, bestseller, new
+    if (req.query.badges) {
+      const badges = req.query.badges.split(",");
+      const badgeOr = [];
+      if (badges.includes("featured")) badgeOr.push({ isFeatured: true });
+      if (badges.includes("bestseller")) badgeOr.push({ isBestSeller: true });
+      if (badges.includes("new")) badgeOr.push({ isNewArrival: true });
+      if (badgeOr.length === 1) Object.assign(query, badgeOr[0]);
+      else if (badgeOr.length > 1) {
+        query.$and = query.$and || [];
+        query.$and.push({ $or: badgeOr });
+      }
+    }
+
+    const sortMap = {
+      newest: { createdAt: -1 },
+      price_asc: { price: 1 },
+      price_desc: { price: -1 },
+      rating: { rating: -1, reviewCount: -1 },
+      discount: { discount: -1 },
+    };
+    const sortKey = req.query.sort || "newest";
+    const sortOption = sortMap[sortKey] || sortMap.newest;
+
+    const products = await Product.find(query).sort(sortOption);
 
     const data = products.map((product) => product.getProductCardData());
 

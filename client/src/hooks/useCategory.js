@@ -1,15 +1,55 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 
-function buildFilterQuery(selectedFilters) {
-  let query = "";
-  for (const key in selectedFilters) {
-    const value = selectedFilters[key];
-    if (Array.isArray(value) && value.length > 0) {
-      query += `${query ? "&" : "?"}${key}=${value.join(",")}`;
-    }
+/** Map UI filter state → API query string */
+export function buildFilterQuery(selectedFilters) {
+  const params = new URLSearchParams();
+
+  if (selectedFilters.priceRange?.length) {
+    params.set("priceRange", selectedFilters.priceRange.join(","));
   }
-  return query;
+
+  if (selectedFilters.discount?.length) {
+    params.set("discount", selectedFilters.discount.join(","));
+  }
+
+  if (selectedFilters.ratings?.length) {
+    params.set("rating", selectedFilters.ratings.join(","));
+  }
+
+  if (selectedFilters.colors?.length) {
+    params.set("color", selectedFilters.colors.join(","));
+  }
+
+  if (selectedFilters.ageGroup?.length) {
+    params.set("ageGroup", selectedFilters.ageGroup.join(","));
+  }
+
+  if (selectedFilters.material?.length) {
+    params.set("material", selectedFilters.material.join(","));
+  }
+
+  if (selectedFilters.availability?.length) {
+    const mapped = selectedFilters.availability.map((v) =>
+      v === "in" ? "In Stock" : v === "out" ? "Out of Stock" : v
+    );
+    params.set("availability", mapped.join(","));
+  }
+
+  if (selectedFilters.offers?.length) {
+    params.set("offers", selectedFilters.offers.join(","));
+  }
+
+  if (selectedFilters.badges?.length) {
+    params.set("badges", selectedFilters.badges.join(","));
+  }
+
+  if (selectedFilters.sort && selectedFilters.sort !== "newest") {
+    params.set("sort", selectedFilters.sort);
+  }
+
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
 }
 
 export default function useCategory(slug, selectedFilters = {}) {
