@@ -125,8 +125,14 @@ export const useProductForm = (productId) => {
           (p.images || []).map((img) => ({
             file: null,
             preview: img.url,
+            id: img.id || img.public_id || "",
           }))
         );
+
+        setCanDispatchFast(p.canDispatchFast ?? true);
+        setReturnEligible(p.returnEligible ?? true);
+        setCodAvailable(p.codAvailable ?? true);
+        setQualityVerified(p.qualityVerified ?? true);
 
         // OFFER
         setDiscount(p.discount ?? "");
@@ -239,7 +245,8 @@ export const useProductForm = (productId) => {
     if (!price) return "Enter price";
     if (!stock) return "Enter stock";
 
-    if (!images.length) return "Upload at least 1 image";
+    const hasImage = images.some((img) => img.file || img.preview);
+    if (!hasImage) return "Upload at least 1 image";
 
     if (offerValidFrom && offerValidTill && offerValidFrom > offerValidTill)
       return "Offer start date cannot be after end date";
@@ -260,61 +267,46 @@ export const useProductForm = (productId) => {
     try {
       setIsLoading(true);
 
+      const token = localStorage.getItem("token");
+      const authHeader = { Authorization: `Bearer ${token}` };
+
+      const parsedTags = tags
+        ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
+      const parsedKeywords = keywords
+        ? keywords.split(",").map((k) => k.trim()).filter(Boolean)
+        : [];
+      const parsedFeatures = featuresText
+        .split("\n")
+        .map((f) => f.trim())
+        .filter(Boolean);
+      const parsedSpecs = specifications.reduce((acc, s) => {
+        if (s.key && s.value) acc[s.key] = s.value;
+        return acc;
+      }, {});
+
       const form = new FormData();
       form.append("productType", "simple");
-
       form.append("name", name);
       form.append("description", description);
       form.append("category", categoryId);
-
       form.append("price", price);
       form.append("stock", stock);
-
-      // NEW FIELDS
       form.append("materials", JSON.stringify(materials));
       form.append("brand", brand);
-
       form.append("ageGroup", JSON.stringify(ageGroup));
       form.append("colors", JSON.stringify(colors));
       form.append("sizes", JSON.stringify(sizes));
-
-      if (tags)
-        form.append(
-          "tags",
-          JSON.stringify(tags.split(",").map((t) => t.trim()))
-        );
-      if (keywords)
-        form.append(
-          "keywords",
-          JSON.stringify(keywords.split(",").map((k) => k.trim()))
-        );
-
+      form.append("tags", JSON.stringify(parsedTags));
+      form.append("keywords", JSON.stringify(parsedKeywords));
       form.append("isFeatured", isFeatured);
       form.append("isNewArrival", isNewArrival);
       form.append("isBestSeller", isBestSeller);
-      form.append(
-        "features",
-        JSON.stringify(
-          featuresText
-            .split("\n")
-            .map((f) => f.trim())
-            .filter(Boolean)
-        )
-      );
-      form.append(
-        "specifications",
-        JSON.stringify(
-          specifications.reduce((acc, s) => {
-            if (s.key && s.value) acc[s.key] = s.value;
-            return acc;
-          }, {})
-        )
-      );
+      form.append("features", JSON.stringify(parsedFeatures));
+      form.append("specifications", JSON.stringify(parsedSpecs));
       form.append("dimensions", JSON.stringify(dimensions));
       form.append("freeShipping", freeShipping);
       form.append("handlingTime", handlingTime);
-
-      // OFFER
       form.append("discount", discount);
       form.append("offerTitle", offerTitle);
       form.append("offerDescription", offerDescription);
@@ -324,21 +316,48 @@ export const useProductForm = (productId) => {
       form.append("returnEligible", returnEligible ? "true" : "false");
       form.append("codAvailable", codAvailable ? "true" : "false");
       form.append("qualityVerified", qualityVerified ? "true" : "false");
-      // IMAGES
+
+      if (productId) {
+        const existingImages = images
+          .filter((img) => img.preview && !img.file)
+          .map((img) => ({ url: img.preview, id: img.id || "" }));
+        form.append("existingImages", JSON.stringify(existingImages));
+      }
+
       images.forEach((img) => {
         if (img.file) form.append("images", img.file);
       });
 
-      if (productId) form.append("productId", productId);
+      if (productId) {
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/update-product/${productId}`,
+          form,
+          {
+            headers: {
+              ...authHeader,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      } else {
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/create-product`,
+          form,
+          {
+            headers: {
+              ...authHeader,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      }
 
-      await axios.post(`${import.meta.env.VITE_API_URL}/create-product`, form, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+      toast({
+        title: "Success",
+        description: productId
+          ? "Product updated successfully"
+          : "Product created successfully",
       });
-
-      toast({ title: "Success", description: "Product saved successfully" });
       return true;
     } catch (err) {
     

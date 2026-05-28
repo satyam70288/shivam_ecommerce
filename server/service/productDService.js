@@ -59,6 +59,10 @@ exports.getProductByIdService = async (productIdOrSlug) => {
     ? Object.fromEntries(product.specifications)
     : {};
   productObj.discountedPrice = discountedPrice;
+  productObj.canDispatchFast = Boolean(cap?.canDispatchFast);
+  productObj.returnEligible = Boolean(cap?.returnEligible);
+  productObj.codAvailable = Boolean(cap?.codAvailable);
+  productObj.qualityVerified = Boolean(cap?.qualityVerified);
 
   return {
     product: productObj,

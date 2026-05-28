@@ -17,7 +17,6 @@ import ProductCard from "@/components/ProductCard";
 import ProductFilters from "@/components/ProductFilters";
 import ProductDeleteDialog from "@/components/ProductDeleteDialog";
 import Pagination from "@/components/Pagination";
-import EditProductDialog from "@/components/Admin/EditProductDialog";
 
 import { useAdminProducts } from "@/hooks/useAdminProducts";
 import { setProducts } from "@/redux/slices/productSlice";
@@ -50,8 +49,11 @@ const navigate = useNavigate();
     refreshProducts,
   } = useAdminProducts();
 
-  const [editProduct, setEditProduct] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+
+  const goToEdit = (product) => {
+    navigate(`/admin/products/edit/${product._id}`);
+  };
 
   const handleDelete = async () => {
     try {
@@ -102,7 +104,7 @@ const navigate = useNavigate();
         <ProductCardRow
           key={p._id}
           product={p}
-          onEdit={setEditProduct}
+          onEdit={goToEdit}
           onDelete={setDeleteId}
         />
       ))}
@@ -175,7 +177,7 @@ const navigate = useNavigate();
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setEditProduct(p)}
+                  onClick={() => goToEdit(p)}
                 >
                   <Pencil size={14} />
                 </Button>
@@ -227,17 +229,6 @@ const navigate = useNavigate();
         onConfirm={handleDelete}
       />
 
-      {/* Edit Dialog */}
-      <EditProductDialog
-        open={!!editProduct}
-        onClose={() => setEditProduct(null)}
-        product={editProduct}
-        categories={categories}
-        onSave={() => {
-          refreshProducts();
-          setEditProduct(null);
-        }}
-      />
     </div>
   );
 };

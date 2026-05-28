@@ -1,5 +1,6 @@
 /* YOUR SAME IMPORTS */
 import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -32,8 +33,13 @@ import {
 
 const MAX_GENERAL_IMAGES = 8;
 
-const CreateProducts = ({ productId }) => {
+const SIZE_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
+
+const CreateProducts = () => {
+  const { productId } = useParams();
+  const navigate = useNavigate();
   const f = useProductForm(productId);
+  const isEdit = Boolean(productId);
 
   if (f.isLoading) {
     return (
@@ -45,12 +51,25 @@ const CreateProducts = ({ productId }) => {
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        f.submitProduct();
+        const ok = await f.submitProduct();
+        if (ok) navigate("/admin/products");
       }}
       className="space-y-10"
     >
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-foreground">
+          {isEdit ? "Edit Product" : "Add New Product"}
+        </h1>
+        <button
+          type="button"
+          onClick={() => navigate("/admin/products")}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back to products
+        </button>
+      </div>
       {/* ================================
       2 COLUMN GRID — MAIN FIELDS
      ================================ */}
@@ -189,6 +208,30 @@ const CreateProducts = ({ productId }) => {
                       className={`w-4 h-4 rounded-full shrink-0 ${c.swatch}`}
                     />
                     {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sizes */}
+            <div>
+              <Label>Sizes (optional)</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                For bags, clothing-style items
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => f.toggleSize(size)}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ${
+                      f.sizes.includes(size)
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    {size}
                   </button>
                 ))}
               </div>
@@ -528,7 +571,7 @@ Lightweight design"
       {/* SUBMIT BUTTON */}
       <Button className="w-full" disabled={f.isLoading}>
         {f.isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        {productId ? "Update Product" : "Add Product"}
+        {isEdit ? "Update Product" : "Add Product"}
       </Button>
     </form>
   );

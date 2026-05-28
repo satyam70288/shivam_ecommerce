@@ -295,12 +295,38 @@ const updateProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
     return res.status(401).json({ success: false, message: "Access denied" });
   }
- console.log(req.body)
+
+  const toBool = (v) => v === "true" || v === true;
+
   try {
     const { id } = req.params;
     const data = { ...req.body };
 
-    const jsonFields = ["sizes", "colors", "materials", "ageGroup", "tags", "keywords", "features", "specifications", "dimensions"];
+    const capabilityFields = {
+      canDispatchFast: data.canDispatchFast,
+      returnEligible: data.returnEligible,
+      codAvailable: data.codAvailable,
+      qualityVerified: data.qualityVerified,
+    };
+    delete data.canDispatchFast;
+    delete data.returnEligible;
+    delete data.codAvailable;
+    delete data.qualityVerified;
+    delete data.productId;
+    delete data.productType;
+
+    const jsonFields = [
+      "sizes",
+      "colors",
+      "materials",
+      "ageGroup",
+      "tags",
+      "keywords",
+      "features",
+      "specifications",
+      "dimensions",
+      "images",
+    ];
     for (const field of jsonFields) {
       if (data[field] && typeof data[field] === "string") {
         try {
@@ -311,19 +337,94 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    if (data.discount) data.discount = Number(data.discount);
+    const boolFields = [
+      "isFeatured",
+      "isNewArrival",
+      "isBestSeller",
+      "freeShipping",
+      "blacklisted",
+    ];
+    for (const field of boolFields) {
+      if (data[field] !== undefined) {
+        data[field] = toBool(data[field]);
+      }
+    }
 
-    if (data.offerValidFrom)
-      data.offerValidFrom = new Date(data.offerValidFrom); // Add this
-    if (data.offerValidTill)
+    if (data.discount !== undefined && data.discount !== "") {
+      data.discount = Number(data.discount);
+    }
+    if (data.price !== undefined) data.price = Number(data.price);
+    if (data.stock !== undefined) data.stock = Number(data.stock);
+    if (data.handlingTime !== undefined) {
+      data.handlingTime = Number(data.handlingTime);
+    }
+
+    if (data.offerValidFrom) {
+      data.offerValidFrom = new Date(data.offerValidFrom);
+    }
+    if (data.offerValidTill) {
       data.offerValidTill = new Date(data.offerValidTill);
+    }
 
-    const product = await Product.findByIdAndUpdate(id, data, { new: true });
+    if (data.name) {
+      data.slug = data.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    }
 
-    if (!product)
+    const parseJSON = (v, fallback) => {
+      try {
+        return v ? JSON.parse(v) : fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    let imageList = parseJSON(data.existingImages, null);
+    delete data.existingImages;
+
+    if (req.files?.length) {
+      for (const file of req.files) {
+        const uploadRes = await cloudinaryUploadBuffer(file.buffer);
+        imageList = imageList || [];
+        imageList.push({
+          url: uploadRes.secure_url,
+          id: uploadRes.public_id,
+        });
+      }
+    }
+
+    if (imageList && imageList.length > 0) {
+      data.images = imageList;
+    }
+
+    const product = await Product.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!product) {
       return res
         .status(404)
         .json({ success: false, message: "Product not found" });
+    }
+
+    const hasCapabilityUpdate = Object.values(capabilityFields).some(
+      (v) => v !== undefined
+    );
+    if (hasCapabilityUpdate) {
+      await ProductCapabilities.findOneAndUpdate(
+        { productId: product._id },
+        {
+          canDispatchFast: toBool(capabilityFields.canDispatchFast),
+          returnEligible: toBool(capabilityFields.returnEligible),
+          codAvailable: toBool(capabilityFields.codAvailable),
+          qualityVerified: toBool(capabilityFields.qualityVerified),
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     return res.status(200).json({
       success: true,
@@ -331,6 +432,7 @@ const updateProduct = async (req, res) => {
       data: product,
     });
   } catch (error) {
+    console.error("PRODUCT UPDATE ERROR:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

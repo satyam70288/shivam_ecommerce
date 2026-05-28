@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
 const AdminProductDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +55,9 @@ const AdminProductDetails = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button>Edit</Button>
+          <Button onClick={() => navigate(`/admin/products/edit/${id}`)}>
+            Edit
+          </Button>
           <Button variant="outline">
             {product.blacklisted ? "Unlist" : "Blacklist"}
           </Button>
@@ -75,7 +78,8 @@ const AdminProductDetails = () => {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>
-                <b>Material:</b> {product.material || "—"}
+                <b>Materials:</b>{" "}
+                {product.materials?.length ? product.materials.join(", ") : "—"}
               </p>
 
               <p>

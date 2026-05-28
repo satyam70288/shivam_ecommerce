@@ -84,6 +84,7 @@ export default function App() {
         { path: "banner", element: <BannerManager /> },
         { path: "products", element: <AllProducts /> },
         { path: "products/create", element: <CreateProducts /> },
+        { path: "products/edit/:productId", element: <CreateProducts /> },
         { path: "orders", element: <Orders /> },
         { path: "analytics", element: <Analytics /> },
         { path: "settings", element: <Settings /> },
