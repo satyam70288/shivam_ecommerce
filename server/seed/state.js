@@ -1,7 +1,8 @@
 
 const mongoose = require('mongoose');
 const State = require('../models/State'); // Capital B
-const MONGO_URI = "mongodb+srv://satyamb971_db_user:mQkimJ4UeyRnldla@cluster0.ajggbjn.mongodb.net/?retryWrites=true&w=majority"; // Database name add karna
+require("dotenv").config();
+const MONGO_URI = process.env.MONGO_URI;
 
 const seedBanners = async () => {
   

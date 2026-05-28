@@ -1,11 +1,11 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import swagiconDark from "@/assets/shivam_new_logo.png";
+import shopLogo from "@/assets/shivam_new_logo.png";
+
 const TermsAndConditions = () => {
   return (
-    <div className="max-w-4xl mx-auto  bg-white dark:bg-black text-gray-900 dark:text-neutral-50 rounded-lg shadow-md my-10 ">
+    <div className="max-w-4xl mx-auto bg-card text-foreground border border-border rounded-lg shadow-md my-10">
       <header
-        className="w-full text-3xl font-bold text-center p-4 bg-white dark:bg-gray-900 
+        className="w-full text-3xl font-bold text-center p-4 bg-muted/50 
              [box-shadow:0_4px_6px_-1px_rgba(0,0,0,0.1)]"
       >
         Terms and Conditions
@@ -16,7 +16,7 @@ const TermsAndConditions = () => {
         <section className="mb-4 ">
           <h2 className="text-xl font-semibold mb-2">1. Introduction</h2>
           <p>
-            Welcome to <strong>www.swagfashion.in</strong>, our online store! Swag Fashion and its associates provide their services subject to the following terms and conditions. By visiting or shopping on this website, you agree to these terms. Please read them carefully.
+            Welcome to <strong>Shree Laxmi Shop</strong>, our online store! Shree Laxmi Shop and its associates provide their services subject to the following terms and conditions. By visiting or shopping on this website, you agree to these terms. Please read them carefully.
           </p>
         </section>
 
@@ -24,7 +24,7 @@ const TermsAndConditions = () => {
         <section className="mb-4  ">
           <h2 className="text-xl font-semibold mb-2 ">2. Privacy</h2>
           <p>
-            At <strong>Swag Fashion</strong>, we respect your privacy and protect your personal information. By using our website, you agree to this policy.
+            At <strong>Shree Laxmi Shop</strong>, we respect your privacy and protect your personal information. By using our website, you agree to this policy.
           </p>
         </section>
 
@@ -33,31 +33,28 @@ const TermsAndConditions = () => {
           <h2 className="text-xl font-semibold mb-2">3. Services Provided</h2>
           <ul className="list-disc ml-6 space-y-2">
             <li>
-              <strong>Easy Exchanges:</strong> You can exchange products, but returns are not accepted. Size or quality issues are handled quickly.
+              <strong>Wide Product Range:</strong> Toys, gifts, stationery, cosmetics, imitation jewellery, pooja samagri, bags, and other daily-use items.
             </li>
             <li>
-              <strong>Wide Range of Styles & Sizes:</strong> T-shirts for men, women, and kids (fits: slim, regular, oversized). Available in sizes S, M, L, XL, XXL, etc.
+              <strong>Quality Products:</strong> We source products carefully to offer good quality at affordable prices.
             </li>
             <li>
-              <strong>Premium Quality Materials:</strong> Soft, durable, and comfortable fabrics. Eco-friendly or organic cotton options.
+              <strong>Bulk & Gift Orders:</strong> Bulk purchases and gift orders are welcome. Contact us for availability and special pricing.
             </li>
             <li>
-              <strong>Bulk Orders & Corporate Orders:</strong> Discounts available for bulk purchases. Custom designs for events, teams, or companies.
+              <strong>Fast Shipping & Delivery:</strong> Multiple shipping options with tracking for eligible orders.
             </li>
             <li>
-              <strong>Fast Shipping & Delivery:</strong> Multiple shipping options with tracking for all orders.
+              <strong>Customer Support:</strong> Email and phone support for product queries, orders, and delivery help.
             </li>
             <li>
-              <strong>Customer Support:</strong> Live chat, email, and phone support. Assistance with sizing, design, or order queries.
-            </li>
-            <li>
-              <strong>Secure Payments:</strong> Multiple payment options: cards, online wallets, and COD. Safe and encrypted payment process.
+              <strong>Secure Payments:</strong> Online payment and cash on delivery (where available). Safe and encrypted payment process.
             </li>
             <li>
               <strong>Pricing and Availability:</strong> Prices are subject to change without notice. Product availability may vary based on stock.
             </li>
             <li>
-              <strong>Intellectual Property:</strong> All designs, logos, and content on the website are owned by Swag Fashion and cannot be copied or used without permission.
+              <strong>Intellectual Property:</strong> All designs, logos, and content on the website are owned by Shree Laxmi Shop and cannot be copied or used without permission.
             </li>
           </ul>
         </section>
@@ -86,7 +83,7 @@ const TermsAndConditions = () => {
         <section className="mb-4">
           <h2 className="text-xl font-semibold mb-2">6. Limitation of Liability</h2>
           <p>
-            <strong>Swag Fashion</strong> is not liable for indirect, incidental, or consequential damages arising from your use of the service.
+            <strong>Shree Laxmi Shop</strong> is not liable for indirect, incidental, or consequential damages arising from your use of the service.
           </p>
         </section>
 
@@ -107,22 +104,12 @@ const TermsAndConditions = () => {
           <h2 className="text-xl font-semibold mb-2">9. Changes to Terms</h2>
           <p>We reserve the right to update these Terms at any time. Changes will be posted on the website or communicated via email.</p>
         </section>
-
-
-
-
-
-
       </div>
-      <section className="w-full h-36 bg-white dark:bg-gray-800 text-center rounded-t-md shadow-md flex flex-col items-center justify-center mt-6">
-    <h1 className="text-lg font-bold mb-2">Swag Fashion</h1>
-    <img src={swagiconDark} alt="Swag Icon" className="h-16 w-16" />
-  </section>
 
-
-
-
-
+      <section className="w-full h-36 bg-muted/40 text-center rounded-t-md shadow-md flex flex-col items-center justify-center mt-6">
+        <h1 className="text-lg font-bold mb-2">Shree Laxmi Shop</h1>
+        <img src={shopLogo} alt="Shree Laxmi Shop Logo" className="h-16 w-16" />
+      </section>
     </div>
   );
 };

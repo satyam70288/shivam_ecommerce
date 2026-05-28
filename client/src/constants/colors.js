@@ -1,14 +1,16 @@
+/** Shree Laxmi Shop — chart & UI palette (aligned with index.css) */
 export const Colors = {
-  /* Core */
-  customBlack: "#0F172A",        // slate-900 (text / axis)
-  customGray: "#64748B",         // slate-500 (grid / muted)
-  customIsabelline: "#F8FAFC",   // slate-50 (card bg)
-
-  /* Accent / Chart colors */
-  customYellow: "#FACC15",       // amber-400 (highlight)
-  customBlue: "#3B82F6",         // blue-500
-  customGreen: "#22C55E",        // green-500
-  customPurple: "#8B5CF6",       // violet-500
-  customOrange: "#F97316",       // orange-500
-  customPink: "#EC4899",         // pink-500
+  customBlack: "hsl(222 47% 11%)",
+  customGray: "hsl(215 16% 42%)",
+  customIsabelline: "hsl(40 33% 98%)",
+  customYellow: "hsl(32 95% 44%)",
+  customAmber: "hsl(38 92% 50%)",
+  customOrange: "hsl(25 90% 52%)",
+  customBlue: "hsl(215 25% 45%)",
+  customGreen: "hsl(142 45% 40%)",
+  customPurple: "hsl(32 60% 35%)",
+  customPink: "hsl(12 70% 50%)",
+  customSlate: "hsl(215 16% 42%)",
+  customSuccess: "hsl(142 71% 40%)",
+  customDestructive: "hsl(0 84% 60%)",
 };

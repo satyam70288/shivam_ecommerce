@@ -61,12 +61,11 @@ const MyOrders = () => {
         const normalizedOrders = (res.data.data || []).map((order) => ({
           _id: order.orderId,
           createdAt: order.date,
-          orderNumber:order.orderNumber,
+          orderNumber:
+            order.orderNumber || `#${order.orderId?.slice(-12)?.toUpperCase()}`,
           status: order.status || "PLACED",
           amount: order.totalAmount || 0,
           products: order.products || [],
-          orderNumber:
-            order.orderNumber || `#${order.orderId?.slice(-12)?.toUpperCase()}`,
           paymentMethod: order.paymentMethod || "Cash on Delivery",
         }));
 

@@ -167,13 +167,13 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-indigo-50/30 to-purple-50/50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 md:p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-background to-orange-50/30 dark:from-background dark:via-background dark:to-background flex items-center justify-center p-4 md:p-6 relative overflow-hidden font-sans">
       
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-60 -right-60 w-96 h-96 bg-blue-400/10 dark:bg-blue-500/5 rounded-full mix-blend-overlay filter blur-3xl animate-float"></div>
-        <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-purple-400/10 dark:bg-purple-500/5 rounded-full mix-blend-overlay filter blur-3xl animate-float delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 to-purple-500/5 dark:from-blue-400/5 dark:to-purple-400/5 rounded-full blur-3xl"></div>
+        <div className="absolute -top-60 -right-60 w-96 h-96 bg-primary/10 rounded-full mix-blend-overlay filter blur-3xl animate-float"></div>
+        <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-amber-400/10 rounded-full mix-blend-overlay filter blur-3xl animate-float delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-3xl"></div>
       </div>
 
       {/* Floating particles */}
@@ -181,7 +181,7 @@ const Signup = () => {
         {[...Array(20)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-blue-400/30 dark:bg-blue-300/20 rounded-full animate-float"
+            className="absolute w-1 h-1 bg-primary/30 rounded-full animate-float"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -210,10 +210,10 @@ const Signup = () => {
 
         {/* Card Container */}
         <div 
-          className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-blue-500/10 dark:shadow-blue-900/20 p-8 md:p-10 border border-white/50 dark:border-gray-700/50 relative overflow-hidden"
+          className="bg-card/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-primary/10 p-8 md:p-10 border border-border relative overflow-hidden"
         >
           {/* Card background pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 dark:from-blue-400/5 dark:to-purple-400/5"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-amber-500/5"></div>
           
           {/* Header */}
           <div className="text-center mb-10 relative z-10">
@@ -236,9 +236,9 @@ const Signup = () => {
                   value={formData.name}
                   onChange={handleInputChange}
                   disabled={signupLoading || signupSuccess}
-                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.name ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'} rounded-2xl focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
+                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.name ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-primary'} rounded-2xl focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
                 />
-                <User className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.name ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'}`} />
+                <User className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.name ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-primary'}`} />
               </div>
               {errors.name && (
                 <p className="text-rose-600 dark:text-rose-400 text-sm flex items-center gap-2 animate-shake">
@@ -262,9 +262,9 @@ const Signup = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   disabled={signupLoading || signupSuccess}
-                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.email ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'} rounded-2xl focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
+                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.email ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-primary'} rounded-2xl focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
                 />
-                <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.email ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'}`} />
+                <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.email ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-primary'}`} />
               </div>
               {errors.email && (
                 <p className="text-rose-600 dark:text-rose-400 text-sm flex items-center gap-2">
@@ -288,9 +288,9 @@ const Signup = () => {
                   value={formData.phone}
                   onChange={handleInputChange}
                   disabled={signupLoading || signupSuccess}
-                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.phone ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'} rounded-2xl focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
+                  className={`pl-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.phone ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-primary'} rounded-2xl focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
                 />
-                <Phone className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.phone ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'}`} />
+                <Phone className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.phone ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-primary'}`} />
               </div>
               {errors.phone && (
                 <p className="text-rose-600 dark:text-rose-400 text-sm flex items-center gap-2">
@@ -314,14 +314,14 @@ const Signup = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   disabled={signupLoading || signupSuccess}
-                  className={`pl-12 pr-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.password ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'} rounded-2xl focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
+                  className={`pl-12 pr-12 h-14 bg-white/80 dark:bg-gray-800/80 border-2 ${errors.password ? 'border-rose-500 dark:border-rose-400 focus:border-rose-500 dark:focus:border-rose-400' : 'border-gray-200 dark:border-gray-700 focus:border-primary dark:focus:border-primary'} rounded-2xl focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25 transition-all duration-300 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-medium`}
                 />
-                <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.password ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'}`} />
+                <Lock className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${errors.password ? 'text-rose-500' : 'text-gray-400 group-focus-within:text-primary'}`} />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   disabled={signupLoading || signupSuccess}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors p-1 rounded-lg hover:bg-muted"
                 >
                   {showPassword ? (
                     <EyeOff className="h-5 w-5" />
@@ -375,7 +375,7 @@ const Signup = () => {
                     }
                   }}
                   disabled={signupLoading || signupSuccess}
-                  className={`mt-1 h-5 w-5 ${acceptedTerms ? 'bg-gradient-to-r from-blue-500 to-purple-600 border-0' : ''}`}
+                  className={`mt-1 h-5 w-5 ${acceptedTerms ? 'bg-primary border-0' : ''}`}
                 />
                 <div className="space-y-2">
                   <label
@@ -404,7 +404,7 @@ const Signup = () => {
               <Button
                 type="submit"
                 disabled={!acceptedTerms || signupLoading || signupSuccess}
-                className={`w-full h-16 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl hover:shadow-blue-500/30 dark:hover:shadow-blue-900/30 transition-all duration-500 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group relative overflow-hidden`}
+                className={`w-full h-16 brand-gradient-bg text-primary-foreground font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group relative overflow-hidden`}
               >
                 {/* Shine effect */}
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
@@ -441,7 +441,7 @@ const Signup = () => {
               Already part of our community?{" "}
               <Link
                 to="/login"
-                className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors inline-flex items-center gap-2 group"
+                className="font-bold text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-2 group"
               >
                 Sign In Now
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />

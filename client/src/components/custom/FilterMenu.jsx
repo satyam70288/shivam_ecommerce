@@ -25,14 +25,14 @@ const FilterMenu = ({ onSearch }) => {
   };
 
   return (
-    <div className="w-full px-3 sm:px-4 lg:px-6 pt-4 sm:py-6 bg-background dark:bg-background bg-gray-100">
+    <div className="w-full px-3 sm:px-4 lg:px-6 pt-4 sm:py-6 bg-background">
       {/* Modern Search Container - Mobile Optimized */}
       <div className="relative max-w-4xl mx-auto">
         {/* Subtle Glow Effect - Mobile Friendly */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl blur-sm opacity-10 group-hover:opacity-15 transition-opacity duration-300"></div>
+        <div className="absolute -inset-0.5 bg-primary/30 rounded-2xl blur-sm opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
         
         {/* Main Search Card - Responsive */}
-        <div className="relative bg-white dark:bg-zinc-900/95 backdrop-blur-sm border border-gray-100 dark:border-zinc-800/80 rounded-xl sm:rounded-2xl shadow-sm sm:shadow-lg p-0.5 sm:p-1">
+        <div className="relative bg-card backdrop-blur-sm border border-border rounded-xl sm:rounded-2xl shadow-sm sm:shadow-md p-0.5 sm:p-1">
           
           {/* Search Input Container */}
           <div className="relative">
@@ -40,7 +40,7 @@ const FilterMenu = ({ onSearch }) => {
             <div className={`
               absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2
               transition-all duration-200
-              ${isFocused || search ? 'text-blue-500' : 'text-gray-400 dark:text-zinc-500'}
+              ${isFocused || search ? 'text-primary' : 'text-muted-foreground'}
             `}>
               <Search className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>

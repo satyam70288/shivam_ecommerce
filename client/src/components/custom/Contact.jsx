@@ -54,8 +54,8 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-zinc-900 py-16 px-6 sm:px-12">
-      <div className="max-w-4xl mx-auto bg-white dark:bg-zinc-800 rounded-2xl shadow-lg p-8 md:p-12">
+    <div className="min-h-screen bg-background py-16 px-6 sm:px-12">
+      <div className="max-w-4xl mx-auto bg-card border border-border rounded-2xl shadow-lg p-8 md:p-12">
         <h2 className="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-8">
           Contact Us
         </h2>
@@ -64,19 +64,19 @@ const Contact = () => {
           {/* Contact Info */}
           <div className="space-y-6">
             <div className="flex items-center space-x-4">
-              <Mail className="text-customYellow" />
+              <Mail className="text-primary" />
               <span className="text-gray-700 dark:text-customGray">
-                swagfashion077@gmail.com
+                support@shreelaxmishop.com
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <Phone className="text-customYellow" />
+              <Phone className="text-primary" />
               <span className="text-gray-700 dark:text-customGray">
                 +91 7410797961
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <MapPin className="text-customYellow" />
+              <MapPin className="text-primary" />
               <span className="text-gray-700 dark:text-customGray">
                 PARSHV ELITE BLDG NO.01, BIRWADI ROAD, NEAR RAILWAY PHATAK, UMROLI EAST, Umroli, Palghar, Maharashtra - 401404
               </span>

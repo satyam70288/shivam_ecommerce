@@ -57,7 +57,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    let user = await Admin.finOne({ username });
+    let user = await Admin.findOne({ username });
 
     if (!user) {
       return res

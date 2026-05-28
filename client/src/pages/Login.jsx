@@ -105,37 +105,19 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Login.jsx - Add debug lines
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (validateForm()) {
-    if (rememberMe) {
-      localStorage.setItem('rememberedEmail', formData.email);
-    } else {
-      localStorage.removeItem('rememberedEmail');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (validateForm()) {
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", formData.email);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+
+      await dispatch(loginUser(formData));
     }
-    
-    // ✅ Debug before dispatch
-    console.log("Dispatching login with:", formData);
-    
-    const result = await dispatch(loginUser(formData));
-    
-    // ✅ Debug after dispatch
-    console.log("Login result:", result);
-    console.log("Token in localStorage:", localStorage.getItem('token'));
-    console.log("User in localStorage:", localStorage.getItem('user'));
-    
-    // Check if token exists
-    if (result.payload?.token) {
-      console.log("✅ Token received:", result.payload.token);
-    } else if (result.payload?.data?.token) {
-      console.log("✅ Token in data:", result.payload.data.token);
-    } else {
-      console.log("❌ No token in response:", result.payload);
-    }
-  }
-};
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -154,11 +136,11 @@ const handleSubmit = async (e) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-background to-orange-50/30 dark:from-background dark:via-background dark:to-background flex items-center justify-center p-4 transition-colors duration-300">
       
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] dark:bg-[radial-gradient(#60a5fa_1px,transparent_1px)] [background-size:40px_40px] transition-opacity duration-300"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(hsl(var(--primary)/0.15)_1px,transparent_1px)] [background-size:40px_40px] transition-opacity duration-300"></div>
       </div>
 
       <div className="w-full max-w-md z-10">
@@ -183,7 +165,7 @@ const handleSubmit = async (e) => {
         )}
 
         {/* Card Container */}
-        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/30 p-8 border border-gray-100 dark:border-gray-800 transition-all duration-300">
+        <div className="bg-card/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-border transition-all duration-300">
           
           {/* Header */}
           <div className="text-center mb-8">
@@ -215,15 +197,15 @@ const handleSubmit = async (e) => {
                   className={`pl-10 h-12 bg-white dark:bg-gray-800 ${
                     errors.email 
                       ? 'border-red-500 focus:border-red-500 dark:border-red-500 dark:focus:border-red-500' 
-                      : 'border-gray-300 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'
-                  } focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 
+                      : 'border-gray-300 dark:border-gray-700 focus:border-primary dark:focus:border-primary'
+                  } focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25 
                     text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
                     transition-all duration-300 disabled:opacity-50`}
                 />
                 <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 
                                ${errors.email 
                                  ? 'text-red-500 dark:text-red-400' 
-                                 : 'text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'
+                                 : 'text-gray-400 dark:text-gray-500 group-focus-within:text-primary'
                                } transition-colors duration-300`} />
               </div>
               {errors.email && (
@@ -241,7 +223,7 @@ const handleSubmit = async (e) => {
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-300"
+                  className="text-xs text-primary hover:text-primary/80 transition-colors duration-300"
                 >
                   Forgot Password?
                 </Link>
@@ -257,22 +239,21 @@ const handleSubmit = async (e) => {
                   className={`pl-10 pr-10 h-12 bg-white dark:bg-gray-800 ${
                     errors.password 
                       ? 'border-red-500 focus:border-red-500 dark:border-red-500 dark:focus:border-red-500' 
-                      : 'border-gray-300 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400'
-                  } focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                      : 'border-gray-300 dark:border-gray-700 focus:border-primary dark:focus:border-primary'
+                  } focus:ring-2 focus:ring-primary/20 dark:focus:ring-primary/25
                     text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500
                     transition-all duration-300 disabled:opacity-50`}
                 />
                 <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 
                                 ${errors.password 
                                   ? 'text-red-500 dark:text-red-400' 
-                                  : 'text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400'
+                                  : 'text-gray-400 dark:text-gray-500 group-focus-within:text-primary'
                                 } transition-colors duration-300`} />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={loginLoading}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 
-                           dark:hover:text-blue-400 transition-colors duration-300 disabled:opacity-50 p-1 rounded"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors duration-300 disabled:opacity-50 p-1 rounded"
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -298,8 +279,8 @@ const handleSubmit = async (e) => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   disabled={loginLoading}
                   className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 
-                           text-blue-600 dark:text-blue-500 
-                           focus:ring-blue-500 dark:focus:ring-blue-400 
+                           text-primary
+                           focus:ring-primary
                            bg-white dark:bg-gray-800 
                            transition-colors duration-300"
                 />
@@ -316,12 +297,8 @@ const handleSubmit = async (e) => {
             <Button
               type="submit"
               disabled={loginLoading}
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 
-                       hover:from-blue-700 hover:to-purple-700 
-                       dark:from-blue-500 dark:to-purple-500 
-                       dark:hover:from-blue-600 dark:hover:to-purple-600
-                       text-white font-medium rounded-lg 
-                       shadow-lg hover:shadow-xl dark:shadow-purple-500/20
+              className="w-full h-12 brand-gradient-bg text-primary-foreground font-medium rounded-lg 
+                       shadow-lg hover:shadow-xl
                        transition-all duration-300 
                        disabled:opacity-50 disabled:cursor-not-allowed 
                        relative overflow-hidden group"
@@ -350,7 +327,7 @@ const handleSubmit = async (e) => {
                 Don't have an account?{" "}
                 <Link
                   to="/signup"
-                  className="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
+                  className="font-medium text-primary hover:text-primary/80 
                            transition-colors duration-300 inline-flex items-center gap-1 group"
                 >
                   Create Account

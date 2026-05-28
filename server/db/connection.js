@@ -2,21 +2,16 @@ const mongoose = require("mongoose");
 
 const connectDb = async () => {
   try {
+    if (!process.env.MONGO_URI) {
+      console.error("MONGO_URI is not set in environment variables");
+      process.exit(1);
+    }
+
     const connection = await mongoose.connect(process.env.MONGO_URI);
-
-    if (connection.STATES.connecting) {
-      console.log(`Connecting DB to ${connection.connection.host}`);
-    }
-
-    if (connection.STATES.connected) {
-      console.log(`DB connected`);
-    }
-
-    if (connection.STATES.disconnected) {
-      console.log(`Disconnected DB from ${connection.connection.host}`);
-    }
+    console.log(`DB connected to ${connection.connection.host}`);
   } catch (error) {
-    console.log("Error connecting to database", error);
+    console.error("Error connecting to database:", error.message);
+    process.exit(1);
   }
 };
 

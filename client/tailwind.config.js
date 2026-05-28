@@ -23,10 +23,15 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
-        customYellow: "#edcf5d",
-        customBlack: "#010101",
-        customIsabelline: "#f2f0ea",
-        customGray: "#a4a4a4",
+        brand: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          muted: "hsl(var(--accent))",
+        },
+        customYellow: "hsl(32 95% 44%)",
+        customBlack: "hsl(222 47% 11%)",
+        customIsabelline: "hsl(40 33% 98%)",
+        customGray: "hsl(215 16% 42%)",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

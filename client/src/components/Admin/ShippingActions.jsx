@@ -1,8 +1,10 @@
 import { useState } from "react";
 import axios from "axios";
-import { Package, Truck, CheckCircle, Clock } from "lucide-react";
+import { Package, Truck, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const ShippingActions = ({ order, fetchOrders }) => {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const createShipment = async () => {

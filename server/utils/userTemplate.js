@@ -4,7 +4,7 @@ function welcomeEmailTemplate(customerName, websiteLink, supportInfo) {
   <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Welcome to Swag Fashion</title>
+    <title>Welcome to Shree Laxmi Shop</title>
     <style>
       body {
         font-family: 'Segoe UI', sans-serif;
@@ -75,9 +75,9 @@ function welcomeEmailTemplate(customerName, websiteLink, supportInfo) {
       <div class="logo">
         <!-- Optional Logo Placeholder -->
       </div> 
-      <img src="https://yourdomain.com/logo.png" alt="Swag Fashion Logo" />
+      <img src="https://yourdomain.com/logo.png" alt="Shree Laxmi Shop Logo" />
       <h1>Welcome to</h1>
-      <h2>SWAG FASHION</h2>
+      <h2>SHREE LAXMI SHOP</h2>
       <p>Let’s Get Started!</p>
       <a href="${websiteLink}" class="shop-button">SHOP NOW</a>
     </div>
@@ -87,12 +87,14 @@ function welcomeEmailTemplate(customerName, websiteLink, supportInfo) {
         Thank you for signing in and setting up your account,<br>
         We’re excited to have you with us!</p>
 
-      <p>Your journey with <strong>Swag Fashion</strong> starts now.<br>
-        If you ever need help, our team is just an email away.<br>
+      <p>Explore toys, gifts, stationery, cosmetics, imitation jewellery, pooja samagri, bags, and daily-use items — all in one place.</p>
+
+      <p>Your journey with <strong>Shree Laxmi Shop</strong> starts now.<br>
+        If you ever need help, reach us at <strong>${supportInfo}</strong>.<br>
         We’re here to make sure everything goes smoothly.</p>
 
       <p>Welcome aboard,<br>
-        The <strong>Swag Fashion</strong> Team</p>
+        The <strong>Shree Laxmi Shop</strong> Team</p>
 
       
     </div>
@@ -101,7 +103,6 @@ function welcomeEmailTemplate(customerName, websiteLink, supportInfo) {
   `;
 }
 
-// 👇 Exported inside an object
 module.exports = {
   welcomeEmailTemplate,
 };

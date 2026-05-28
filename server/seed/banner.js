@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Banner = require('../models/banner'); // Capital B
-const MONGO_URI = "mongodb+srv://satyamb971_db_user:mQkimJ4UeyRnldla@cluster0.ajggbjn.mongodb.net/?retryWrites=true&w=majority"; // Database name add karna
+require("dotenv").config();
+const MONGO_URI = process.env.MONGO_URI;
 
 const seedBanners = async () => {
   const defaultBanners = [
@@ -41,7 +42,7 @@ const seedBanners = async () => {
       isActive: true
     },
     {
-      title: "Fashion Jewellery",
+      title: "Imitation Jewellery",
       subtitle: "Latest Designs",
       image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200&auto=format&fit=crop",
       tag: "TRENDING",
@@ -52,7 +53,9 @@ const seedBanners = async () => {
   ];
 
   try {
-    // MongoDB connection
+    if (!MONGO_URI) {
+      throw new Error("MONGO_URI is not set in environment variables");
+    }
     await mongoose.connect(MONGO_URI);
         console.log("✅ MongoDB connected");
     

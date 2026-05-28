@@ -6,8 +6,8 @@ require("dotenv").config();
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "swagfashion077@gmail.com",
-    pass: "lnxk wszo movn gubk", // Use App Password, not regular password
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
   },
   tls: {
     rejectUnauthorized: false // This fixes the self-signed certificate error
@@ -20,7 +20,7 @@ const transporter = nodemailer.createTransport({
 const sendMail = async (toEmail, subject, htmlContent) => {
   try {
     const info = await transporter.sendMail({
-      from: `"Swag Fashion" <${process.env.GMAIL_USER}>`,
+      from: `"Shree Laxmi Shop" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: subject,
       text: htmlContent.replace(/<\/?[^>]+(>|$)/g, ""), // Remove HTML tags for plain text
@@ -56,7 +56,7 @@ const sendMail = async (toEmail, subject, htmlContent) => {
 
 // OTP email template
 const sendOtpEmail = async (toEmail, otp, userName = "User") => {
-  const subject = "Your Password Reset OTP - Swag Fashion";
+  const subject = "Your Password Reset OTP - Shree Laxmi Shop";
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -83,7 +83,7 @@ const sendOtpEmail = async (toEmail, otp, userName = "User") => {
       <div class="container">
         <div class="content">
           <h2>Hello ${userName},</h2>
-          <p>You requested to reset your password for your Swag Fashion account.</p>
+          <p>You requested to reset your password for your Shree Laxmi Shop account.</p>
           <p>Use the OTP below to reset your password:</p>
           
           <div class="otp-box">${otp}</div>
@@ -92,7 +92,7 @@ const sendOtpEmail = async (toEmail, otp, userName = "User") => {
           <p>If you didn't request this password reset, please ignore this email or contact support if you have concerns.</p>
           
           <div class="footer">
-            <p>Best regards,<br>Swag Fashion Team</p>
+            <p>Best regards,<br>Shree Laxmi Shop Team</p>
             <p><small>This is an automated message, please do not reply to this email.</small></p>
           </div>
         </div>
@@ -106,7 +106,7 @@ const sendOtpEmail = async (toEmail, otp, userName = "User") => {
 
 // Password reset confirmation email
 const sendPasswordResetConfirmation = async (toEmail, userName = "User") => {
-  const subject = "Password Reset Successful - Swag Fashion";
+  const subject = "Password Reset Successful - Shree Laxmi Shop";
   const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -123,13 +123,13 @@ const sendPasswordResetConfirmation = async (toEmail, userName = "User") => {
         
         <div class="success-box">
           <h3>✅ Your password has been reset successfully!</h3>
-          <p>You can now log in to your Swag Fashion account with your new password.</p>
+          <p>You can now log in to your Shree Laxmi Shop account with your new password.</p>
         </div>
         
         <p>If you didn't make this change, please contact our support team immediately.</p>
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-          <p>Stay stylish!<br>Swag Fashion Team</p>
+          <p>Thank you for shopping with us!<br>Shree Laxmi Shop Team</p>
         </div>
       </div>
     </body>

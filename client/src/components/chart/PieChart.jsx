@@ -21,13 +21,13 @@ import { Colors } from "@/constants/colors";
    CATEGORY → COLOR MAP
 ========================= */
 const CATEGORY_COLORS = {
-  Cosmetics: Colors.customYellow,
-  "Imitation Jewellery": Colors.customPink,
-  "Pooja Essentials": Colors.customGreen,
+  Cosmetics: Colors.customAmber,
+  "Imitation Jewellery": Colors.customOrange,
+  "Pooja Essentials": Colors.customYellow,
   Bags: Colors.customBlue,
-  Toys: Colors.customPurple,
+  Toys: Colors.customGreen,
   Gifts: Colors.customPink,
-  Stationery: Colors.customGreen,
+  Stationery: Colors.customPurple,
 };
 
 export default function CategoryPieChart({ data }) {

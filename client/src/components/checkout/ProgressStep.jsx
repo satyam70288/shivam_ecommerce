@@ -27,7 +27,7 @@ const ProgressStep = ({
           flex items-center justify-center
           transition-all duration-500
           ${isActive 
-            ? 'border-4 border-blue-500 dark:border-blue-400 bg-white dark:bg-gray-900 scale-110 shadow-lg ring-4 ring-blue-100 dark:ring-blue-900/30' 
+            ? 'border-4 border-primary bg-card scale-110 shadow-lg ring-4 ring-primary/20' 
             : isCompleted
             ? 'border-4 border-green-500 dark:border-green-400 bg-green-500 dark:bg-green-600 shadow-md'
             : 'border-4 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900'
@@ -41,7 +41,7 @@ const ProgressStep = ({
             <Icon className={`
               w-5 h-5 md:w-6 md:h-6 transition-colors duration-300
               ${isActive 
-                ? 'text-blue-600 dark:text-blue-400' 
+                ? 'text-primary' 
                 : 'text-gray-500 dark:text-gray-400'
               }
             `} />
@@ -61,7 +61,7 @@ const ProgressStep = ({
           px-3 py-1 rounded-full text-xs font-bold min-w-[60px] text-center
           transition-all duration-300
           ${isActive 
-            ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg' 
+            ? 'bg-primary text-primary-foreground shadow-lg' 
             : isCompleted
             ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
             : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'

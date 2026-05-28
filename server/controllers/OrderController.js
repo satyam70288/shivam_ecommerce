@@ -41,7 +41,6 @@ var razorpay = new Razorpay({
     process.env.RAZORPAY_KEY_SECRET ||
     "YourKeySecretHereHgijUZmybpNNR67lBrY4OumS",
 });
-console.log("RAZORPAY KEY:", process.env.RAZORPAY_KEY_ID);
 
 const getOrdersByUserId = async (req, res) => {
   const userId = req.id;

@@ -17,7 +17,7 @@ const cartSchema = new mongoose.Schema(
           required: true,
         },
 
-        // Only for clothing (variant products)
+        // Only for products with size/color variants (if used)
         variantId: {
           type: mongoose.Schema.Types.ObjectId,
           required: false,

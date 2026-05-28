@@ -73,11 +73,11 @@ const signup = async (req, res) => {
     // ✅ 2. Send full HTML Welcome Email to USER
     const userHtml = welcomeEmailTemplate(
       name,
-      "https://swag-fashion.vercel.app", // Website Link
-      "support@swag-fashion.com"         // Support Info
+      process.env.CLIENT_URL || "https://shivam-ecommerce.vercel.app",
+      "support@shreelaxmishop.com"
     );
 
-    await sendMail(email, "🎉 Welcome to Swag Fashion!", userHtml);
+    await sendMail(email, "🎉 Welcome to Shree Laxmi Shop!", userHtml);
 
     return res.status(201).json({
       success: true,
@@ -137,20 +137,32 @@ const login = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "15m",
-  });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-  const resetLink = `https://shivam-ecommerce.vercel.app/reset-password/${token}`;
-  const html = sendResetEmail(resetLink,user.name)
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "15m",
+    });
 
- const data= await sendMail(user.email, html.subject, html.htmlContent);
+    const clientUrl = process.env.CLIENT_URL || "https://shivam-ecommerce.vercel.app";
+    const resetLink = `${clientUrl}/reset-password/${token}`;
+    const html = sendResetEmail(resetLink, user.name);
 
-  res.json({ message: "Reset email sent" });
+    await sendMail(user.email, html.subject, html.htmlContent);
+
+    res.json({ message: "Reset email sent" });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: "Failed to send reset email" });
+  }
 };
 const resetPasword = async (req, res) => {
   const { token } = req.params;

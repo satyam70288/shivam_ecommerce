@@ -1,15 +1,15 @@
 import React from "react";
-import { Facebook, Instagram, Youtube, Mail, MapPin } from "lucide-react";
+import { Facebook, Mail, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 ">
+    <footer className="bg-muted/60 dark:bg-card border-t border-border text-foreground/80">
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
 
         {/* SHOP INFO */}
         <div>
-          <h3 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+          <h3 className="text-2xl font-bold mb-4 text-foreground">
             Shree Laxmi Shop
           </h3>
 
@@ -30,7 +30,7 @@ const Footer = () => {
 
         {/* QUICK LINKS */}
         <div>
-          <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+          <h4 className="text-xl font-semibold mb-4 text-foreground">
             Quick Links
           </h4>
           <ul className="space-y-2 text-sm">
@@ -48,7 +48,7 @@ const Footer = () => {
 
         {/* CATEGORIES */}
         <div>
-          <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+          <h4 className="text-xl font-semibold mb-4 text-foreground">
             Shop Categories
           </h4>
           <ul className="space-y-2 text-sm">
@@ -64,7 +64,7 @@ const Footer = () => {
 
         {/* CONTACT & SOCIAL */}
         <div>
-          <h4 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+          <h4 className="text-xl font-semibold mb-4 text-foreground">
             Contact Us
           </h4>
 
@@ -88,29 +88,12 @@ const Footer = () => {
               <Facebook size={20} />
             </a>
 
-            <a
-              href="https://youtube.com/@uniqueswagfashion"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="YouTube"
-            >
-              <Youtube size={20} />
-            </a>
-
-            <a
-              href="https://www.instagram.com/swag_fashion.07/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-            >
-              <Instagram size={20} />
-            </a>
           </div>
         </div>
       </div>
 
       {/* COPYRIGHT */}
-      <div className="border-t border-gray-200 dark:border-gray-700 py-4 text-center text-sm">
+      <div className="border-t border-border py-4 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} Shree Laxmi Shop. All rights reserved.
       </div>
     </footer>

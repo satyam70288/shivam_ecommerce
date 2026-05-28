@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const PromiseMaster = require("../models/PromiseMaster");
-const MONGO_URI = "mongodb+srv://satyamb971_db_user:mQkimJ4UeyRnldla@cluster0.ajggbjn.mongodb.net/"; 
+require("dotenv").config();
+const MONGO_URI = process.env.MONGO_URI; 
 // ↑ apna DB name daalna
 
 const promises = [

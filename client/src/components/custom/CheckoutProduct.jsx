@@ -25,12 +25,12 @@ const CheckoutProduct = ({
             <span className="hidden sm:block">|</span>
             <span className="font-semibold">
               Qty :{" "}
-              <span className="font-medium text-customYellow">{quantity}</span>{" "}
+              <span className="font-medium text-primary">{quantity}</span>{" "}
             </span>
             <span className="hidden sm:block">|</span>
             <span className="font-semibold">
               Price :{" "}
-              <span className="font-medium text-customYellow">₹{price}</span>{" "}
+              <span className="font-medium text-primary">₹{price}</span>{" "}
             </span>
           </p>
         </div>

@@ -204,7 +204,7 @@
             <div class="email-header">
                 <div class="logo-container">
                     <img src="https://shivam-ecommerce.vercel.app/assets/shivam_latest_logo-B8WToGYo.png" 
-                         alt="Shivam Ecommerce Logo" 
+                         alt="Shree Laxmi Shop Logo" 
                          class="company-logo">
                 </div>
                 <h1 class="email-title">Password Reset Request</h1>
@@ -216,7 +216,7 @@
                 <h2 class="greeting">Hello ${userName},</h2>
                 
                 <p class="message">
-                    We received a request to reset your password for your Shivam Ecommerce account. 
+                    We received a request to reset your password for your Shree Laxmi Shop account. 
                     To create a new password, please click the button below:
                 </p>
                 
@@ -264,14 +264,14 @@
                 <div class="email-footer">
                     <p class="footer-text">
                         Need assistance? Our support team is here to help at 
-                        <a href="mailto:support@shivamecommerce.com" class="support-link">support@shivamecommerce.com</a>
+                        <a href="mailto:support@shreelaxmishop.com" class="support-link">support@shreelaxmishop.com</a>
                     </p>
                     <p class="signature">
                         Best regards,<br>
-                        The Shivam Ecommerce Team
+                        The Shree Laxmi Shop Team
                     </p>
                     <p class="copyright">
-                        © ${new Date().getFullYear()} Shivam Ecommerce. All rights reserved.<br>
+                        © ${new Date().getFullYear()} Shree Laxmi Shop. All rights reserved.<br>
                         This is an automated message. Please do not reply to this email.
                     </p>
                 </div>

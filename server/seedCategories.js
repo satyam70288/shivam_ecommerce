@@ -61,7 +61,11 @@ function generateProduct(namePrefix, categoryId, images, index) {
 
 async function seed() {
   try {
-    await mongoose.connect("mongodb+srv://satyamb971_db_user:mQkimJ4UeyRnldla@cluster0.ajggbjn.mongodb.net/");
+    const uri = process.env.MONGO_URI || process.env.MONGO_URL;
+    if (!uri) {
+      throw new Error("MONGO_URI or MONGO_URL is not set");
+    }
+    await mongoose.connect(uri);
    
 
     const allProducts = [];

@@ -161,7 +161,7 @@ const ProductCard = ({
       {/* SUBTLE HOVER EFFECT */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-50/0 to-gray-100/0 group-hover:from-gray-50/50 group-hover:to-gray-100/50 dark:group-hover:from-gray-800/30 dark:group-hover:to-gray-900/30 rounded-xl transition-all duration-300 font-sans" />
 
-      <div className="relative bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden h-full flex flex-col">
+      <div className="relative bg-card rounded-xl border border-border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden h-full flex flex-col">
         {/* ========== ABSOLUTE POSITIONED BADGES ========== */}
         {/* HEART BUTTON - Top Right */}
         <button
@@ -191,14 +191,14 @@ const ProductCard = ({
 
           {/* Featured/Bestseller */}
           {isFeatured && (
-            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[11px] font-bold shadow-md flex items-center gap-1">
+            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-600 to-primary text-primary-foreground text-[11px] font-bold shadow-md flex items-center gap-1">
               <Sparkles size={10} />
               Featured
             </div>
           )}
 
           {isBestSeller && !isFeatured && (
-            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[11px] font-bold shadow-md">
+            <div className="px-2.5 py-1 rounded-full bg-gradient-to-r from-primary to-amber-600 text-primary-foreground text-[11px] font-bold shadow-md">
               Bestseller
             </div>
           )}
