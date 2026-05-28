@@ -1,8 +1,7 @@
-import OrderData from "@/components/custom/OrderData";
 import useErrorLogout from "@/hooks/use-error-logout";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const MyOrders = () => {
@@ -10,12 +9,21 @@ const MyOrders = () => {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
-  const [expandedOrderId, setExpandedOrderId] = useState(null); // Track expanded order
   const { handleErrorLogout } = useErrorLogout();
  const navigate = useNavigate();
 
-  const viewOrderDetails = (orderId) => {
-    navigate(`/orders/${orderId}`);
+  const getOrderId = (order) => {
+    const raw = order?._id ?? order?.orderId;
+    if (!raw) return "";
+    if (typeof raw === "string") return raw;
+    if (raw.$oid) return raw.$oid;
+    return String(raw);
+  };
+
+  const viewOrderDetails = (order) => {
+    const id = getOrderId(order);
+    if (!id) return;
+    navigate(`/orders/${encodeURIComponent(id)}`);
   };
   // Filter logic
   useEffect(() => {
@@ -58,16 +66,20 @@ const MyOrders = () => {
           }
         );
 
-        const normalizedOrders = (res.data.data || []).map((order) => ({
-          _id: order.orderId,
+        const normalizedOrders = (res.data.data || []).map((order) => {
+          const id = order.orderId?.$oid || order.orderId || order._id;
+          return {
+          _id: String(id || ""),
+          orderId: String(id || ""),
           createdAt: order.date,
           orderNumber:
-            order.orderNumber || `#${order.orderId?.slice(-12)?.toUpperCase()}`,
+            order.orderNumber || `#${String(id || "").slice(-12).toUpperCase()}`,
           status: order.status || "PLACED",
           amount: order.totalAmount || 0,
           products: order.products || [],
           paymentMethod: order.paymentMethod || "Cash on Delivery",
-        }));
+        };
+        });
 
         setOrders(normalizedOrders);
       } catch (error) {
@@ -80,28 +92,6 @@ const MyOrders = () => {
 
     getMyOrders();
   }, []);
-
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
-
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/cancel-order`,
-        { orderId },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      setOrders((prev) => prev.filter((order) => order._id !== orderId));
-      alert("Order cancelled successfully");
-    } catch (error) {
-      console.error(error);
-      alert("Failed to cancel order");
-    }
-  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -180,7 +170,6 @@ const MyOrders = () => {
   // Tab change handler
   const handleTabChange = (filterId) => {
     setActiveFilter(filterId);
-    setExpandedOrderId(null); // Close any expanded order when changing filter
   };
 
   // Count orders for each filter
@@ -188,15 +177,6 @@ const MyOrders = () => {
     if (filterId === "ALL") return orders.length;
 
     return orders.filter((order) => order.status === filterId).length;
-  };
-
-  // Toggle order details
-  const toggleOrderDetails = (orderId) => {
-    if (expandedOrderId === orderId) {
-      setExpandedOrderId(null); // Close if already open
-    } else {
-      setExpandedOrderId(orderId); // Open this order
-    }
   };
 
   if (loading) {
@@ -384,39 +364,19 @@ const MyOrders = () => {
                             </button>
                           )}
 
-                          {/* View Details Button */}
                           <button
-                            onClick={() => viewOrderDetails(order._id)}
-                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-900/20 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                            type="button"
+                            onClick={() => viewOrderDetails(order)}
+                            className="px-4 py-2 border border-primary text-primary hover:bg-primary/10 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
                           >
-                            {expandedOrderId === order._id ? (
-                              <>
-                                <ChevronUp className="w-4 h-4" />
-                                Hide Details
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-4 h-4" />
-                                View Details
-                              </>
-                            )}
+                            View Details
+                            <ChevronRight className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Expanded Order Details - Shows only when clicked */}
-                  {expandedOrderId === order._id && (
-                    <div className="border-t border-gray-100 dark:border-gray-700">
-                      <div className="p-4 md:p-6">
-                        <OrderData
-                          {...order}
-                          onCancel={() => handleCancelOrder(order._id)}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))
             )}

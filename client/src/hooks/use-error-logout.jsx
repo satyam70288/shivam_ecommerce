@@ -7,6 +7,14 @@ const useErrorLogout = () => {
   const { toast } = useToast();
 
   const handleErrorLogout = (error, otherTitle = "Error occured") => {
+    if (!error?.response) {
+      toast({
+        title: otherTitle,
+        description: error?.message || "Something went wrong",
+        variant: "destructive",
+      });
+      return;
+    }
     if (error.response.status === 401) {
       dispatch(setUserLogout());
       toast({

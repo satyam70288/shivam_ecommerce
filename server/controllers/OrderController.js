@@ -103,11 +103,18 @@ const getOrdersByOrderId = async (req, res) => {
   const userId = req.id;
 
   try {
-    // Find single order
-    const order = await Order.findOne({
-      _id: orderId,
-      userId,
-    }).lean();
+    const isObjectId =
+      mongoose.Types.ObjectId.isValid(orderId) &&
+      String(new mongoose.Types.ObjectId(orderId)) === orderId;
+
+    const query = { userId };
+    if (isObjectId) {
+      query._id = orderId;
+    } else {
+      query.orderNumber = decodeURIComponent(orderId);
+    }
+
+    const order = await Order.findOne(query).lean();
 
     if (!order) {
       return res.status(404).json({
@@ -175,6 +182,12 @@ const getOrdersByOrderId = async (req, res) => {
     });
   } catch (error) {
     console.error("getOrderById error:", error);
+    if (error.name === "CastError") {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
     return res.status(500).json({
       success: false,
       message: error.message,

@@ -28,8 +28,14 @@ const ProtectedRoute = ({ children }) => {
   // ============================
   // USER ROUTES
   // ============================
-  if (!isAuthenticated && (pathname === "/orders" || pathname === "/account")) {
-    return <Navigate to="/login" replace />;
+  if (
+    !isAuthenticated &&
+    (pathname === "/orders" ||
+      pathname.startsWith("/orders/") ||
+      pathname === "/account" ||
+      pathname.startsWith("/account/"))
+  ) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   // 🟢 FIXED: 'items' use करें

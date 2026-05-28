@@ -29,8 +29,17 @@ const OrderDetails = () => {
         setOrder(res.data.data);
       } catch (error) {
         console.error("OrderDetails error:", error);
-        setError("Order not found or access denied");
-        handleErrorLogout(error);
+        const status = error?.response?.status;
+        if (status === 404) {
+          setError("Order not found or you do not have access to this order.");
+        } else if (status === 401) {
+          handleErrorLogout(error);
+        } else {
+          setError(
+            error?.response?.data?.message ||
+              "Could not load order details. Please try again."
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -203,7 +212,7 @@ const OrderDetails = () => {
     {/* Right: Amount */}
     <div className="md:text-right">
       <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-        ₹{order.amount.toLocaleString("en-IN")}
+        ₹{(order.amount ?? order.totalAmount ?? 0).toLocaleString("en-IN")}
       </div>
       <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
         <div className="flex items-center gap-2 justify-end">
