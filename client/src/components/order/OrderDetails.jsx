@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, Home, Package, IndianRupee, Calendar } from "lucide-react";
 import OrderData from "@/components/custom/OrderData";
+import ShiprocketOrderActions from "@/components/order/ShiprocketOrderActions";
 import useErrorLogout from "@/hooks/use-error-logout";
 
 const OrderDetails = () => {
@@ -238,15 +239,24 @@ const OrderDetails = () => {
 
           {/* Main Order Content */}
           <OrderData
-            products={order.products} // ✅ order.products use karein
-            amount={order.amount} // ✅ order.amount hai, totalAmount nahi
+            products={order.products}
+            amount={order.amount}
             subtotal={order.subtotal}
             shippingCharge={order.shippingCharge}
             status={order.status}
-            createdAt={order.createdAt} // ✅ Add this
+            createdAt={order.createdAt}
             _id={order._id}
             onCancel={handleCancelOrder}
+            hideTrackAction
           />
+
+          <div className="mt-6">
+            <ShiprocketOrderActions
+              orderId={order._id}
+              shipment={order.shipment}
+              status={order.status}
+            />
+          </div>
 
           {/* Additional Order Info (Address, Payment, etc.) */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -326,20 +336,13 @@ const OrderDetails = () => {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="mt-8">
             <Link
               to="/orders"
-              className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition-colors"
+              className="inline-flex px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium transition-colors"
             >
               Back to All Orders
             </Link>
-            <button
-              onClick={() => window.print()}
-              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-            >
-              Print Invoice
-            </button>
           </div>
         </div>
       </div>

@@ -23,12 +23,14 @@ const OrderActions = ({
   setShowActions,
   handleTrackOrder,
   handleCancelClick,
+  hideTrack = false,
 }) => {
   const actionButtons = getActionButtons({
     status,
     loading,
     handleTrackOrder,
     handleCancelClick,
+    hideTrack,
   });
 
   return (

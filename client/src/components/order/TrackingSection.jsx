@@ -2,30 +2,38 @@
 import React from "react";
 import { getStatusIcon, formatDate } from "@/utils/orderHelpers";
 
-const TrackingStep = ({ step, isLast }) => (
-  <div
-    className={`flex items-start gap-3 p-3 ${
-      isLast ? "bg-white dark:bg-gray-800" : "bg-white/50 dark:bg-gray-800/50"
-    } rounded-lg`}
-  >
+const TrackingStep = ({ step, isLast }) => {
+  const statusText =
+    step.status || step.activity || step.shipment_status || "Update";
+  const dateVal =
+    step.updated_at || step.date || step.activity_date || step["date-time"];
+  const location = step.location || step.sr_location || step.place;
+
+  return (
     <div
-      className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
-        isLast ? "bg-green-500 animate-pulse" : "bg-blue-500"
-      }`}
-    />
-    <div className="flex-1">
-      <p className="font-medium text-gray-900 dark:text-white">{step.status}</p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-        {step.updated_at ? formatDate(step.updated_at) : "Date not available"}
-      </p>
-      {step.location && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
-          📍 {step.location}
+      className={`flex items-start gap-3 p-3 ${
+        isLast ? "bg-white dark:bg-gray-800" : "bg-white/50 dark:bg-gray-800/50"
+      } rounded-lg`}
+    >
+      <div
+        className={`w-3 h-3 rounded-full mt-1.5 flex-shrink-0 ${
+          isLast ? "bg-green-500 animate-pulse" : "bg-blue-500"
+        }`}
+      />
+      <div className="flex-1">
+        <p className="font-medium text-gray-900 dark:text-white">{statusText}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          {dateVal ? formatDate(dateVal) : "Date not available"}
         </p>
-      )}
+        {location && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
+            📍 {location}
+          </p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const TrackingHistory = ({ trackingData }) => (
   <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
@@ -34,11 +42,11 @@ const TrackingHistory = ({ trackingData }) => (
       <h3 className="font-semibold text-gray-900 dark:text-white">Tracking History</h3>
     </div>
     <div className="space-y-3">
-      {trackingData.map((step, idx) => (
+      {list.map((step, idx) => (
         <TrackingStep
           key={idx}
           step={step}
-          isLast={idx === trackingData.length - 1}
+          isLast={idx === list.length - 1}
         />
       ))}
     </div>
@@ -56,8 +64,9 @@ const NoTrackingMessage = () => (
   </div>
 );
 
-const TrackingSection = ({ trackingData }) => {
-  return trackingData.length > 0 ? (
+const TrackingSection = ({ trackingData = [] }) => {
+  const list = Array.isArray(trackingData) ? trackingData : [];
+  return list.length > 0 ? (
     <TrackingHistory trackingData={trackingData} />
   ) : (
     <NoTrackingMessage />

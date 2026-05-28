@@ -22,6 +22,14 @@ const shipmentSchema = new mongoose.Schema(
       index: true,
     },
 
+    shiprocketShipmentId: {
+      type: String,
+      index: true,
+    },
+
+    labelUrl: String,
+    invoiceUrl: String,
+
     awb: {
       type: String,
       index: true,

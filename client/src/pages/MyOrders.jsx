@@ -78,6 +78,7 @@ const MyOrders = () => {
           amount: order.totalAmount || 0,
           products: order.products || [],
           paymentMethod: order.paymentMethod || "Cash on Delivery",
+          shipment: order.shipment || null,
         };
         });
 
@@ -357,10 +358,26 @@ const MyOrders = () => {
                         </div>
 
                         <div className="flex gap-2">
-                          {/* Track Order Button */}
-                          {order.status === "SHIPPED" && (
-                            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-                              Track Order
+                          {(order.shipment?.trackingUrl ||
+                            ["PACKED", "SHIPPED", "DELIVERED"].includes(
+                              order.status
+                            )) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (order.shipment?.trackingUrl) {
+                                  window.open(
+                                    order.shipment.trackingUrl,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                  );
+                                } else {
+                                  viewOrderDetails(order);
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                              Track
                             </button>
                           )}
 

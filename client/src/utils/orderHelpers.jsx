@@ -136,7 +136,7 @@ export const buttonVariantClasses = {
 
 // ========== ACTION BUTTONS ==========
 export const getActionButtons = (params) => {
-  const { status, loading, handleTrackOrder, handleCancelClick } = params;
+  const { status, loading, handleTrackOrder, handleCancelClick, hideTrack } = params;
   
   const baseActions = [
     {
@@ -221,8 +221,11 @@ export const getActionButtons = (params) => {
   };
 
   const allActions = [
-    ...baseActions.filter(action => action.showFor.includes(status)),
-    ...(statusActions[status] || [])
+    ...baseActions.filter(
+      (action) =>
+        action.showFor.includes(status) && !(hideTrack && action.label === "Track Order")
+    ),
+    ...(statusActions[status] || []),
   ];
 
   return allActions;

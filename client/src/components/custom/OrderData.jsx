@@ -16,6 +16,7 @@ const OrderData = ({
   createdAt,
   _id,
   onCancel,
+  hideTrackAction = false,
 }) => {
   const [trackingData, setTrackingData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,7 @@ const OrderData = ({
       setLoading(true);
       const token = localStorage.getItem("token");
       const data = await orderApi.trackOrder(_id, token);
-      setTrackingData(data);
+      setTrackingData(data?.history || data || []);
       setShowTracking(true);
     } catch (error) {
       alert(error.message || "Failed to fetch tracking data");
@@ -111,6 +112,7 @@ const OrderData = ({
         setShowActions={setShowActions}
         handleTrackOrder={handleTrackOrder}
         handleCancelClick={handleCancelClick}
+        hideTrack={hideTrackAction}
       />
 
       {/* Tracking Section */}
