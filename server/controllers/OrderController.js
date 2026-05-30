@@ -678,8 +678,6 @@ const getMetrics = async (req, res) => {
       {
         $match: {
           createdAt: { $gte: sixMonthsAgo },
-
-          // ❗ CANCELLED orders excluded
           status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] },
         },
       },
@@ -712,12 +710,128 @@ const getMetrics = async (req, res) => {
       },
     ]);
 
+    /* =========================
+       YEAR-WISE (12 MONTHS)
+    ========================= */
+    const selectedYear = Number(req.query.year) || now.getFullYear();
+    const startOfYear = new Date(selectedYear, 0, 1);
+    const startOfNextYear = new Date(selectedYear + 1, 0, 1);
+    const startOfPrevYear = new Date(selectedYear - 1, 0, 1);
+
+    const buildMonthlyBreakdown = (aggRows) => {
+      const map = new Map(aggRows.map((row) => [row._id.month, row]));
+      return Array.from({ length: 12 }, (_, i) => {
+        const month = i + 1;
+        const row = map.get(month);
+        const totalAmount = row?.totalAmount || 0;
+        const totalOrders = row?.totalOrders || 0;
+        return {
+          month,
+          totalAmount,
+          totalOrders,
+          aov:
+            totalOrders > 0
+              ? Math.round((totalAmount / totalOrders) * 100) / 100
+              : 0,
+        };
+      });
+    };
+
+    const [yearMonthlyAgg, prevYearMonthlyAgg, earliestOrder, yearsWithOrders] =
+      await Promise.all([
+        Order.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startOfYear, $lt: startOfNextYear },
+              status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] },
+            },
+          },
+          {
+            $group: {
+              _id: { month: { $month: "$createdAt" } },
+              totalAmount: { $sum: "$totalAmount" },
+              totalOrders: { $sum: 1 },
+            },
+          },
+        ]),
+        Order.aggregate([
+          {
+            $match: {
+              createdAt: { $gte: startOfPrevYear, $lt: startOfYear },
+              status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] },
+            },
+          },
+          {
+            $group: {
+              _id: { month: { $month: "$createdAt" } },
+              totalAmount: { $sum: "$totalAmount" },
+              totalOrders: { $sum: 1 },
+            },
+          },
+        ]),
+        Order.findOne({
+          status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] },
+        })
+          .sort({ createdAt: 1 })
+          .select("createdAt")
+          .lean(),
+        Order.aggregate([
+          {
+            $match: {
+              status: { $nin: ["CANCELLED", "CANCELLED_BY_USER"] },
+            },
+          },
+          {
+            $group: {
+              _id: { $year: "$createdAt" },
+            },
+          },
+          { $sort: { _id: -1 } },
+        ]),
+      ]);
+
+    const yearlyMonthlyBreakdown = buildMonthlyBreakdown(yearMonthlyAgg);
+    const prevYearMonthlyBreakdown = buildMonthlyBreakdown(prevYearMonthlyAgg);
+
+    const yearTotalRevenue = yearlyMonthlyBreakdown.reduce(
+      (s, m) => s + m.totalAmount,
+      0
+    );
+    const yearTotalOrders = yearlyMonthlyBreakdown.reduce(
+      (s, m) => s + m.totalOrders,
+      0
+    );
+    const prevYearTotal = prevYearMonthlyBreakdown.reduce(
+      (s, m) => s + m.totalAmount,
+      0
+    );
+    const yearOverYearGrowth = prevYearTotal
+      ? ((yearTotalRevenue - prevYearTotal) / prevYearTotal) * 100
+      : yearTotalRevenue > 0
+        ? 100
+        : 0;
+
+    const METRICS_START_YEAR = 2020;
+    const maxYear = now.getFullYear();
+
+    const earliestYear = earliestOrder?.createdAt
+      ? new Date(earliestOrder.createdAt).getFullYear()
+      : maxYear;
+
+    // Always list full year range for dropdown (even months with ₹0 sales)
+    const minYear = Math.min(earliestYear, METRICS_START_YEAR, selectedYear);
+
+    const availableYears = [];
+    for (let y = maxYear; y >= minYear; y--) {
+      availableYears.push(y);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
         sales: {
-          total: totalSales, // 🔥 all-time
-          thisMonth: totalThisMonth, // 🔥 current month
+          total: totalSales,
+          thisMonth: totalThisMonth,
           growth: salesGrowth,
         },
         users: {
@@ -730,6 +844,20 @@ const getMetrics = async (req, res) => {
         recentSales: recentOrders,
         sixMonthsBarChartData: categoryChart,
         monthlySalesTrend,
+        selectedYear,
+        availableYears,
+        yearlyMonthlyBreakdown,
+        prevYearMonthlyBreakdown,
+        yearRange: { min: minYear, max: maxYear },
+        yearSummary: {
+          year: selectedYear,
+          totalRevenue: yearTotalRevenue,
+          totalOrders: yearTotalOrders,
+          avgMonthlyRevenue:
+            Math.round((yearTotalRevenue / 12) * 100) / 100,
+          prevYearTotal,
+          yearOverYearGrowth,
+        },
       },
     });
   } catch (error) {

@@ -43,23 +43,6 @@ const ProductItem = ({ product }) => {
                 Qty: {product.quantity}
               </span>
 
-              {product.color && (
-                <div className="flex items-center gap-1">
-                  <div
-                    className="w-3 h-3 rounded-full border border-gray-300"
-                    style={{ backgroundColor: product.color }}
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {product.color}
-                  </span>
-                </div>
-              )}
-
-              {product.size && (
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Size: {product.size}
-                </span>
-              )}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

@@ -6,8 +6,6 @@ const useProductDetails = (productId) => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [color, setColor] = useState("");
-  const [size, setSize] = useState("");
   const [promise, setPromise] = useState([]);
 
   useEffect(() => {
@@ -32,10 +30,6 @@ const useProductDetails = (productId) => {
         setProduct(data);
         setPromise(res.data.promises || []);
 
-        if (data.colors?.length) setColor(data.colors[0]);
-        else setColor("");
-        if (data.sizes?.length) setSize(data.sizes[0]);
-        else setSize("");
         setSelectedImage(0);
       } catch (err) {
         if (!cancelled) {
@@ -54,29 +48,10 @@ const useProductDetails = (productId) => {
     };
   }, [productId]);
 
-  const isVariant = product?.productType === "variant";
-
-  const hasColors = useMemo(
-    () => Array.isArray(product?.colors) && product.colors.length > 0,
-    [product]
-  );
-
-  const hasSizes = useMemo(
-    () => Array.isArray(product?.sizes) && product.sizes.length > 0,
-    [product]
-  );
-
   const images = useMemo(() => {
     if (!product) return [];
-    if (isVariant) {
-      return product.variants?.find((v) => v.color === color)?.images || [];
-    }
-    return product.images || [];
-  }, [product, isVariant, color]);
-
-  useEffect(() => {
-    setSelectedImage(0);
-  }, [color]);
+    return product.images || product.allImages || [];
+  }, [product]);
 
   const isOfferActive =
     product?.discount > 0 &&
@@ -87,12 +62,6 @@ const useProductDetails = (productId) => {
     ? product?.discountedPrice
     : product?.price;
 
-  const validateSelection = () => {
-    if ((hasColors || isVariant) && !color) return false;
-    if (hasSizes && !size) return false;
-    return true;
-  };
-
   return {
     product,
     loading,
@@ -100,17 +69,9 @@ const useProductDetails = (productId) => {
     setQuantity,
     selectedImage,
     setSelectedImage,
-    color,
-    setColor,
-    size,
-    setSize,
     images,
-    isVariant,
-    hasColors,
-    hasSizes,
     isOfferActive,
     displayPrice,
-    validateSelection,
     promise,
   };
 };

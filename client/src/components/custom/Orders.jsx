@@ -402,11 +402,6 @@ const ProductCard = ({ product }) => (
         <p className="text-sm font-semibold text-gray-900 dark:text-white">
           ₹{product.price}
         </p>
-        {product.color && product.color !== "Default" && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Color: {product.color}
-          </p>
-        )}
       </div>
     </div>
   </div>

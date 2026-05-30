@@ -7,7 +7,6 @@ import {
   Percent,
   Star,
   Baby,
-  Palette,
   Layers,
   PackageCheck,
   Tag,
@@ -22,7 +21,6 @@ import {
   RATING_OPTIONS,
   AGE_GROUP_OPTIONS,
   MATERIAL_OPTIONS,
-  COLOR_OPTIONS,
   AVAILABILITY_OPTIONS,
   OFFER_OPTIONS,
   BADGE_OPTIONS,
@@ -35,7 +33,6 @@ const SECTION_ICONS = {
   discount: Percent,
   ratings: Star,
   age: Baby,
-  colors: Palette,
   material: Layers,
   availability: PackageCheck,
   offers: Tag,
@@ -178,14 +175,6 @@ export default function FiltersSidebar({
           />
         </FilterSection>
 
-        <FilterSection title="Color" iconKey="colors">
-          <ColorSwatches
-            options={COLOR_OPTIONS}
-            selected={safe.colors}
-            onToggle={(value) => updateFilter("colors", value)}
-          />
-        </FilterSection>
-
         <FilterSection title="Age group" iconKey="age">
           <CheckboxList
             filterKey="ageGroup"
@@ -276,27 +265,3 @@ function CheckboxList({ options, filterKey, selectedFilters, updateFilter }) {
   );
 }
 
-function ColorSwatches({ options, selected, onToggle }) {
-  return (
-    <div className="flex flex-wrap gap-2 px-1">
-      {options.map((c) => {
-        const active = selected.includes(c.value);
-        return (
-          <button
-            key={c.value}
-            type="button"
-            title={c.label}
-            onClick={() => onToggle(c.value)}
-            className={`relative w-8 h-8 rounded-full ${c.swatch} transition-all ring-offset-2 ring-offset-card ${
-              active
-                ? "ring-2 ring-primary scale-110"
-                : "ring-1 ring-border/80 hover:scale-105"
-            }`}
-            aria-label={c.label}
-            aria-pressed={active}
-          />
-        );
-      })}
-    </div>
-  );
-}

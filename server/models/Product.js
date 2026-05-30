@@ -95,6 +95,9 @@ const productSchema = new mongoose.Schema(
 
     blacklisted: { type: Boolean, default: false },
 
+    /** false = hidden from shop; admin can still manage */
+    isActive: { type: Boolean, default: true },
+
     // CATEGORY
     category: {
       type: mongoose.Schema.Types.ObjectId,

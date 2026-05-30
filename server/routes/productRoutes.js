@@ -11,8 +11,10 @@ const {
   getProductsforadmin,
   getProductsByCategory,
   getSimilarProducts,
+  setProductActive,
 } = require("../controllers/productController");
 const verifyToken = require("../middlewares/verifyToken");
+const optionalVerifyToken = require("../middlewares/optionalVerifyToken");
 const upload = require("../middlewares/multer");
 console.log("📦 Product routes loaded");
 
@@ -42,7 +44,9 @@ router.put("/blacklist-product/:id", verifyToken, blacklistProduct);
 
 router.put("/remove-from-blacklist/:id", verifyToken, removeFromBlacklist);
 
-router.get("/product/:id", getProductById); // ALWAYS LAST
-router.get("/admin/products/:id", getProductById); // ALWAYS LAST
+router.patch("/product/:id/active", verifyToken, setProductActive);
+
+router.get("/product/:id", optionalVerifyToken, getProductById);
+router.get("/admin/products/:id", optionalVerifyToken, getProductById);
 router.get('/similar/:productId', getSimilarProducts);
 module.exports = router;

@@ -258,9 +258,10 @@ const SimpleCartDrawer = ({
           ) : (
             <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               {displayItems.map((item, index) => (
-                <CartProduct 
-                  key={item._id || item.cartItemId || index}
+                <CartProduct
+                  key={item.cartItemId || `cart-line-${index}`}
                   {...item}
+                  cartItemId={item.cartItemId}
                   onUpdate={() => {
                     if (!loading) {
                       fetchCartData();

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -17,51 +18,44 @@ import {
   CardDescription,
   CardContent,
 } from "../ui/card";
+import {
+  PERIODS,
+  filterByPeriod,
+  getMonthLabel,
+} from "@/utils/analyticsPeriod";
 
-/* =========================
-   MONTH MAP
-========================= */
-const monthMap = {
-  1: "Jan",
-  2: "Feb",
-  3: "Mar",
-  4: "Apr",
-  5: "May",
-  6: "Jun",
-  7: "Jul",
-  8: "Aug",
-  9: "Sep",
-  10: "Oct",
-  11: "Nov",
-  12: "Dec",
-};
+export default function LineSalesChart({
+  data,
+  selectedYear,
+  selectedPeriod = "full",
+}) {
+  const breakdown = data?.yearlyMonthlyBreakdown;
+  const periodMeta = PERIODS[selectedPeriod] || PERIODS.full;
 
-export default function LineSalesChart({ data }) {
-  if (!data?.monthlySalesTrend?.length) return null;
+  const chartData = useMemo(() => {
+    if (!breakdown?.length) return [];
+    return filterByPeriod(breakdown, selectedPeriod).map((row) => ({
+      month: getMonthLabel(row.month),
+      amount: Number(row.totalAmount),
+      orders: Number(row.totalOrders),
+      aov: Math.round(row.aov || 0),
+    }));
+  }, [breakdown, selectedPeriod]);
 
-  /* =========================
-     BACKEND → CHART FORMAT
-  ========================= */
-  const chartData = data.monthlySalesTrend.map((item) => ({
-    month: monthMap[item._id.month],
-    amount: Number(item.totalAmount),
-    orders: Number(item.totalOrders),
-    aov: Math.round(item.aov),
-  }));
+  if (!chartData.length) return null;
 
   return (
     <Card className="flex-1 rounded-2xl bg-muted/40 backdrop-blur">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">Sales Trend</CardTitle>
         <CardDescription className="text-sm">
-          Revenue, Orders & AOV (last 6 months)
+          {selectedYear} · {periodMeta.label} — revenue, orders & AOV
         </CardDescription>
       </CardHeader>
 
       <CardContent>
         <ResponsiveContainer width="100%" height={360}>
           <LineChart data={chartData}>
-            {/* ===== Gradient (BRIGHT) ===== */}
             <defs>
               <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10B981" stopOpacity={1} />
@@ -75,29 +69,32 @@ export default function LineSalesChart({ data }) {
               opacity={0.25}
             />
 
-            <XAxis dataKey="month" tickLine={false} axisLine={false} />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 11 }}
+              interval={0}
+            />
 
-            {/* ===== Revenue Axis (₹) ===== */}
             <YAxis
               yAxisId="revenue"
               tickFormatter={(v) =>
                 v >= 1000 ? `₹${(v / 1000).toFixed(1)}k` : `₹${v}`
               }
-              domain={[0, (dataMax) => dataMax * 1.25]}
+              domain={[0, (dataMax) => Math.max(dataMax * 1.25, 100)]}
               tickLine={false}
               axisLine={false}
             />
 
-            {/* ===== Orders Axis ===== */}
             <YAxis
               yAxisId="orders"
               orientation="right"
-              domain={[0, (dataMax) => Math.ceil(dataMax * 1.4)]}
+              domain={[0, (dataMax) => Math.ceil(Math.max(dataMax * 1.4, 1))]}
               tickLine={false}
               axisLine={false}
             />
 
-            {/* ===== AOV Axis (hidden) ===== */}
             <YAxis yAxisId="aov" hide />
 
             <Tooltip
@@ -110,67 +107,47 @@ export default function LineSalesChart({ data }) {
               }}
               formatter={(value, name) => {
                 if (name === "Revenue")
-                  return [`₹${value.toLocaleString()}`, name];
+                  return [`₹${Number(value).toLocaleString()}`, name];
                 if (name === "Orders") return [value, name];
                 if (name === "AOV") return [`₹${value}`, name];
                 return value;
               }}
+              labelFormatter={(label) => `${label} ${selectedYear}`}
             />
 
             <Legend />
 
-            {/* ===== Revenue (BRIGHT HERO) ===== */}
             <Line
               yAxisId="revenue"
               type="monotone"
               dataKey="amount"
               stroke="url(#revenueGradient)"
               strokeWidth={3.5}
-              dot={{
-                r: 4,
-                fill: "#10B981",
-              }}
-              activeDot={{
-                r: 7,
-                fill: "#10B981",
-              }}
+              dot={{ r: 4, fill: "#10B981" }}
+              activeDot={{ r: 7, fill: "#10B981" }}
               name="Revenue"
             />
 
-            {/* ===== Orders (BRIGHT SUPPORT) ===== */}
             <Line
               yAxisId="orders"
               type="monotone"
               dataKey="orders"
-              stroke="#0EA5E9" // brighter blue
+              stroke="#0EA5E9"
               strokeWidth={2.8}
-              dot={{
-                r: 3,
-                fill: "#0EA5E9",
-              }}
-              activeDot={{
-                r: 6,
-                fill: "#0EA5E9",
-              }}
+              dot={{ r: 3, fill: "#0EA5E9" }}
+              activeDot={{ r: 6, fill: "#0EA5E9" }}
               name="Orders"
             />
 
-            {/* ===== AOV (SUBTLE BUT VISIBLE) ===== */}
             <Line
               yAxisId="aov"
               type="monotone"
               dataKey="aov"
-              stroke="#8B5CF6" // brighter violet
+              stroke="#8B5CF6"
               strokeWidth={2.2}
               strokeDasharray="6 4"
-              dot={{
-                r: 3,
-                fill: "#8B5CF6",
-              }}
-              activeDot={{
-                r: 6,
-                fill: "#8B5CF6",
-              }}
+              dot={{ r: 3, fill: "#8B5CF6" }}
+              activeDot={{ r: 6, fill: "#8B5CF6" }}
               name="AOV"
             />
           </LineChart>

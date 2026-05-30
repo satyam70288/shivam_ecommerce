@@ -34,7 +34,7 @@ const AdminLogin = () => {
       toast({
         title: data.message,
       });
-      navigate("/admin/dashboard");
+      navigate("/admin", { replace: true });
     } catch (error) {
  
       return toast({

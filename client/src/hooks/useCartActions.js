@@ -34,8 +34,8 @@ const useCartActions = () => {
       const result = await dispatch(addToCart({
         productId,
         quantity,
-        color: color || "Default",
-        size: size || "M",
+        ...(color != null && { color }),
+        ...(size != null && { size }),
         variantId,
       })).unwrap();
       

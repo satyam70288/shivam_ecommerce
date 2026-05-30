@@ -76,7 +76,7 @@ exports.addToCart = async (req, res) => {
 
     // 1️⃣ Validate product
     const product = await Product.findById(productId);
-    if (!product || product.blacklisted) {
+    if (!product || product.blacklisted || product.isActive === false) {
       return res.status(404).json({
         success: false,
         message: "Product not found",
@@ -293,6 +293,13 @@ exports.removeFromCart = async function (req, res) {
       });
     }
 
+    if (!cartItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "cartItemId is required",
+      });
+    }
+
     console.log("Remove from cart - User:", userId, "Item:", cartItemId);
 
     // Find user's cart
@@ -335,6 +342,13 @@ exports.decreaseQuantity = async function (req, res) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    if (!cartItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "cartItemId is required",
       });
     }
 
@@ -390,6 +404,13 @@ exports.increaseQuantity = async function (req, res) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized - User ID not found in token",
+      });
+    }
+
+    if (!cartItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "cartItemId is required",
       });
     }
 

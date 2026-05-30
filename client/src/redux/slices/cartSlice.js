@@ -5,39 +5,34 @@ import axiosInstance from "@/api/axiosInterceptor"; // ✅ ONLY THIS LINE CHANGE
 // Base URL
 const API_URL = `${import.meta.env.VITE_API_URL}`;
 
+const emptyCart = {
+  items: [],
+  summary: {
+    itemCount: 0,
+    subtotal: 0,
+    discount: 0,
+    total: 0,
+    grandTotal: 0,
+  },
+};
+
+const refetchCartFromApi = async () => {
+  const cartResponse = await axiosInstance.get(`${API_URL}/cart`);
+  return cartResponse.data.cart || emptyCart;
+};
 
 // ================ ASYNC THUNKS ================
 
 // Fetch user's cart
 export const fetchCart = createAsyncThunk(
   "cart/fetchCart",
-  async (userId, { rejectWithValue }) => {
+  async (_arg, { rejectWithValue }) => {
     try {
-      console.log("userId",userId)
-      const response = await axiosInstance.get(`${API_URL}/cart`); // ✅ axios → axiosInstance
-      return response.data.cart || {
-        items: [],
-        summary: {
-          itemCount: 0,
-          subtotal: 0,
-          discount: 0,
-          total: 0,
-          grandTotal: 0,
-        },
-      };
+      return await refetchCartFromApi();
     } catch (error) {
       // If cart doesn't exist, return empty cart
       if (error.response?.status === 404) {
-        return {
-          items: [],
-          summary: {
-            itemCount: 0,
-            subtotal: 0,
-            discount: 0,
-            total: 0,
-            grandTotal: 0,
-          },
-        };
+        return emptyCart;
       }
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch cart"
@@ -50,23 +45,20 @@ export const fetchCart = createAsyncThunk(
 export const addToCart = createAsyncThunk(
   "cart/addToCart",
   async (
-    { userId, productId, quantity = 1, color = "Default", size = "M", variantId = null },
+    { productId, quantity = 1, color, size, variantId = null },
     { rejectWithValue }
   ) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/add`, { // ✅ axios → axiosInstance
-        userId,
+      const response = await axiosInstance.post(`${API_URL}/add`, {
         productId,
         quantity,
-        color,
-        size,
+        ...(color != null && { color }),
+        ...(size != null && { size }),
         variantId,
       });
-      
-      // If API returns success, fetch updated cart
+
       if (response.data.success) {
-        const cartResponse = await axiosInstance.get(`${API_URL}/cart`); // ✅ axios → axiosInstance
-        return cartResponse.data.cart;
+        return await refetchCartFromApi();
       } else {
         throw new Error(response.data.message || "Failed to add to cart");
       }
@@ -81,16 +73,18 @@ export const addToCart = createAsyncThunk(
 // Remove from cart
 export const removeFromCart = createAsyncThunk(
   "cart/removeFromCart",
-  async ({ userId, cartItemId }, { rejectWithValue }) => {
+  async ({ cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/cart/remove`, { // ✅ axios → axiosInstance
-        userId,
-        cartItemId,
+      if (!cartItemId) {
+        return rejectWithValue("Missing cart item id");
+      }
+
+      const response = await axiosInstance.post(`${API_URL}/cart/remove`, {
+        cartItemId: String(cartItemId),
       });
-      
+
       if (response.data.success) {
-        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
-        return cartResponse.data.cart;
+        return await refetchCartFromApi();
       } else {
         throw new Error(response.data.message || "Failed to remove item");
       }
@@ -105,16 +99,18 @@ export const removeFromCart = createAsyncThunk(
 // Increase quantity
 export const increaseQuantity = createAsyncThunk(
   "cart/increaseQuantity",
-  async ({ userId, cartItemId }, { rejectWithValue }) => {
+  async ({ cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/cart/increase`, { // ✅ axios → axiosInstance
-        userId,
-        cartItemId,
+      if (!cartItemId) {
+        return rejectWithValue("Missing cart item id");
+      }
+
+      const response = await axiosInstance.post(`${API_URL}/cart/increase`, {
+        cartItemId: String(cartItemId),
       });
-      
+
       if (response.data.success) {
-        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
-        return cartResponse.data.cart;
+        return await refetchCartFromApi();
       } else {
         throw new Error(response.data.message || "Failed to increase quantity");
       }
@@ -129,16 +125,18 @@ export const increaseQuantity = createAsyncThunk(
 // Decrease quantity
 export const decreaseQuantity = createAsyncThunk(
   "cart/decreaseQuantity",
-  async ({ userId, cartItemId }, { rejectWithValue }) => {
+  async ({ cartItemId }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`${API_URL}/cart/decrease`, { // ✅ axios → axiosInstance
-        userId,
-        cartItemId,
+      if (!cartItemId) {
+        return rejectWithValue("Missing cart item id");
+      }
+
+      const response = await axiosInstance.post(`${API_URL}/cart/decrease`, {
+        cartItemId: String(cartItemId),
       });
-      
+
       if (response.data.success) {
-        const cartResponse = await axiosInstance.get(`${API_URL}/cart/${userId}`); // ✅ axios → axiosInstance
-        return cartResponse.data.cart;
+        return await refetchCartFromApi();
       } else {
         throw new Error(response.data.message || "Failed to decrease quantity");
       }
@@ -153,24 +151,17 @@ export const decreaseQuantity = createAsyncThunk(
 // Clear entire cart
 export const clearCart = createAsyncThunk(
   "cart/clearCart",
-  async (userId, { rejectWithValue }) => {
+  async (_arg, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.delete(`${API_URL}/cart/clear/${userId}`); // ✅ axios → axiosInstance
-      
-      if (response.data.success) {
-        return {
-          items: [],
-          summary: {
-            itemCount: 0,
-            subtotal: 0,
-            discount: 0,
-            total: 0,
-            grandTotal: 0,
-          },
-        };
-      } else {
-        throw new Error(response.data.message || "Failed to clear cart");
+      const current = await refetchCartFromApi();
+      for (const item of current.items || []) {
+        if (item.cartItemId) {
+          await axiosInstance.post(`${API_URL}/cart/remove`, {
+            cartItemId: String(item.cartItemId),
+          });
+        }
       }
+      return emptyCart;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message || error.message || "Failed to clear cart"

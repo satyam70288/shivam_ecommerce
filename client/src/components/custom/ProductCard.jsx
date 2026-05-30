@@ -77,26 +77,17 @@ const ProductCard = ({
     setIsAdding(true);
 
     try {
-      const firstVariant = variants?.[0];
-      const color = firstVariant?.color || "Default";
-      const size = firstVariant?.size || "M";
-      const variantId = firstVariant?._id;
-
       const productData = {
         _id,
         name,
         price: finalPrice,
         images: [{ url: displayImage }],
-        variants: variants,
       };
 
       await addToCartHandler({
         productId: _id,
         productData,
         quantity: 1,
-        color,
-        size,
-        variantId,
       });
 
       toast({

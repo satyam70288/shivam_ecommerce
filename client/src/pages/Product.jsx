@@ -35,10 +35,6 @@ const Product = () => {
     setQuantity,
     selectedImage,
     setSelectedImage,
-    color,
-    setColor,
-    size,
-    setSize,
     images,
     displayPrice,
     isOfferActive,
@@ -86,33 +82,18 @@ const Product = () => {
     setAddingToCart(true);
 
     try {
-      // Get variant ID if available
-      let variantId = null;
-      if (color && size && product.variants) {
-        const variant = product.variants.find(
-          v => v.color === color && v.size === size
-        );
-        variantId = variant?._id;
-      }
-
-      // Prepare product data for optimistic update
       const productData = {
         _id: product._id,
         name: product.name,
         price: product.price,
         sellingPrice: displayPrice,
-        images: product.allImages || [],
-        variants: product.variants || [],
+        images: product.allImages || product.images || [],
       };
 
-      // Call addToCart with proper parameters
       await addToCart({
         productId: product._id,
         productData,
         quantity,
-        color: color || product.variants?.[0]?.color || "Default",
-        size: size || product.variants?.[0]?.size || "M",
-        variantId,
       });
 
       // Success toast
@@ -156,8 +137,6 @@ const Product = () => {
       buyNow({
         productId: product._id,
         quantity,
-        color,
-        size,
       });
     } catch (error) {
       toast({
@@ -205,14 +184,7 @@ const Product = () => {
                 discount={product.discount}
                 isOfferActive={isOfferActive}
               />
-<ProductVariants
-                colors={product.colors}
-                selectedColor={color}
-                onColorChange={setColor}
-                sizes={product.sizes}
-                selectedSize={size}
-                onSizeChange={setSize}
-                sizeGuide={product.sizeGuide}
+              <ProductVariants
                 stock={product.totalStock || product.stock}
                 quantity={quantity}
                 onQuantityChange={setQuantity}

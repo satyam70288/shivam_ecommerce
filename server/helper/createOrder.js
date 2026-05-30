@@ -44,7 +44,8 @@ exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => 
 
   if (productId) {
     const product = await Product.findById(productId);
-    if (!product || product.blacklisted) throw new Error("Product not available");
+    if (!product || product.blacklisted || product.isActive === false)
+      throw new Error("Product not available");
 
     const qty = Number(quantity) || 1;
     if (product.stock < qty) throw new Error(`${product.name} out of stock`);
@@ -160,7 +161,8 @@ exports.calculateOrderValidation = async (userId, { productId, quantity }, addre
 
   if (productId) {
     const product = await Product.findById(productId);
-    if (!product || product.blacklisted) throw new Error("Product not available");
+    if (!product || product.blacklisted || product.isActive === false)
+      throw new Error("Product not available");
 
     const qty = Number(quantity) || 1;
     if (product.stock < qty) throw new Error(`${product.name} out of stock`);
@@ -356,7 +358,7 @@ exports.calculateOrderBase = async (userId, { productId, quantity }) => {
 
   if (productId) {
     const product = await Product.findById(productId);
-    if (!product || product.blacklisted)
+    if (!product || product.blacklisted || product.isActive === false)
       throw new Error("Product not available");
 
     const qty = Number(quantity) || 1;

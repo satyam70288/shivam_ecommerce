@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/table";
 
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Power } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useSelector, useDispatch } from "react-redux";
 import { useState } from "react";
 import axios from "axios";
@@ -53,6 +54,36 @@ const navigate = useNavigate();
 
   const goToEdit = (product) => {
     navigate(`/admin/products/edit/${product._id}`);
+  };
+
+  const handleToggleActive = async (product, e) => {
+    e?.stopPropagation?.();
+    const isCurrentlyActive = product.isActive !== false;
+    try {
+      const res = await axios.patch(
+        `${import.meta.env.VITE_API_URL}/product/${product._id}/active`,
+        { isActive: !isCurrentlyActive },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      toast({ title: res.data.message });
+
+      dispatch(
+        setProducts(
+          products.map((p) =>
+            p._id === product._id
+              ? { ...p, isActive: res.data.data.isActive }
+              : p
+          )
+        )
+      );
+    } catch (err) {
+      handleErrorLogout(err, "Failed to update product status");
+    }
   };
 
   const handleDelete = async () => {
@@ -106,6 +137,7 @@ const navigate = useNavigate();
           product={p}
           onEdit={goToEdit}
           onDelete={setDeleteId}
+          onToggleActive={handleToggleActive}
         />
       ))}
     </div>
@@ -163,10 +195,12 @@ const navigate = useNavigate();
               </TableCell>
 
               <TableCell>
-                {p.blacklisted ? (
-                  <span className="text-red-600">Inactive</span>
+                {p.isActive !== false ? (
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                    Active
+                  </Badge>
                 ) : (
-                  <span className="text-green-600">Active</span>
+                  <Badge variant="secondary">Inactive</Badge>
                 )}
               </TableCell>
 
@@ -174,6 +208,19 @@ const navigate = useNavigate();
                 className="text-right space-x-2"
                 onClick={(e) => e.stopPropagation()}
               >
+                <Button
+                  size="sm"
+                  variant={p.isActive !== false ? "outline" : "default"}
+                  title={
+                    p.isActive !== false
+                      ? "Deactivate (hide from shop)"
+                      : "Activate (show on shop)"
+                  }
+                  onClick={(e) => handleToggleActive(p, e)}
+                >
+                  <Power size={14} />
+                </Button>
+
                 <Button
                   size="sm"
                   variant="outline"
@@ -236,9 +283,15 @@ const navigate = useNavigate();
 export default AllProducts;
 
 
-const ProductCardRow = ({ product, onEdit, onDelete }) => {
+const ProductCardRow = ({ product, onEdit, onDelete, onToggleActive }) => {
+  const isActive = product.isActive !== false;
+
   return (
-    <div className="border rounded-lg p-4 flex gap-4 items-start">
+    <div
+      className={`border rounded-lg p-4 flex gap-4 items-start ${
+        !isActive ? "opacity-75 bg-muted/30" : ""
+      }`}
+    >
       <img
         src={product.images?.[0]?.url || "/placeholder.png"}
         alt={product.name}
@@ -246,7 +299,16 @@ const ProductCardRow = ({ product, onEdit, onDelete }) => {
       />
 
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold truncate">{product.name}</h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-semibold truncate">{product.name}</h3>
+          {isActive ? (
+            <Badge className="bg-emerald-600 text-[10px] px-1.5 py-0">Active</Badge>
+          ) : (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              Inactive
+            </Badge>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">
           {product.category?.name || "-"}
         </p>
@@ -267,7 +329,15 @@ const ProductCardRow = ({ product, onEdit, onDelete }) => {
           </span>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant={isActive ? "outline" : "default"}
+            onClick={(e) => onToggleActive(product, e)}
+          >
+            <Power size={14} className="mr-1" />
+            {isActive ? "Deactivate" : "Activate"}
+          </Button>
           <Button
             size="sm"
             variant="outline"

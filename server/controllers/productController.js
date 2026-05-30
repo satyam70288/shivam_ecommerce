@@ -6,6 +6,10 @@ const { default: mongoose } = require("mongoose");
 const ProductCapabilities = require("../models/ProductCapabilities");
 const PromiseMaster = require("../models/PromiseMaster");
 const { getProductByIdService } = require("../service/productDService");
+const {
+  PUBLIC_PRODUCT_FILTER,
+  isProductVisibleToPublic,
+} = require("../utils/productVisibility");
 
 const createProduct = async (req, res) => {
   if (req.role !== ROLES.admin) {
@@ -140,6 +144,7 @@ const createProduct = async (req, res) => {
       offerDescription: offerDescription || null,
       offerValidFrom: offerValidFrom ? new Date(offerValidFrom) : null,
       offerValidTill: offerValidTill ? new Date(offerValidTill) : null,
+      isActive: true,
     });
 
     await product.save();
@@ -325,7 +330,6 @@ const updateProduct = async (req, res) => {
       "features",
       "specifications",
       "dimensions",
-      "images",
     ];
     for (const field of jsonFields) {
       if (data[field] && typeof data[field] === "string") {
@@ -343,6 +347,7 @@ const updateProduct = async (req, res) => {
       "isBestSeller",
       "freeShipping",
       "blacklisted",
+      "isActive",
     ];
     for (const field of boolFields) {
       if (data[field] !== undefined) {
@@ -381,13 +386,36 @@ const updateProduct = async (req, res) => {
       }
     };
 
-    let imageList = parseJSON(data.existingImages, null);
+    const parseExistingImages = (value) => {
+      if (value == null || value === "") return [];
+      if (Array.isArray(value)) return value;
+      if (typeof value === "string") {
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+
+    const rawExistingImages = data.existingImages;
+    const clientSentExistingImages = rawExistingImages !== undefined;
     delete data.existingImages;
 
+    let imageList = null;
+    if (clientSentExistingImages) {
+      imageList = parseExistingImages(rawExistingImages);
+    }
+
     if (req.files?.length) {
+      if (imageList === null) {
+        const current = await Product.findById(id).select("images").lean();
+        imageList = [...(current?.images || [])];
+      }
       for (const file of req.files) {
         const uploadRes = await cloudinaryUploadBuffer(file.buffer);
-        imageList = imageList || [];
         imageList.push({
           url: uploadRes.secure_url,
           id: uploadRes.public_id,
@@ -395,7 +423,7 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    if (imageList && imageList.length > 0) {
+    if (imageList !== null) {
       data.images = imageList;
     }
 
@@ -469,7 +497,7 @@ const getProducts = async (req, res) => {
     limit = parseInt(limit) || 12;
 
     // Build query
-    const query = { blacklisted: false };
+    const query = { ...PUBLIC_PRODUCT_FILTER };
 
     // Simple search only on name field
     if (search && search.trim()) {
@@ -533,6 +561,7 @@ const getProductByName = async (req, res) => {
   try {
     const product = await Product.findOne({
       name: { $regex: new RegExp(name, "i") },
+      ...PUBLIC_PRODUCT_FILTER,
     }).populate("reviews");
 
     if (!product) {
@@ -570,6 +599,14 @@ const getProductById = async (req, res) => {
       });
     }
 
+    const isAdmin = req.role === ROLES.admin;
+    if (!isAdmin && !isProductVisibleToPublic(result.product)) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Product found",
@@ -590,6 +627,41 @@ const getProductById = async (req, res) => {
       success: false,
       message: "Something went wrong",
     });
+  }
+};
+
+const setProductActive = async (req, res) => {
+  if (req.role !== ROLES.admin) {
+    return res.status(401).json({ success: false, message: "Access denied" });
+  }
+
+  const { id } = req.params;
+  const explicit =
+    req.body?.isActive !== undefined
+      ? req.body.isActive === true || req.body.isActive === "true"
+      : null;
+
+  try {
+    const product = await Product.findById(id);
+    if (!product) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
+    }
+
+    const nextActive = explicit !== null ? explicit : product.isActive === false;
+    product.isActive = nextActive;
+    await product.save();
+
+    return res.status(200).json({
+      success: true,
+      message: nextActive
+        ? "Product is now active — visible to customers"
+        : "Product is now inactive — hidden from shop",
+      data: { _id: product._id, isActive: product.isActive },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -714,7 +786,7 @@ const getProductsByCategory = async (req, res) => {
     /* ------------------------------
        STEP 1: Prepare Filters
     ------------------------------ */
-    const query = { category: categoryDoc._id, blacklisted: false };
+    const query = { category: categoryDoc._id, ...PUBLIC_PRODUCT_FILTER };
 
     // PRICE RANGE FILTER
     if (req.query.priceRange) {
@@ -869,7 +941,7 @@ const getSimilarProducts = async (req, res) => {
     }
 
     const query = {
-      blacklisted: false,
+      ...PUBLIC_PRODUCT_FILTER,
       _id: { $ne: currentProduct._id },
     };
 
@@ -914,5 +986,6 @@ module.exports = {
   getProductsforadmin,
   getProductsByCategory,
   // getProductById
-  getSimilarProducts
+  getSimilarProducts,
+  setProductActive,
 };

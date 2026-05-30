@@ -120,10 +120,11 @@ export const useProductForm = (productId) => {
         setIsBestSeller(p.isBestSeller || false);
         setFeaturesText((p.features || []).join("\n"));
 
-        // Images
+        // Images (isExisting keeps server URLs separate from new uploads)
         setImages(
           (p.images || []).map((img) => ({
-            file: null,
+            isExisting: true,
+            url: img.url,
             preview: img.url,
             id: img.id || img.public_id || "",
           }))
@@ -174,14 +175,17 @@ export const useProductForm = (productId) => {
   // ================================
   const handleGeneralImages = (e) => {
     const files = [...e.target.files];
-    const add = files.slice(0, MAX_GENERAL_IMAGES - images.length);
+    if (!files.length) return;
 
+    const add = files.slice(0, MAX_GENERAL_IMAGES - images.length);
     const mapped = add.map((f) => ({
+      isExisting: false,
       file: f,
       preview: URL.createObjectURL(f),
     }));
 
     setImages((prev) => [...prev, ...mapped]);
+    e.target.value = "";
   };
   const addSpec = () =>
     setSpecifications((prev) => [...prev, { key: "", value: "" }]);
@@ -210,7 +214,33 @@ export const useProductForm = (productId) => {
   };
 
   const removeGeneralImage = (i) => {
-    setImages((prev) => prev.filter((_, idx) => idx !== i));
+    setImages((prev) => {
+      const removed = prev[i];
+      if (removed?.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(removed.preview);
+      }
+      return prev.filter((_, idx) => idx !== i);
+    });
+  };
+
+  const moveImage = (fromIndex, direction) => {
+    setImages((prev) => {
+      const toIndex = fromIndex + direction;
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]];
+      return next;
+    });
+  };
+
+  const setPrimaryImage = (index) => {
+    if (index <= 0) return;
+    setImages((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
   };
 
   // ================================
@@ -239,14 +269,25 @@ export const useProductForm = (productId) => {
   // ================================
   const validate = () => {
     if (!name.trim()) return "Enter product name";
-    if (!description.trim()) return "Enter description";
+
+    const descText = description.replace(/<[^>]*>/g, "").trim();
+    if (!descText) return "Enter description";
+
     if (!categoryId) return "Select category";
 
-    if (!price) return "Enter price";
-    if (!stock) return "Enter stock";
+    if (price === "" || Number(price) < 0) return "Enter a valid price";
+    if (stock === "" || Number(stock) < 0) return "Enter a valid stock quantity";
 
     const hasImage = images.some((img) => img.file || img.preview);
     if (!hasImage) return "Upload at least 1 image";
+
+    const featureLines = featuresText
+      .split("\n")
+      .map((f) => f.trim())
+      .filter(Boolean);
+    if (featureLines.length === 0) {
+      return "Add at least one feature (one per line in Specs section)";
+    }
 
     if (offerValidFrom && offerValidTill && offerValidFrom > offerValidTill)
       return "Offer start date cannot be after end date";
@@ -319,13 +360,18 @@ export const useProductForm = (productId) => {
 
       if (productId) {
         const existingImages = images
-          .filter((img) => img.preview && !img.file)
-          .map((img) => ({ url: img.preview, id: img.id || "" }));
+          .filter((img) => img.isExisting)
+          .map((img) => ({
+            url: img.url || img.preview,
+            id: img.id || "",
+          }));
         form.append("existingImages", JSON.stringify(existingImages));
       }
 
       images.forEach((img) => {
-        if (img.file) form.append("images", img.file);
+        if (!img.isExisting && img.file) {
+          form.append("images", img.file);
+        }
       });
 
       if (productId) {
@@ -386,7 +432,10 @@ export const useProductForm = (productId) => {
     images,
     handleGeneralImages,
     removeGeneralImage,
+    moveImage,
+    setPrimaryImage,
     generalInputRef,
+    maxGeneralImages: MAX_GENERAL_IMAGES,
 
     // New fields
 

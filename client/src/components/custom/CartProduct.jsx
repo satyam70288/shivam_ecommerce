@@ -22,8 +22,6 @@ const CartProduct = ({
   quantity,
   lineTotal,          // ✅ From backend
   lineDiscount,       // ✅ From backend
-  color,
-  size,
   stock,
   onUpdate
 }) => {
@@ -34,18 +32,31 @@ const CartProduct = ({
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   // ✅ Use the values directly from backend
+  const lineId = cartItemId ? String(cartItemId) : null;
+
   const displayPrice = discountedPrice || originalPrice || 0;
   const hasDiscount = discountPercent > 0 && originalPrice > discountedPrice;
   const itemTotal = lineTotal || (displayPrice * quantity);
   const itemDiscount = lineDiscount || (discountAmount * quantity) || 0;
+
+  const ensureLineId = () => {
+    if (lineId) return true;
+    toast({
+      title: "Error",
+      description: "Cart item invalid. Please refresh the cart.",
+      variant: "destructive",
+    });
+    return false;
+  };
 
   const handleRemove = () => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
+    if (!ensureLineId()) return;
 
-    dispatch(removeFromCart({ cartItemId }))  // ✅ No userId needed with interceptor
+    dispatch(removeFromCart({ cartItemId: lineId }))
       .unwrap()
       .then(() => {
         toast({
@@ -69,8 +80,10 @@ const CartProduct = ({
       return;
     }
 
+    if (!ensureLineId()) return;
+
     if (quantity > 1) {
-      dispatch(decreaseQuantity({ cartItemId }))  // ✅ No userId
+      dispatch(decreaseQuantity({ cartItemId: lineId }))
         .unwrap()
         .then(() => {
           if (onUpdate) onUpdate();
@@ -102,7 +115,9 @@ const CartProduct = ({
       return;
     }
 
-    dispatch(increaseQuantity({ cartItemId }))  // ✅ No userId
+    if (!ensureLineId()) return;
+
+    dispatch(increaseQuantity({ cartItemId: lineId }))
       .unwrap()
       .then(() => {
         if (onUpdate) onUpdate();
@@ -141,14 +156,6 @@ const CartProduct = ({
               {name}
             </h3>
             
-            {(color || size) && (
-              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {color && color !== "Default" ? `${color}` : ""}
-                {color && size && " • "}
-                {size ? `Size: ${size}` : ""}
-              </div>
-            )}
-
             <div className="mt-2 flex items-center gap-2">
               <span className="text-base font-bold text-gray-900 dark:text-white">
                 ₹{itemTotal.toFixed(2)}
@@ -197,9 +204,8 @@ const CartProduct = ({
             <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded">
               <button
                 onClick={handleQuantityDecrease}
-                disabled={quantity <= 1}
-                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Decrease quantity"
+                className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                aria-label={quantity <= 1 ? "Remove item" : "Decrease quantity"}
               >
                 <Minus size={14} />
               </button>

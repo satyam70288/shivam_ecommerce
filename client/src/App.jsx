@@ -81,6 +81,7 @@ export default function App() {
       ),
       children: [
         { index: true, element: <Analytics /> },
+        { path: "dashboard", element: <Analytics /> },
         { path: "banner", element: <BannerManager /> },
         { path: "products", element: <AllProducts /> },
         { path: "products/create", element: <CreateProducts /> },

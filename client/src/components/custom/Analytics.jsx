@@ -37,14 +37,19 @@ const formatPercent = (value = 0) => {
 
 const Analytics = () => {
   const [metrics, setMetrics] = useState(null);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedPeriod, setSelectedPeriod] = useState("full");
+  const [loadingCharts, setLoadingCharts] = useState(false);
   const { handleErrorLogout } = useErrorLogout();
 
   useEffect(() => {
     const getMetrics = async () => {
       try {
+        setLoadingCharts(true);
         const res = await axios.get(
           `${import.meta.env.VITE_API_URL}/get-metrics`,
           {
+            params: { year: selectedYear },
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
@@ -52,15 +57,23 @@ const Analytics = () => {
         );
 
         setMetrics(res.data.data);
+        if (res.data.data?.selectedYear) {
+          setSelectedYear(res.data.data.selectedYear);
+        }
       } catch (error) {
         handleErrorLogout(error);
+      } finally {
+        setLoadingCharts(false);
       }
     };
 
     getMetrics();
-  }, []);
+  }, [selectedYear]);
 
   if (!metrics) return null;
+
+  const availableYears = metrics.availableYears ?? [selectedYear];
+  const yearRange = metrics.yearRange;
 
   const salesGrowth = formatPercent(metrics?.sales?.growth);
   const usersGrowth = formatPercent(metrics?.users?.growth);
@@ -152,12 +165,29 @@ const Analytics = () => {
         {/* ================= CHARTS ================= */}
         <div className="flex flex-col gap-6">
 
-          <div className="w-full min-h-[320px] sm:min-h-[380px]">
-            <ComboSalesChart data={metrics} />
+          <div className="w-full min-h-[320px] sm:min-h-[380px] relative">
+            {loadingCharts && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/60 backdrop-blur-sm">
+                <p className="text-sm text-muted-foreground">Loading {selectedYear}…</p>
+              </div>
+            )}
+            <ComboSalesChart
+              data={metrics}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+              selectedPeriod={selectedPeriod}
+              onPeriodChange={setSelectedPeriod}
+              availableYears={availableYears}
+              yearRange={yearRange}
+            />
           </div>
 
           <div className="w-full min-h-[300px] sm:min-h-[360px]">
-            <LineSalesChart data={metrics} />
+            <LineSalesChart
+              data={metrics}
+              selectedYear={selectedYear}
+              selectedPeriod={selectedPeriod}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
