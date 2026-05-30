@@ -14,6 +14,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { normalizeLineItem, hasActiveDiscount } from "@/utils/pricing";
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
@@ -448,50 +449,54 @@ useEffect(() => {
                 <div className="px-5 py-4">
                   <div className="space-y-4">
                     <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                      {items.map((item) => (
-                        <div
-                          key={item.productId}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                          <div className="relative">
-                            <img
-                              src={item.image}
-                              alt={item.name}
-                              className="w-14 h-14 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                            />
-                            {item.quantity > 1 && (
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
-                                {item.quantity}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                              {item.name}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1">
-                              <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
-                                Qty: {item.quantity}
-                              </span>
-                              {item.discountAmount > 0 && (
-                                <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
-                                  Save ₹{item.discountAmount.toFixed(2)}
+                      {items.map((raw) => {
+                        const item = normalizeLineItem(raw);
+                        const showDiscount = hasActiveDiscount(item);
+                        return (
+                          <div
+                            key={raw.cartItemId || item.productId}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                          >
+                            <div className="relative">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-14 h-14 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                              />
+                              {item.quantity > 1 && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
+                                  {item.quantity}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                                {item.name}
+                              </p>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
+                                  Qty: {item.quantity}
                                 </span>
+                                {showDiscount && (
+                                  <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-0.5 rounded">
+                                    Save ₹{item.lineDiscount.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                ₹{item.lineTotal.toFixed(2)}
+                              </p>
+                              {showDiscount && (
+                                <p className="text-xs text-gray-400 line-through">
+                                  ₹{(item.originalPrice * item.quantity).toFixed(2)}
+                                </p>
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                              ₹{(item.lineTotal || 0).toFixed(2)}
-                            </p>
-                            {item.discountAmount > 0 && (
-                              <p className="text-xs text-gray-400 line-through">
-                                ₹{(item.price * item.quantity).toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Price Breakdown (UPDATED) */}

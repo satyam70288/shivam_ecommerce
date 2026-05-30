@@ -8,6 +8,7 @@ import {
   decreaseQuantity, 
   removeFromCart 
 } from "@/redux/slices/cartSlice";
+import { normalizeLineItem, hasActiveDiscount } from "@/utils/pricing";
 
 const CartProduct = ({
   // ✅ Match backend response field names
@@ -17,11 +18,12 @@ const CartProduct = ({
   image,
   originalPrice,      // ✅ From backend
   discountedPrice,     // ✅ From backend
-  discountPercent,     // ✅ From backend
-  discountAmount,      // ✅ From backend
+  discountPercent,
+  discountAmount,
+  isOfferActive,
   quantity,
-  lineTotal,          // ✅ From backend
-  lineDiscount,       // ✅ From backend
+  lineTotal,
+  lineDiscount,
   stock,
   onUpdate
 }) => {
@@ -31,13 +33,28 @@ const CartProduct = ({
 
   const { isAuthenticated } = useSelector((state) => state.auth);
 
-  // ✅ Use the values directly from backend
-  const lineId = cartItemId ? String(cartItemId) : null;
+  const line = normalizeLineItem({
+    cartItemId,
+    productId,
+    name,
+    image,
+    originalPrice,
+    discountedPrice,
+    discountPercent,
+    discountAmount,
+    isOfferActive,
+    quantity,
+    lineTotal,
+    lineDiscount,
+    stock,
+  });
 
-  const displayPrice = discountedPrice || originalPrice || 0;
-  const hasDiscount = discountPercent > 0 && originalPrice > discountedPrice;
-  const itemTotal = lineTotal || (displayPrice * quantity);
-  const itemDiscount = lineDiscount || (discountAmount * quantity) || 0;
+  const lineId = cartItemId ? String(cartItemId) : null;
+  const hasDiscount = hasActiveDiscount(line);
+  const displayPrice = line.sellingPrice;
+  const itemTotal = line.lineTotal;
+  const itemDiscount = line.lineDiscount;
+  const mrpTotal = line.originalPrice * line.quantity;
 
   const ensureLineId = () => {
     if (lineId) return true;
@@ -143,9 +160,9 @@ const CartProduct = ({
               alt={name}
               className="w-16 h-16 object-cover rounded"
             />
-            {hasDiscount && (
+            {hasDiscount && line.discountPercent > 0 && (
               <div className="absolute -top-1 -left-1 bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded">
-                {discountPercent}% OFF
+                {line.discountPercent}% OFF
               </div>
             )}
           </div>
@@ -163,7 +180,7 @@ const CartProduct = ({
               {hasDiscount && (
                 <>
                   <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
-                    ₹{(originalPrice * quantity).toFixed(2)}
+                    ₹{mrpTotal.toFixed(2)}
                   </span>
                   <span className="text-xs text-green-600 font-medium">
                     Save ₹{itemDiscount.toFixed(2)}

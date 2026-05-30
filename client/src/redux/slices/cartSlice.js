@@ -196,7 +196,11 @@ const cartSlice = createSlice({
       const item = state.items.find(item => item.cartItemId === cartItemId);
       if (item) {
         item.quantity = quantity;
-        item.lineTotal = (item.finalPrice * quantity).toFixed(2);
+        const unit =
+          parseFloat(item.discountedPrice ?? item.finalPrice ?? item.sellingPrice) ||
+          parseFloat(item.originalPrice ?? item.price) ||
+          0;
+        item.lineTotal = parseFloat((unit * quantity).toFixed(2));
         
         // Recalculate summary
         recalculateSummary(state);
@@ -224,8 +228,12 @@ const cartSlice = createSlice({
       if (existingIndex > -1) {
         // Update quantity
         state.items[existingIndex].quantity += newItem.quantity;
-        state.items[existingIndex].lineTotal = 
-          (state.items[existingIndex].finalPrice * state.items[existingIndex].quantity).toFixed(2);
+        const existing = state.items[existingIndex];
+        const unit =
+          parseFloat(existing.discountedPrice ?? existing.finalPrice ?? existing.sellingPrice) ||
+          parseFloat(existing.originalPrice ?? existing.price) ||
+          0;
+        existing.lineTotal = parseFloat((unit * existing.quantity).toFixed(2));
       } else {
         // Add new item
         state.items.push(newItem);
@@ -325,14 +333,16 @@ const recalculateSummary = (state) => {
   let discount = 0;
   let itemCount = 0;
   
-  state.items.forEach(item => {
-    if (!item.outOfStock && !item.cartItemId?.startsWith('temp-')) {
-      const price = parseFloat(item.price) || 0;
-      const finalPrice = parseFloat(item.finalPrice) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      
-      subtotal += price * quantity;
-      discount += (price - finalPrice) * quantity;
+  state.items.forEach((item) => {
+    if (!item.outOfStock && !item.cartItemId?.startsWith("temp-")) {
+      const mrp = parseFloat(item.originalPrice ?? item.price) || 0;
+      const selling =
+        parseFloat(item.discountedPrice ?? item.finalPrice ?? item.sellingPrice) ||
+        mrp;
+      const quantity = parseInt(item.quantity, 10) || 0;
+
+      subtotal += mrp * quantity;
+      discount += (mrp - selling) * quantity;
       itemCount += quantity;
     }
   });

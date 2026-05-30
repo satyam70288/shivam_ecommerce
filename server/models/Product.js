@@ -221,6 +221,7 @@ const discountedPrice = isOfferActive
     rating: this.rating || 0,
     reviewCount: this.reviewCount || 0,
     image: this.getMainImage(),
+    images: this.images || [],
     discountedPrice: discountedPrice,
     discount: this.discount || 0,
     offerValidTill: this.offerValidTill,

@@ -4,40 +4,16 @@ const Product = require("../models/Product");
 const User = require("../models/User");
 const Address = require("../models/address");
 const { calculateShippingCharge } = require("../service/shiprocketService");
+const { buildLineItem, buildAmountSummary } = require("../utils/orderPricing");
 
 exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => {
   let items = [];
-  let subtotal = 0;
-  let discount = 0;
   let totalWeight = 0;
 
   const processItem = (product, qty, extra = {}) => {
-    const price = product.price;
-    const finalPrice = product.getDiscountedPrice();
-    const quantity = Number(qty);
-
-    const discountAmountPerUnit = price - finalPrice;
-
-    subtotal += price * quantity;
-    discount += discountAmountPerUnit * quantity;
-    totalWeight += (product.dimensions?.weight || 0) * quantity;
-
-    items.push({
-      productId: product._id,
-      name: product.name,
-      image: product.images?.[0]?.url,
-      price,
-      discountPercent: product.discount || 0,
-      discountAmount: discountAmountPerUnit,
-      finalPrice,
-      quantity,
-      lineTotal: finalPrice * quantity,
-      weight: product.dimensions?.weight || 0,
-      length: product.dimensions?.length || 0,
-      width: product.dimensions?.width || 0,
-      height: product.dimensions?.height || 0,
-      ...extra,
-    });
+    const line = buildLineItem(product, qty, extra);
+    items.push(line);
+    totalWeight += (line.weight || 0) * line.quantity;
   };
 
   /* ---------------- PRODUCTS ---------------- */
@@ -70,7 +46,8 @@ exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => 
 
   /* ---------------- AMOUNT ---------------- */
 
-  const payable = subtotal - discount;
+  const baseSummary = buildAmountSummary(items);
+  const payable = baseSummary.payable;
 
   /* ---------------- ADDRESS ---------------- */
 
@@ -111,11 +88,9 @@ exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => 
   return {
     items,
     summary: {
-      subtotal,
-      discount,
-      payable,
+      ...baseSummary,
       shipping,
-      total,
+      total: baseSummary.payable + shipping,
       totalWeight,
       shippingInfo,
     },
@@ -124,37 +99,12 @@ exports.calculateOrder = async (userId, { productId, quantity }, addressDoc) => 
 };
 exports.calculateOrderValidation = async (userId, { productId, quantity }, addressDoc) => {
   let items = [];
-  let subtotal = 0;
-  let discount = 0;
   let totalWeight = 0;
 
   const processItem = (product, qty, extra = {}) => {
-    const price = product.price;
-    const finalPrice = product.getDiscountedPrice();
-    const q = Number(qty);
-
-    const discountAmountPerUnit = price - finalPrice;
-
-    subtotal += price * q;
-    discount += discountAmountPerUnit * q;
-    totalWeight += (product.dimensions?.weight || 0) * q;
-
-    items.push({
-      productId: product._id,
-      name: product.name,
-      image: product.images?.[0]?.url,
-      price,
-      discountPercent: product.discount || 0,
-      discountAmount: discountAmountPerUnit,
-      finalPrice,
-      quantity: q,
-      lineTotal: finalPrice * q,
-      weight: product.dimensions?.weight || 0,
-      length: product.dimensions?.length || 0,
-      width: product.dimensions?.width || 0,
-      height: product.dimensions?.height || 0,
-      ...extra,
-    });
+    const line = buildLineItem(product, qty, extra);
+    items.push(line);
+    totalWeight += (line.weight || 0) * line.quantity;
   };
 
   /* -------- PRODUCTS -------- */
@@ -185,14 +135,12 @@ exports.calculateOrderValidation = async (userId, { productId, quantity }, addre
     }
   }
 
-  const payable = subtotal - discount;
+  const baseSummary = buildAmountSummary(items);
 
   return {
     items,
     summary: {
-      subtotal,
-      discount,
-      payable,
+      ...baseSummary,
       totalWeight,
     },
     checkoutType: productId ? "BUY_NOW" : "CART",
@@ -331,29 +279,12 @@ exports.processPaymentAndCreateOrder = async (
 
 exports.calculateOrderBase = async (userId, { productId, quantity }) => {
   let items = [];
-  let subtotal = 0;
-  let discount = 0;
   let totalWeight = 0;
 
   const processItem = (product, qty, extra = {}) => {
-    const price = product.price;
-    const finalPrice = product.getDiscountedPrice();
-    const q = Number(qty);
-
-    subtotal += price * q;
-    discount += (price - finalPrice) * q;
-    totalWeight += (product.dimensions?.weight || 0) * q;
-    items.push({
-      productId: product._id,
-      name: product.name,
-      image: product.images?.[0]?.url,
-      price,
-      finalPrice,
-      quantity: q,
-      lineTotal: finalPrice * q,
-      weight: product.dimensions?.weight || 0,
-      ...extra,
-    });
+    const line = buildLineItem(product, qty, extra);
+    items.push(line);
+    totalWeight += (line.weight || 0) * line.quantity;
   };
 
   if (productId) {
@@ -383,11 +314,11 @@ exports.calculateOrderBase = async (userId, { productId, quantity }) => {
     }
   }
 
+  const summary = buildAmountSummary(items);
+
   return {
     items,
-    subtotal,
-    discount,
-    payable: subtotal - discount,
+    ...summary,
     totalWeight,
     checkoutType: productId ? "BUY_NOW" : "CART",
   };

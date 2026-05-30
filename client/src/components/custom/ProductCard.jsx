@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, memo, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
@@ -37,32 +37,34 @@ const ProductCard = ({
 
   const { addToCart: addToCartHandler } = useCartActions();
 
-  const displayImage = getImageUrl({ image, images, variants });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
-  const imageSrc = imageError
-    ? getImageUrl({ image, images, variants, imageError: true })
-    : displayImage;
+  const imageSrc = useMemo(
+    () =>
+      getImageUrl({
+        image,
+        images,
+        variants,
+        imageError,
+      }),
+    [image, images, variants, imageError]
+  );
 
   useEffect(() => {
     setImageError(false);
     setImageLoaded(false);
-  }, [displayImage]);
-
-  useEffect(() => {
-    const probe = new Image();
-    probe.src = imageSrc;
-    if (probe.complete) setImageLoaded(true);
-  }, [imageSrc]);
+  }, [_id, imageSrc]);
 
   const finalPrice =
     isOfferActive && discountedPrice > 0 ? discountedPrice : price;
 
-  const savings = price - finalPrice;
-  const discountPercentage = isOfferActive && discount > 0 ? discount : 0;
+  const savings = isOfferActive ? Math.max(0, price - finalPrice) : 0;
+  const discountPercentage =
+    isOfferActive && discount > 0 ? Math.round(discount) : 0;
+  const showStrikePrice = isOfferActive && price > finalPrice;
   const stockStatus = getStockStatus(stock);
 
   const handleAddToCart = async (e) => {
@@ -81,7 +83,7 @@ const ProductCard = ({
         _id,
         name,
         price: finalPrice,
-        images: [{ url: displayImage }],
+        images: [{ url: imageSrc }],
       };
 
       await addToCartHandler({
@@ -154,25 +156,30 @@ const ProductCard = ({
     <article className="group relative h-full flex flex-col bg-card rounded-xl border border-border/80 shadow-sm hover:shadow-md hover:border-primary/25 transition-all duration-300 overflow-hidden">
       <Link to={productLink} className="flex flex-col flex-1 min-h-0">
         <div className="relative aspect-square w-full overflow-hidden bg-muted">
-          {!imageLoaded && (
-            <div
-              className="absolute inset-0 z-10 bg-muted animate-pulse"
-              aria-hidden
-            />
-          )}
+          <div
+            className={`absolute inset-0 z-[1] bg-muted transition-opacity duration-300 ${
+              imageLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+            aria-hidden
+          />
 
           <img
-            key={imageSrc}
             loading="lazy"
             decoding="async"
             src={imageSrc}
             alt={name}
             onLoad={() => setImageLoaded(true)}
             onError={() => {
-              if (!imageError) setImageError(true);
-              else setImageLoaded(true);
+              if (!imageError) {
+                setImageError(true);
+                setImageLoaded(false);
+              } else {
+                setImageLoaded(true);
+              }
             }}
-            className="block w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
+            className={`block w-full h-full object-cover object-center transition-all duration-300 group-hover:scale-[1.03] ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
           />
 
           {/* Badges on image */}
@@ -230,12 +237,12 @@ const ProductCard = ({
             <span className="text-base font-bold text-foreground">
               {formatPrice(finalPrice)}
             </span>
-            {discountedPrice > 0 && price > discountedPrice && (
+            {showStrikePrice && (
               <span className="text-sm text-muted-foreground line-through">
                 {formatPrice(price)}
               </span>
             )}
-            {savings > 0 && (
+            {savings > 0 && isOfferActive && (
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                 Save {formatPrice(savings)}
               </span>

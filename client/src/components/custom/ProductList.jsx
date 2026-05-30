@@ -167,7 +167,7 @@ const ProductList = ({ category = "All", price = "", search = "" }) => {
                     <div 
                       key={p._id} 
                       ref={isLastElement ? lastProductRef : null}
-                      className="transform transition-all duration-300 hover:scale-[1.02] hover:z-10"
+                      className="h-full transition-shadow duration-300 hover:shadow-md"
                     >
                       <div className="h-full">
                         <ProductCard {...p} />

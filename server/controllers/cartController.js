@@ -1,6 +1,7 @@
 // controllers/cartController.js - FIXED VERSION
 var Cart = require("../models/Cart");
 var Product = require("../models/Product");
+const { buildLineItem, buildAmountSummary } = require("../utils/orderPricing");
 
 function normalizeStr(s) {
   return String(s ?? "").trim();
@@ -204,70 +205,49 @@ exports.getCart = async function (req, res) {
     const cart = await Cart.findOne({ user: userId }).populate({
       path: "products.product",
       select:
-        "name price discount images stock variants productType isOfferActive offerValidTill",
+        "name price discount offerValidFrom offerValidTill images stock variants productType dimensions",
     });
 
     if (!cart) {
       return res.status(200).json({
         success: true,
-        cart: { items: [], summary: { subtotal: 0, discount: 0, total: 0 } }
+        cart: {
+          items: [],
+          summary: {
+            subtotal: 0,
+            discount: 0,
+            total: 0,
+            grandTotal: 0,
+            itemCount: 0,
+            totalQuantity: 0,
+          },
+        },
       });
     }
 
-    let subtotal = 0;
-    let totalDiscount = 0;
     const items = [];
 
     for (const item of cart.products) {
       const product = item.product;
       if (!product) continue;
 
-      // ✅ Use schema method to get current discounted price
-      const currentPrice = product.price;
-      const currentDiscountedPrice = product.getDiscountedPrice();
-      
-      // Use stored discountedPrice or calculate fresh
-      const finalPrice = item.discountedPrice || currentDiscountedPrice;
-      const discountPerUnit = currentPrice - finalPrice;
-      
-      const lineTotal = finalPrice * item.quantity;
-      const lineDiscount = discountPerUnit * item.quantity;
-
-      subtotal += currentPrice * item.quantity;
-      totalDiscount += lineDiscount;
-
-      items.push({
-        cartItemId: item._id,
-        productId: product._id,
-        name: product.name,
-        image: product.images?.[0]?.url,
-        originalPrice: currentPrice,
-        discountedPrice: finalPrice,
-        discountPercent: product.discount || 0,
-        discountAmount: discountPerUnit,
-        quantity: item.quantity,
-        lineTotal,
-        lineDiscount,
-        color: item.color,
-        size: item.size,
-        stock: product.stock
-      });
+      items.push(
+        buildLineItem(product, item.quantity, {
+          cartItemId: item._id,
+          color: item.color,
+          size: item.size,
+        })
+      );
     }
 
-    const total = subtotal - totalDiscount;
+    const summary = buildAmountSummary(items);
 
     res.status(200).json({
       success: true,
       cart: {
         items,
-        summary: {
-          subtotal: Math.round(subtotal * 100) / 100,
-          discount: Math.round(totalDiscount * 100) / 100,
-          total: Math.round(total * 100) / 100,
-          itemCount: items.length,
-          totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0)
-        }
-      }
+        summary,
+      },
     });
 
   } catch (error) {
