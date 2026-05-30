@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { signupUser, clearSignupState } from "@/redux/slices/authSlice"
+import { signupUser, clearSignupState } from "@/redux/slices/authSlice";
+import SEO from "@/components/seo/SEO";
 
 const Signup = () => {
   const dispatch = useDispatch();
@@ -167,6 +168,8 @@ const Signup = () => {
   };
 
   return (
+    <>
+      <SEO title="Sign Up" path="/signup" noindex />
     <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-background to-orange-50/30 dark:from-background dark:via-background dark:to-background flex items-center justify-center p-4 md:p-6 relative overflow-hidden font-sans">
       
       {/* Animated background elements */}
@@ -497,6 +500,7 @@ const Signup = () => {
         }
       `}</style>
     </div>
+    </>
   );
 };
 

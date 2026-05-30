@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /checkout
+Disallow: /login
+Disallow: /signup
+Disallow: /account
+Disallow: /orders
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://shivam-ecommerce.vercel.app/sitemap.xml

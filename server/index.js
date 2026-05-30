@@ -11,7 +11,8 @@ const mongoSanitize = require("express-mongo-sanitize");
 const hpp = require("hpp");
 const rateLimit = require("express-rate-limit");
 const { connectDb } = require("./db/connection");
-const webhookRoutes=require("./routes/webhook")
+const webhookRoutes=require("./routes/webhook");
+const { sitemap } = require("./controllers/seoController");
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -127,6 +128,10 @@ app.get("/", (req, res) => {
   res.send(`<center><h1>✅ Server Running on PORT: ${port}</h1></center>`);
 });
 app.use("/api/webhook", webhookRoutes);
+
+// SEO sitemap (set CLIENT_URL in server .env to your storefront domain)
+app.get("/sitemap.xml", sitemap);
+
 // load routes
 readdirSync("./routes").forEach((route) => {
   app.use("/api", require(`./routes/${route}`));

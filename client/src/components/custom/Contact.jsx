@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SEO from "@/components/seo/SEO";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,12 @@ const Contact = () => {
   };
 
   return (
+    <>
+      <SEO
+        title="Contact Us"
+        description="Get in touch with Shree Laxmi Shop for orders, bulk enquiries, and support."
+        path="/contact"
+      />
     <div className="min-h-screen bg-background py-16 px-6 sm:px-12">
       <div className="max-w-4xl mx-auto bg-card border border-border rounded-2xl shadow-lg p-8 md:p-12">
         <h2 className="text-3xl font-extrabold text-center text-gray-900 dark:text-white mb-8">
@@ -136,6 +143,7 @@ const Contact = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

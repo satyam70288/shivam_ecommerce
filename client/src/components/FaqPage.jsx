@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import SEO from "@/components/seo/SEO";
+import { faqPageSchema } from "@/utils/seoSchemas";
 
 const faqs = [
   {
@@ -42,6 +44,13 @@ const FaqPage = () => {
   };
 
   return (
+    <>
+      <SEO
+        title="FAQ"
+        description="Frequently asked questions about shopping, delivery, returns, and products at Shree Laxmi Shop."
+        path="/faq"
+        jsonLd={faqPageSchema(faqs)}
+      />
     <div className="max-w-3xl mx-auto px-4 py-12">
       <h1 className="text-4xl font-extrabold text-center mb-10 text-zinc-900 dark:text-zinc-100">
         Frequently Asked Questions
@@ -82,6 +91,7 @@ const FaqPage = () => {
         })}
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,8 +1,15 @@
 import React from "react";
 import shopLogo from "@/assets/shivam_new_logo.png";
+import SEO from "@/components/seo/SEO";
 
 const TermsAndConditions = () => {
   return (
+    <>
+      <SEO
+        title="Terms and Conditions"
+        description="Terms and conditions for using Shree Laxmi Shop website and placing orders."
+        path="/Termsandconditions"
+      />
     <div className="max-w-4xl mx-auto bg-card text-foreground border border-border rounded-lg shadow-md my-10">
       <header
         className="w-full text-3xl font-bold text-center p-4 bg-muted/50 
@@ -111,6 +118,7 @@ const TermsAndConditions = () => {
         <img src={shopLogo} alt="Shree Laxmi Shop Logo" className="h-16 w-16" />
       </section>
     </div>
+    </>
   );
 };
 

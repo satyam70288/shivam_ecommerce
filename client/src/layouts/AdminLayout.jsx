@@ -2,10 +2,12 @@ import React from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/custom/AppSidebar";
 import { Outlet } from "react-router-dom";
+import SEO from "@/components/seo/SEO";
 
 const AdminLayout = () => {
   return (
     <SidebarProvider>
+      <SEO title="Admin" path="/admin" noindex />
       <div className="flex w-full min-h-screen">
         
         {/* LEFT SIDEBAR */}

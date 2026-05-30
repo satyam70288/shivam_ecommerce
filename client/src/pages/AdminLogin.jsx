@@ -6,6 +6,7 @@ import axios from "axios";
 import React from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import SEO from "@/components/seo/SEO";
 
 const AdminLogin = () => {
   const { toast } = useToast();
@@ -45,6 +46,8 @@ const AdminLogin = () => {
   };
 
   return (
+    <>
+      <SEO title="Admin Login" path="/admin/login" noindex />
     <div className="w-[60vw] lg:w-[25vw] mx-auto my-32 grid gap-3">
       <h1 className="text-2xl font-bold">Login into your account</h1>
       <form className="grid gap-3" onSubmit={handleLogin}>
@@ -53,6 +56,7 @@ const AdminLogin = () => {
         <Button>Log In</Button>
       </form>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import SEO from "@/components/seo/SEO";
 
 const AboutPage = () => {
   // Online placeholder images (replace later anytime)
@@ -19,6 +20,12 @@ const AboutPage = () => {
   }, [images.length]);
 
   return (
+    <>
+      <SEO
+        title="About Us"
+        description="Learn about Shree Laxmi Shop — our story, values, and commitment to quality products at fair prices."
+        path="/about"
+      />
     <div className="max-w-6xl mx-auto px-4 py-12">
 
       {/* HERO */}
@@ -100,6 +107,7 @@ const AboutPage = () => {
       </div>
 
     </div>
+    </>
   );
 };
 

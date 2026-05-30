@@ -16,6 +16,7 @@ import {
   LogIn,
   CheckCircle
 } from "lucide-react";
+import SEO from "@/components/seo/SEO";
 
 const Login = () => {
   const { toast } = useToast();
@@ -136,6 +137,8 @@ const Login = () => {
   };
 
   return (
+    <>
+      <SEO title="Login" path="/login" noindex />
     <div className="min-h-screen bg-gradient-to-br from-amber-50/50 via-background to-orange-50/30 dark:from-background dark:via-background dark:to-background flex items-center justify-center p-4 transition-colors duration-300">
       
       {/* Background Pattern */}
@@ -363,6 +366,7 @@ const Login = () => {
         }
       `}</style>
     </div>
+    </>
   );
 };
 

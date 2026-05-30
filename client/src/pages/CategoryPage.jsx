@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import SEO from "@/components/seo/SEO";
 import useCategory from "@/hooks/useCategory";
 import FiltersSidebar from "@/components/category/FiltersSidebar";
 import ProductGrid from "@/components/category/ProductGrid";
@@ -48,6 +49,12 @@ export default function CategoryPage() {
   }
 
   return (
+  <>
+    <SEO
+      title={categoryName || slug}
+      description={`Browse ${categoryName || slug} products at Shree Laxmi Shop. Filter, compare, and order online.`}
+      path={`/category/${slug}`}
+    />
     <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 flex flex-col md:flex-row gap-4 md:gap-6 min-h-screen bg-background">
       {/* Mobile filters */}
       <div className="md:hidden w-full">
@@ -95,5 +102,6 @@ export default function CategoryPage() {
         )}
       </section>
     </div>
+  </>
   );
 }

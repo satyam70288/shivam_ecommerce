@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { normalizeLineItem, hasActiveDiscount } from "@/utils/pricing";
+import SEO from "@/components/seo/SEO";
 
 const CheckoutPage = () => {
   const dispatch = useDispatch();
@@ -92,6 +93,8 @@ useEffect(() => {
   };
 
   return (
+    <>
+      <SEO title="Checkout" path="/checkout" noindex />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
@@ -653,6 +656,7 @@ useEffect(() => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

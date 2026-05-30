@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import SEO from "@/components/seo/SEO";
+import { metaDescription } from "@/config/seo";
+import { productSchema, breadcrumbSchema } from "@/utils/seoSchemas";
 import { useNavigate, useParams } from "react-router-dom";
 import useBuyNow from "@/hooks/useBuyNow";
 import useCartActions from "@/hooks/useCartActions"; // ✅ Updated hook
@@ -45,6 +48,19 @@ const Product = () => {
   const { buyNow } = useBuyNow();
   const [addingToCart, setAddingToCart] = useState(false);
 
+  const seoJsonLd = useMemo(() => {
+    if (!product) return null;
+    const crumbs = breadcrumbSchema([
+      { name: "Home", url: "/" },
+      { name: product.name, url: `/product/${product._id}` },
+    ]);
+    const productLd = productSchema(product, displayPrice);
+    return {
+      "@context": "https://schema.org",
+      "@graph": [productLd, crumbs].filter(Boolean),
+    };
+  }, [product, displayPrice]);
+
   if (productLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -55,6 +71,8 @@ const Product = () => {
 
   if (!product) {
     return (
+      <>
+        <SEO title="Product not found" path={`/product/${id}`} noindex />
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold text-foreground">Product not found</h2>
@@ -69,8 +87,11 @@ const Product = () => {
           </button>
         </div>
       </div>
+      </>
     );
   }
+
+  const productImage = images?.[0]?.url || product.images?.[0]?.url;
 
   // ✅ CORRECT: Add to cart function with proper Redux
   const handleAddToCartClick = async () => {
@@ -148,6 +169,16 @@ const Product = () => {
   };
 
   return (
+    <>
+      <SEO
+        title={product.name}
+        description={metaDescription(product.description)}
+        keywords={[...(product.keywords || []), ...(product.tags || [])]}
+        path={`/product/${product._id}`}
+        image={productImage}
+        type="product"
+        jsonLd={seoJsonLd}
+      />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Breadcrumb */}
       <Breadcrumb
@@ -246,6 +277,7 @@ const Product = () => {
         <SimilarProducts productId={product._id} />
       </div>
     </div>
+    </>
   );
 };
 
